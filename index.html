@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>ร้านปลาเม้า - ระบบออกบิลเงินสด iPad</title>
+  <title>ร้านปลาเม้า - ระบบออกบิลเงินสด</title>
   <!-- React & Tailwind CSS -->
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- html2canvas -->
+  <!-- html2canvas แปลงสลิปเป็นรูปภาพ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <!-- Kanit Font -->
-  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Kanit', sans-serif; }
-    /* CSS สำหรับสั่งพิมพ์สลิป ออกเฉพาะตัวสลิปเท่านั้น */
+    /* สไตล์สำหรับการสั่งพิมพ์สลิป */
     @media print {
       body * { visibility: hidden; }
       #receipt-slip, #receipt-slip * { visibility: visible; }
@@ -26,6 +26,7 @@
         width: 100%;
         border: none !important;
         box-shadow: none !important;
+        padding: 0 !important;
       }
       .no-print { display: none !important; }
     }
@@ -35,16 +36,17 @@
   <div id="root" class="h-full"></div>
 
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState } = React;
 
     function POSApp() {
       const customers = ['หน้าร้าน', 'เฮียบ๊อบ', 'เฮียเสม'];
       
+      // รายการสินค้า (เอา defaultPrice ออกแล้ว)
       const products = [
-        { id: 1, name: 'ปลาดุก', defaultPrice: 80, unit: 'กก.' },
-        { id: 2, name: 'ปลาช่อน', defaultPrice: 120, unit: 'กก.' },
-        { id: 3, name: 'ปลานิล', defaultPrice: 70, unit: 'กก.' },
-        { id: 4, name: 'เกลือ', defaultPrice: 10, unit: 'ถุง' },
+        { id: 1, name: 'ปลาดุก', unit: 'กก.' },
+        { id: 2, name: 'ปลาช่อน', unit: 'กก.' },
+        { id: 3, name: 'ปลานิล', unit: 'กก.' },
+        { id: 4, name: 'เกลือ', unit: 'ถุง' },
       ];
 
       const [selectedCustomer, setSelectedCustomer] = useState('หน้าร้าน');
@@ -52,15 +54,15 @@
       const [showSuccess, setShowSuccess] = useState(false);
       const [isGenerating, setIsGenerating] = useState(false);
 
-      // Modal สำหรับคีย์น้ำหนักและราคา
+      // Modal State สำหรับระบุน้ำหนักและราคา
       const [activeProduct, setActiveProduct] = useState(null);
-      const [weightInput, setWeightInput] = useState('1');
-      const [priceInput, setPriceInput] = useState('80');
+      const [weightInput, setWeightInput] = useState('');
+      const [priceInput, setPriceInput] = useState('');
 
       const todayDate = new Date().toLocaleDateString('th-TH', {
         year: 'numeric',
-        month: 'short',
-        day: 'numeric'
+        month: '2-digit',
+        day: '2-digit'
       });
 
       const currentTime = new Date().toLocaleTimeString('th-TH', {
@@ -68,22 +70,22 @@
         minute: '2-digit'
       });
 
-      // เปิดหน้าต่างคีย์น้ำหนักเมื่อกดเลือกสินค้า
+      // เปิด Pop-up พร้อมล้างค่าให้เป็นว่างเปล่าเพื่อรอคีย์
       const handleSelectProduct = (product) => {
         setActiveProduct(product);
-        setWeightInput('1');
-        setPriceInput(product.defaultPrice.toString());
+        setWeightInput('');
+        setPriceInput('');
       };
 
-      // เพิ่มลงบิล
+      // บันทึกรายการลงบิล
       const handleAddToCart = () => {
         if (!activeProduct) return;
         
         const weight = parseFloat(weightInput) || 0;
         const price = parseFloat(priceInput) || 0;
 
-        if (weight <= 0) {
-          alert('กรุณากรอกน้ำหนัก/จำนวนให้ถูกต้อง');
+        if (weight <= 0 || price <= 0) {
+          alert('กรุณากรอกน้ำหนักและราคาให้ครบถ้วนถูกต้อง');
           return;
         }
 
@@ -98,23 +100,22 @@
         };
 
         setCart(prev => [...prev, newItem]);
-        setActiveProduct(null); // ปิด Pop-up
+        setActiveProduct(null);
       };
 
-      // ลบรายการออกจากบิล
+      // ลบรายการ
       const removeItem = (cartItemId) => {
         setCart(prev => prev.filter(item => item.cartItemId !== cartItemId));
       };
 
       const totalPrice = cart.reduce((sum, item) => sum + item.total, 0);
 
-      // 1. ปุ่มพิมพ์ใบเสร็จ
+      // ฟังก์ชัน พิมพ์ / แชร์ / บันทึก
       const handlePrint = () => {
         if (cart.length === 0) return;
         window.print();
       };
 
-      // 2. ปุ่มแชร์สลิปเข้า LINE
       const handleShareReceiptImage = async () => {
         const receiptElement = document.getElementById('receipt-slip');
         if (!receiptElement || cart.length === 0) return;
@@ -152,13 +153,12 @@
             setIsGenerating(false);
           }, 'image/png');
         } catch (error) {
-          console.error('Error creating image:', error);
+          console.error(error);
           alert('ไม่สามารถสร้างรูปภาพได้ กรุณาลองใหม่อีกครั้ง');
           setIsGenerating(false);
         }
       };
 
-      // 3. ปุ่มบันทึก / ล้างหน้าจอ
       const handleSave = () => {
         if (cart.length === 0) return;
         setShowSuccess(true);
@@ -171,7 +171,7 @@
 
       return (
         <div class="h-full flex flex-col justify-between max-w-[1280px] mx-auto">
-          {/* Header แถบบนสุด */}
+          {/* Header */}
           <header class="bg-blue-600 text-white p-3 rounded-2xl shadow-md flex justify-between items-center mb-3">
             <div class="flex items-center space-x-3">
               <span class="text-3xl">🐟</span>
@@ -186,13 +186,13 @@
             </div>
           </header>
 
-          {/* เมนูกลาง แบ่ง 2 ฝั่ง (แนวนอน iPad) */}
+          {/* Main Content (iPad Split Screen) */}
           <div class="grid grid-cols-12 gap-4 flex-1 overflow-hidden">
             
-            {/* ฝั่งซ้าย: เลือกสินค้า & เลือกลูกค้า (7 คอลัมน์) */}
+            {/* ฝั่งซ้าย: เลือกลูกค้า & เลือกสินค้า (7 คอลัมน์) */}
             <div class="col-span-7 flex flex-col space-y-3 h-full overflow-y-auto pr-1">
               
-              {/* 1. เลือกลูกค้า */}
+              {/* เลือกลูกค้า */}
               <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-gray-200">
                 <h2 class="text-md font-bold text-gray-700 mb-2">1. เลือกลูกค้า</h2>
                 <div class="grid grid-cols-3 gap-2">
@@ -212,18 +212,18 @@
                 </div>
               </div>
 
-              {/* 2. เลือกสินค้าเพื่อชั่งน้ำหนัก */}
+              {/* เลือกสินค้า */}
               <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-gray-200 flex-1">
-                <h2 class="text-md font-bold text-gray-700 mb-2">2. กดเลือกรายการสินค้า (เพื่อระบุน้ำหนัก)</h2>
+                <h2 class="text-md font-bold text-gray-700 mb-2">2. กดเลือกสินค้า (คีย์น้ำหนักและราคา)</h2>
                 <div class="grid grid-cols-2 gap-3">
                   {products.map(prod => (
                     <button
                       key={prod.id}
                       onClick={() => handleSelectProduct(prod)}
-                      class="bg-emerald-50 border-2 border-emerald-500 hover:bg-emerald-100 p-5 rounded-2xl flex flex-col items-center justify-center transition-all active:scale-95 shadow-sm"
+                      class="bg-emerald-50 border-2 border-emerald-500 hover:bg-emerald-100 p-6 rounded-2xl flex flex-col items-center justify-center transition-all active:scale-95 shadow-sm"
                     >
-                      <span class="text-2xl font-bold text-emerald-950">{prod.name}</span>
-                      <span class="text-md text-emerald-700 font-medium">ราคาตั้งไว้ {prod.defaultPrice} ฿/{prod.unit}</span>
+                      <span class="text-3xl font-extrabold text-emerald-950">{prod.name}</span>
+                      <span class="text-sm text-emerald-700 font-semibold mt-1">หน่วย: {prod.unit}</span>
                     </button>
                   ))}
                 </div>
@@ -231,80 +231,107 @@
 
             </div>
 
-            {/* ฝั่งขวา: แสดงสลิปบิลเงินสด & ปุ่มควบคุม (5 คอลัมน์) */}
+            {/* ฝั่งขวา: Layout สลิปบิลเงินสด ออกแบบตามรูปภาพตัวอย่าง (5 คอลัมน์) */}
             <div class="col-span-5 flex flex-col justify-between h-full bg-white p-4 rounded-2xl border-2 border-blue-100 shadow-sm overflow-hidden">
               
-              {/* สลิปใบเสร็จ */}
-              <div id="receipt-slip" class="bg-white p-4 rounded-xl border border-gray-200 font-mono text-gray-800 space-y-3 flex-1 overflow-y-auto">
+              {/* ตัวสลิปใบเสร็จ (Layout ถอดแบบจาก FlowAccount Sample) */}
+              <div id="receipt-slip" class="bg-white p-5 rounded-xl border border-gray-300 font-sans text-gray-800 space-y-3 flex-1 overflow-y-auto">
                 
-                {/* หัวสลิป */}
-                <div class="text-center space-y-0.5 border-b-2 border-dashed border-gray-300 pb-2">
-                  <h2 class="text-2xl font-extrabold">🐟 ร้านปลาเม้า</h2>
-                  <div class="text-xs font-bold bg-gray-100 inline-block px-2.5 py-0.5 rounded-full">
-                    บิลเงินสด / CASH RECEIPT
+                {/* 1. Header ร้าน */}
+                <div class="text-center space-y-1 pb-2">
+                  <div class="flex justify-center mb-1">
+                    <div class="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center text-xl font-bold">
+                      🐟
+                    </div>
                   </div>
-                  <div class="text-[11px] text-gray-500 pt-1">
-                    วันที่: {todayDate} | เวลา: {currentTime} น.
+                  <h2 class="text-xl font-bold tracking-wide text-black">ร้านปลาเม้า</h2>
+                  <p class="text-xs text-gray-500">ตลาดสด / หน้าร้านขายปลา</p>
+                </div>
+
+                <div class="border-b border-gray-300"></div>
+
+                {/* 2. หัวข้อสลิป และ ข้อมูลบิล */}
+                <div class="space-y-1 text-sm">
+                  <div class="font-bold text-center text-gray-800 py-1">
+                    ใบเสร็จรับเงิน / บิลเงินสด
                   </div>
-                  <div class="text-sm font-bold text-blue-800">
-                    ลูกค้า: {selectedCustomer}
+                  <div class="flex justify-between text-xs text-gray-600 pt-1">
+                    <span>ลูกค้า: <strong class="text-gray-900">{selectedCustomer}</strong></span>
+                    <span>วันที่: {todayDate}</span>
                   </div>
                 </div>
 
-                {/* รายการในสลิป */}
-                <div>
-                  <div class="flex justify-between text-[11px] font-bold border-b border-gray-200 pb-1 mb-1.5 text-gray-500">
-                    <span>รายการ</span>
-                    <span>น้ำหนักxราคา</span>
-                    <span>รวม (บาท)</span>
-                  </div>
+                <div class="border-b border-dashed border-gray-300"></div>
 
+                {/* 3. ตารางรายการสินค้า (รูปแบบ [จำนวน/น้ำหนัก] [รายการ] [ราคารวม]) */}
+                <div class="min-h-[140px]">
                   {cart.length === 0 ? (
-                    <div class="text-center py-10 text-gray-400 text-sm font-sans">
-                      👈 กดเลือกสินค้าฝั่งซ้ายเพื่อระบุน้ำหนัก
+                    <div class="text-center py-12 text-gray-400 text-sm">
+                      👈 กดเลือกสินค้าเพื่อเริ่มออกบิล
                     </div>
                   ) : (
-                    <div class="space-y-1.5 text-xs font-sans">
+                    <div class="space-y-2 text-sm pt-1">
                       {cart.map(item => (
-                        <div key={item.cartItemId} class="flex justify-between items-center bg-gray-50 p-1.5 rounded border border-gray-100">
-                          <div class="flex-1">
-                            <div class="font-bold text-sm text-gray-800">{item.name}</div>
-                            <div class="text-[11px] text-gray-500">{item.weight} {item.unit} × {item.pricePerUnit}฿</div>
+                        <div key={item.cartItemId} class="flex items-center justify-between hover:bg-gray-50 p-1 rounded">
+                          {/* ฝั่งซ้าย: จำนวน/น้ำหนัก + ชื่อสินค้า */}
+                          <div class="flex items-center space-x-2 flex-1 pr-2">
+                            <span class="font-bold w-12 text-right text-gray-700">{item.weight}</span>
+                            <span class="font-medium text-gray-900">{item.name} ({item.pricePerUnit}฿)</span>
                           </div>
 
-                          <div class="text-right font-extrabold text-sm w-16">
-                            {item.total}
+                          {/* ฝั่งขวา: ยอดรวม + ปุ่มลบ */}
+                          <div class="flex items-center space-x-2">
+                            <span class="font-bold text-gray-900 w-20 text-right">
+                              {item.total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                            <button 
+                              onClick={() => removeItem(item.cartItemId)}
+                              class="no-print text-red-400 hover:text-red-600 font-bold px-1"
+                            >
+                              ✕
+                            </button>
                           </div>
-
-                          <button 
-                            onClick={() => removeItem(item.cartItemId)}
-                            class="no-print ml-2 text-red-500 font-bold px-1.5 py-0.5 hover:bg-red-50 rounded"
-                          >
-                            ✕
-                          </button>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
 
-                {/* สรุปยอด */}
-                <div class="border-t-2 border-dashed border-gray-300 pt-2">
-                  <div class="flex justify-between items-center text-md font-bold font-sans">
-                    <span>ยอดรวมสุทธิ</span>
-                    <span class="text-2xl font-extrabold text-blue-700">{totalPrice} บาท</span>
+                <div class="border-b border-dashed border-gray-300"></div>
+
+                {/* 4. สรุปยอดเงินล่างสลิป (ตามทรง Layout ตัวอย่าง) */}
+                <div class="space-y-1.5 text-sm pt-1">
+                  <div class="flex justify-between text-gray-600">
+                    <span>จำนวนรายการรวม</span>
+                    <span class="font-bold text-gray-800">{cart.length} รายการ</span>
+                  </div>
+
+                  <div class="flex justify-between text-gray-600">
+                    <span>รวมเป็นเงิน</span>
+                    <span class="font-bold text-gray-800">
+                      {totalPrice.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท
+                    </span>
+                  </div>
+
+                  <div class="border-b border-gray-200 my-1"></div>
+
+                  <div class="flex justify-between items-center text-lg font-bold text-black pt-1">
+                    <span>รวมทั้งสิ้น</span>
+                    <span class="text-2xl font-extrabold border-b-4 border-double border-black pb-0.5">
+                      {totalPrice.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
                   </div>
                 </div>
 
-                <div class="text-center text-[10px] text-gray-400 border-t border-gray-100 pt-1 font-sans">
+                {/* 5. ท้ายสลิป */}
+                <div class="text-center text-xs text-gray-400 pt-4 pb-1">
                   *** ขอบคุณที่อุดหนุน ร้านปลาเม้า ***
                 </div>
 
               </div>
 
-              {/* ด้านล่างบิล: ปุ่ม 3 ปุ่มหลักตามสั่ง */}
+              {/* ปุ่ม 3 ปุ่มควบคุมหลักใต้สลิป */}
               <div class="grid grid-cols-3 gap-2 mt-3 pt-2 border-t no-print">
-                {/* ปุ่มที่ 1: พิมพ์ใบเสร็จ */}
                 <button
                   onClick={handlePrint}
                   disabled={cart.length === 0}
@@ -318,7 +345,6 @@
                   <span>พิมพ์ใบเสร็จ</span>
                 </button>
 
-                {/* ปุ่มที่ 2: แชร์บิลเข้า LINE */}
                 <button
                   onClick={handleShareReceiptImage}
                   disabled={cart.length === 0 || isGenerating}
@@ -332,7 +358,6 @@
                   <span>{isGenerating ? 'สร้างรูป...' : 'แชร์บิล LINE'}</span>
                 </button>
 
-                {/* ปุ่มที่ 3: บันทึก / ล้างหน้าจอ */}
                 <button
                   onClick={handleSave}
                   disabled={cart.length === 0}
@@ -351,14 +376,14 @@
 
           </div>
 
-          {/* Pop-up คีย์น้ำหนักและราคาขาย (เปิดขึ้นมาเมื่อกดเลือกสินค้า) */}
+          {/* Pop-up คีย์น้ำหนักและราคา (ตั้งค่าเริ่มต้นเป็นช่องว่างเปล่า) */}
           {activeProduct && (
             <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
               <div class="bg-white p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in duration-150">
                 
                 <div class="flex justify-between items-center border-b pb-2">
                   <h3 class="text-2xl font-bold text-gray-800">
-                    🐟 ระบุรายการ: <span class="text-blue-600">{activeProduct.name}</span>
+                    🐟 คีย์รายการ: <span class="text-blue-600">{activeProduct.name}</span>
                   </h3>
                   <button 
                     onClick={() => setActiveProduct(null)}
@@ -368,8 +393,8 @@
                   </button>
                 </div>
 
-                <div class="space-y-3">
-                  {/* ช่องระบุน้ำหนัก */}
+                <div class="space-y-4">
+                  {/* ช่องระบุน้ำหนัก (ว่างเปล่า) */}
                   <div>
                     <label class="block text-sm font-bold text-gray-700 mb-1">
                       ⚖️ น้ำหนัก / จำนวน ({activeProduct.unit})
@@ -377,6 +402,7 @@
                     <input
                       type="number"
                       step="0.1"
+                      placeholder="0.0"
                       value={weightInput}
                       onChange={(e) => setWeightInput(e.target.value)}
                       class="w-full text-3xl font-extrabold text-center p-3 border-2 border-blue-400 rounded-2xl bg-blue-50 focus:outline-none focus:border-blue-600"
@@ -384,29 +410,30 @@
                     />
                   </div>
 
-                  {/* ช่องระบุราคาขายต่อหน่วย */}
+                  {/* ช่องระบุราคาขาย (ว่างเปล่า) */}
                   <div>
                     <label class="block text-sm font-bold text-gray-700 mb-1">
-                      💵 ราคาขาย (บาท / {activeProduct.unit})
+                      💵 ราคาขายต่อหน่วย (บาท / {activeProduct.unit})
                     </label>
                     <input
                       type="number"
+                      placeholder="0"
                       value={priceInput}
                       onChange={(e) => setPriceInput(e.target.value)}
-                      class="w-full text-2xl font-bold text-center p-2.5 border-2 border-gray-300 rounded-2xl bg-gray-50 focus:outline-none focus:border-blue-600"
+                      class="w-full text-3xl font-extrabold text-center p-3 border-2 border-gray-300 rounded-2xl bg-gray-50 focus:outline-none focus:border-blue-600"
                     />
                   </div>
 
-                  {/* สรุปคำนวณเงิน */}
+                  {/* สรุปเงินอัตโนมัติ */}
                   <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-2xl text-center">
                     <div class="text-xs text-emerald-700 font-bold">ราคารวมคำนวณได้</div>
                     <div class="text-3xl font-extrabold text-emerald-600">
-                      {((parseFloat(weightInput) || 0) * (parseFloat(priceInput) || 0)).toFixed(0)} <span class="text-lg">บาท</span>
+                      {((parseFloat(weightInput) || 0) * (parseFloat(priceInput) || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span class="text-lg">บาท</span>
                     </div>
                   </div>
                 </div>
 
-                {/* ปุ่มส่งไปบิล */}
+                {/* ปุ่มควบคุม Pop-up */}
                 <div class="flex space-x-2 pt-2">
                   <button
                     onClick={() => setActiveProduct(null)}
