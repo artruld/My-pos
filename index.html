@@ -3,29 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ร้านปลาเม้า - ระบบออกบิลหน้าร้าน</title>
+  <title>ร้านปลาเม้า - ระบบออกบิลเงินสด</title>
   <!-- React & Tailwind CSS -->
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- html2canvas แปลงสลิปหน้าจอเป็นรูปภาพ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <!-- Kanit Font -->
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Kanit', sans-serif; }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-4">
+<body class="bg-gray-100 min-h-screen p-3 md:p-6">
   <div id="root"></div>
 
   <script type="text/babel">
     const { useState } = React;
 
     function POSApp() {
-      // ข้อมูลลูกค้า
       const customers = ['หน้าร้าน', 'เฮียบ๊อบ', 'เฮียเสม'];
       
-      // ข้อมูลสินค้า
       const products = [
         { id: 1, name: 'ปลาดุก', price: 80, unit: 'กก.' },
         { id: 2, name: 'ปลาช่อน', price: 120, unit: 'กก.' },
@@ -36,15 +36,20 @@
       const [selectedCustomer, setSelectedCustomer] = useState('หน้าร้าน');
       const [cart, setCart] = useState([]);
       const [showSuccess, setShowSuccess] = useState(false);
+      const [isGenerating, setIsGenerating] = useState(false);
 
-      // วันที่ปัจจุบันแบบไทย
       const todayDate = new Date().toLocaleDateString('th-TH', {
         year: 'numeric',
-        month: 'long',
+        month: 'short',
         day: 'numeric'
       });
 
-      // เพิ่มสินค้าเข้าตะกร้า
+      const currentTime = new Date().toLocaleTimeString('th-TH', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      // เพิ่มสินค้า
       const addToCart = (product) => {
         setCart(prevCart => {
           const existing = prevCart.find(item => item.id === product.id);
@@ -57,7 +62,7 @@
         });
       };
 
-      // ปรับจำนวนสินค้า
+      // ปรับจำนวน
       const updateQty = (id, delta) => {
         setCart(prevCart =>
           prevCart
@@ -72,31 +77,55 @@
         );
       };
 
-      // คำนวณราคารวม
       const totalPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
 
-      // ข้อความสรุปบิลส่งเข้า LINE
-      const generateBillText = () => {
-        let text = `🧾 *บิลเงินสด - ร้านปลาเม้า*\n`;
-        text += `📅 วันที่: ${todayDate}\n`;
-        text += `👤 ลูกค้า: ${selectedCustomer}\n`;
-        text += `------------------------\n`;
-        cart.forEach(item => {
-          text += `• ${item.name} x ${item.qty} ${item.unit} = ${item.price * item.qty} บาท\n`;
-        });
-        text += `------------------------\n`;
-        text += `💰 *ยอดรวมทั้งหมด: ${totalPrice} บาท*`;
-        return text;
+      // แปลงสลิปเป็นรูปภาพ และแชร์เข้า LINE / ดาวน์โหลด
+      const handleShareReceiptImage = async () => {
+        const receiptElement = document.getElementById('receipt-slip');
+        if (!receiptElement || cart.length === 0) return;
+
+        setIsGenerating(true);
+
+        try {
+          const canvas = await html2canvas(receiptElement, {
+            scale: 3,
+            backgroundColor: '#ffffff',
+            useCORS: true
+          });
+
+          canvas.toBlob(async (blob) => {
+            if (!blob) {
+              setIsGenerating(false);
+              return;
+            }
+
+            const fileName = `Slip-ร้านปลาเม้า-${selectedCustomer}.png`;
+            const file = new File([blob], fileName, { type: 'image/png' });
+
+            // ใช้ iOS / iPadOS Native Share Sheet ถ้าใช้อุปกรณ์ Apple
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                files: [file],
+                title: 'บิลเงินสด ร้านปลาเม้า',
+                text: `บิลเงินสด ร้านปลาเม้า - คุณ ${selectedCustomer}`,
+              });
+            } else {
+              // ดาวน์โหลดรูปกรณีเปิดบนอุปกรณ์อื่น
+              const link = document.createElement('a');
+              link.href = URL.createObjectURL(blob);
+              link.download = fileName;
+              link.click();
+            }
+            setIsGenerating(false);
+          }, 'image/png');
+        } catch (error) {
+          console.error('Error creating image:', error);
+          alert('ไม่สามารถสร้างรูปภาพได้ กรุณาลองใหม่อีกครั้ง');
+          setIsGenerating(false);
+        }
       };
 
-      // ส่งเข้า LINE
-      const shareToLine = () => {
-        if (cart.length === 0) return;
-        const text = encodeURIComponent(generateBillText());
-        window.open(`https://line.me/R/msg/text/?${text}`, '_blank');
-      };
-
-      // บันทึกบิล
+      // บันทึกและล้างหน้าบิล
       const handleSave = () => {
         if (cart.length === 0) return;
         setShowSuccess(true);
@@ -104,25 +133,31 @@
           setShowSuccess(false);
           setCart([]);
           setSelectedCustomer('หน้าร้าน');
-        }, 2000);
+        }, 1500);
       };
 
       return (
-        <div class="max-w-4xl mx-auto space-y-6">
-          {/* Header ด้านบนสุด */}
-          <header class="bg-blue-600 text-white p-4 rounded-2xl shadow-md text-center">
-            <h1 class="text-3xl font-bold">🐟 ร้านปลาเม้า</h1>
-            <p class="text-blue-100 text-lg">ระบบออกบิลหน้าร้าน</p>
+        <div class="max-w-5xl mx-auto space-y-4">
+          {/* Header */}
+          <header class="bg-blue-600 text-white p-4 rounded-2xl shadow-md text-center flex justify-between items-center px-6">
+            <div>
+              <h1 class="text-3xl font-bold">🐟 ร้านปลาเม้า</h1>
+              <p class="text-blue-100 text-sm">ระบบออกบิลเงินสดหน้าร้าน</p>
+            </div>
+            <div class="text-right text-sm bg-blue-700 px-3 py-1 rounded-xl">
+              <div>{todayDate}</div>
+              <div>{currentTime} น.</div>
+            </div>
           </header>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
             
-            {/* ฝั่งซ้าย: เลือกลูกค้า & เลือกสินค้า */}
-            <div class="space-y-6">
+            {/* ฝั่งซ้าย: เลือกลูกค้า & สินค้า (7 คอลัมน์) */}
+            <div class="md:col-span-7 space-y-4">
               
               {/* 1. เลือกลูกค้า */}
               <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
-                <h2 class="text-xl font-bold text-gray-700 mb-3">1. เลือกลูกค้า</h2>
+                <h2 class="text-lg font-bold text-gray-700 mb-2">1. เลือกลูกค้า</h2>
                 <div class="grid grid-cols-3 gap-2">
                   {customers.map(cust => (
                     <button
@@ -130,8 +165,8 @@
                       onClick={() => setSelectedCustomer(cust)}
                       class={`p-3 text-lg font-bold rounded-xl border-2 transition-all ${
                         selectedCustomer === cust
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-105'
-                          : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-102'
+                          : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
                       }`}
                     >
                       {cust}
@@ -142,16 +177,16 @@
 
               {/* 2. กดเลือกสินค้า */}
               <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
-                <h2 class="text-xl font-bold text-gray-700 mb-3">2. กดเลือกสินค้า</h2>
+                <h2 class="text-lg font-bold text-gray-700 mb-2">2. กดเลือกสินค้า</h2>
                 <div class="grid grid-cols-2 gap-3">
                   {products.map(prod => (
                     <button
                       key={prod.id}
                       onClick={() => addToCart(prod)}
-                      class="bg-emerald-50 border-2 border-emerald-500 hover:bg-emerald-100 p-4 rounded-2xl flex flex-col items-center justify-center transition-all active:scale-95"
+                      class="bg-emerald-50 border-2 border-emerald-500 hover:bg-emerald-100 p-4 rounded-2xl flex flex-col items-center justify-center transition-all active:scale-95 shadow-sm"
                     >
                       <span class="text-2xl font-bold text-emerald-900">{prod.name}</span>
-                      <span class="text-lg text-emerald-700 font-semibold">{prod.price} บาท/{prod.unit}</span>
+                      <span class="text-md text-emerald-700 font-semibold">{prod.price} บาท/{prod.unit}</span>
                     </button>
                   ))}
                 </div>
@@ -159,89 +194,113 @@
 
             </div>
 
-            {/* ฝั่งขวา: หน้าบิลเงินสด */}
-            <div class="bg-white p-5 rounded-2xl shadow-sm border-2 border-blue-200 flex flex-col justify-between">
-              <div>
-                {/* หัวบิลเงินสด */}
-                <div class="text-center border-b pb-3 mb-4 space-y-1 bg-blue-50/50 p-3 rounded-xl border border-blue-100">
-                  <h2 class="text-2xl font-bold text-blue-900">🐟 ร้านปลาเม้า</h2>
-                  <p class="text-md font-semibold text-gray-600">-- บิลเงินสด --</p>
-                  
-                  <div class="flex justify-between items-center text-md text-gray-700 pt-2 border-t border-gray-200 mt-2">
-                    <span class="font-semibold">📅 วันที่: <span class="font-normal">{todayDate}</span></span>
-                    <span class="bg-blue-600 text-white font-bold px-3 py-1 rounded-lg text-sm">
-                      👤 {selectedCustomer}
-                    </span>
+            {/* ฝั่งขวา: แสดงรูปสลิปใบเสร็จจริง (5 คอลัมน์) */}
+            <div class="md:col-span-5 flex flex-col justify-between space-y-4">
+              
+              {/* ตัวสลิปใบเสร็จ (สไตล์กระดาษสลิปความร้อน) */}
+              <div id="receipt-slip" class="bg-white p-6 rounded-xl shadow-md border border-gray-300 font-mono text-gray-800 space-y-4">
+                
+                {/* หัวสลิป */}
+                <div class="text-center space-y-1 border-b-2 border-dashed border-gray-300 pb-3">
+                  <h2 class="text-2xl font-extrabold tracking-wide">🐟 ร้านปลาเม้า</h2>
+                  <div class="text-sm font-bold bg-gray-100 inline-block px-3 py-0.5 rounded-full">
+                    บิลเงินสด / CASH RECEIPT
+                  </div>
+                  <div class="text-xs text-gray-500 pt-1">
+                    วันที่: {todayDate} | เวลา: {currentTime} น.
+                  </div>
+                  <div class="text-sm font-bold text-blue-800 pt-1">
+                    ลูกค้า: {selectedCustomer}
                   </div>
                 </div>
 
-                {/* รายการสินค้าที่เลือก */}
-                {cart.length === 0 ? (
-                  <div class="text-center py-12 text-gray-400 text-xl">
-                    👈 กดเลือกสินค้าด้านซ้ายได้เลย
+                {/* รายการสินค้าในสลิป */}
+                <div>
+                  <div class="flex justify-between text-xs font-bold border-b border-gray-200 pb-1 mb-2 text-gray-500">
+                    <span>รายการ</span>
+                    <span>จำนวน x ราคา</span>
+                    <span>รวม (บาท)</span>
                   </div>
-                ) : (
-                  <div class="space-y-3 max-h-60 overflow-y-auto pr-1">
-                    {cart.map(item => (
-                      <div key={item.id} class="flex justify-between items-center bg-gray-50 p-3 rounded-xl border">
-                        <div>
-                          <div class="text-xl font-bold text-gray-800">{item.name}</div>
-                          <div class="text-gray-500">{item.price} บาท/{item.unit}</div>
-                        </div>
 
-                        {/* ปุ่ม + - เพิ่มลดจำนวน */}
-                        <div class="flex items-center space-x-2">
-                          <button
-                            onClick={() => updateQty(item.id, -1)}
-                            class="w-10 h-10 bg-red-100 text-red-600 font-bold text-2xl rounded-lg flex items-center justify-center active:bg-red-200"
-                          >
-                            -
-                          </button>
-                          <span class="text-2xl font-bold px-2">{item.qty}</span>
-                          <button
-                            onClick={() => updateQty(item.id, 1)}
-                            class="w-10 h-10 bg-green-100 text-green-600 font-bold text-2xl rounded-lg flex items-center justify-center active:bg-green-200"
-                          >
-                            +
-                          </button>
+                  {cart.length === 0 ? (
+                    <div class="text-center py-8 text-gray-400 text-sm font-sans">
+                      [ ยังไม่มีรายการสินค้า ]
+                    </div>
+                  ) : (
+                    <div class="space-y-2 text-sm max-h-56 overflow-y-auto pr-1">
+                      {cart.map(item => (
+                        <div key={item.id} class="flex justify-between items-center">
+                          <div class="flex-1">
+                            <span class="font-bold text-gray-800">{item.name}</span>
+                          </div>
+                          
+                          {/* ปุ่มปรับจำนวนแสดงในสลิป */}
+                          <div class="flex items-center space-x-1 mx-2">
+                            <button 
+                              onClick={() => updateQty(item.id, -1)}
+                              class="w-6 h-6 bg-red-100 text-red-600 font-bold rounded flex items-center justify-center text-xs"
+                            >
+                              -
+                            </button>
+                            <span class="px-1 font-bold">{item.qty} {item.unit}</span>
+                            <button 
+                              onClick={() => updateQty(item.id, 1)}
+                              class="w-6 h-6 bg-green-100 text-green-600 font-bold rounded flex items-center justify-center text-xs"
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          <div class="text-right font-bold w-16">
+                            {item.price * item.qty}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* สรุปยอดเงิน */}
+                <div class="border-t-2 border-dashed border-gray-300 pt-3 space-y-2">
+                  <div class="flex justify-between items-center text-lg font-bold">
+                    <span>ยอดรวมสุทธิ</span>
+                    <span class="text-2xl font-extrabold text-blue-700">{totalPrice} บาท</span>
                   </div>
-                )}
+                </div>
+
+                {/* ท้ายสลิป */}
+                <div class="text-center text-xs text-gray-400 border-t border-gray-100 pt-2 font-sans">
+                  *** ขอบคุณที่อุดหนุน ร้านปลาเม้า ***
+                </div>
+
               </div>
 
-              {/* ยอดรวมและปุ่มกดใหญ่ๆ */}
-              <div class="mt-6 pt-4 border-t space-y-4">
-                <div class="flex justify-between items-center bg-blue-50 p-3 rounded-xl">
-                  <span class="text-2xl font-bold text-gray-800">ยอดรวมทั้งหมด</span>
-                  <span class="text-4xl font-extrabold text-blue-600">{totalPrice} <span class="text-2xl">บาท</span></span>
-                </div>
-
-                {/* ปุ่มแชร์ไป LINE */}
+              {/* ปุ่มการทำงานใต้สลิป */}
+              <div class="space-y-2">
+                {/* ปุ่มแชร์สลิปเป็นรูปภาพเข้า LINE */}
                 <button
-                  onClick={shareToLine}
-                  disabled={cart.length === 0}
-                  class={`w-full py-4 text-2xl font-bold rounded-2xl flex items-center justify-center space-x-2 shadow-lg transition-all ${
-                    cart.length === 0
+                  onClick={handleShareReceiptImage}
+                  disabled={cart.length === 0 || isGenerating}
+                  class={`w-full py-4 text-xl font-bold rounded-2xl flex items-center justify-center space-x-2 shadow-lg transition-all ${
+                    cart.length === 0 || isGenerating
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       : 'bg-green-500 text-white hover:bg-green-600 active:scale-98'
                   }`}
                 >
-                  💬 ส่งบิลเข้า LINE
+                  {isGenerating ? '⏳ กำลังสร้างรูปสลิป...' : '📸 แชร์รูปสลิปเข้า LINE'}
                 </button>
 
-                {/* ปุ่มบันทึกเปิดบิลใหม่ */}
+                {/* ปุ่มบันทึกบิล */}
                 <button
                   onClick={handleSave}
                   disabled={cart.length === 0}
-                  class={`w-full py-3 text-xl font-bold rounded-2xl border-2 transition-all ${
+                  class={`w-full py-3 text-lg font-bold rounded-2xl border-2 transition-all ${
                     cart.length === 0
                       ? 'border-gray-200 text-gray-300'
                       : 'border-blue-600 text-blue-600 hover:bg-blue-50'
                   }`}
                 >
-                  ✅ บันทึก / ล้างหน้าจอ
+                  ✅ บันทึก / ล้างบิล
                 </button>
               </div>
 
@@ -251,8 +310,8 @@
 
           {/* แจ้งเตือนเมื่อบันทึกสำเร็จ */}
           {showSuccess && (
-            <div class="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-              <div class="bg-white p-8 rounded-3xl text-center space-y-4 shadow-2xl animate-bounce">
+            <div class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+              <div class="bg-white p-8 rounded-3xl text-center space-y-3 shadow-2xl animate-bounce">
                 <div class="text-6xl">🎉</div>
                 <div class="text-3xl font-bold text-gray-800">บันทึกบิลเรียบร้อย!</div>
               </div>
