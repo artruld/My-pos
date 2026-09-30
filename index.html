@@ -41,7 +41,6 @@
     function POSApp() {
       const customers = ['หน้าร้าน', 'เฮียบ๊อบ', 'เฮียเสม'];
       
-      // รายการสินค้า (เอา defaultPrice ออกแล้ว)
       const products = [
         { id: 1, name: 'ปลาดุก', unit: 'กก.' },
         { id: 2, name: 'ปลาช่อน', unit: 'กก.' },
@@ -54,7 +53,6 @@
       const [showSuccess, setShowSuccess] = useState(false);
       const [isGenerating, setIsGenerating] = useState(false);
 
-      // Modal State สำหรับระบุน้ำหนักและราคา
       const [activeProduct, setActiveProduct] = useState(null);
       const [weightInput, setWeightInput] = useState('');
       const [priceInput, setPriceInput] = useState('');
@@ -70,14 +68,12 @@
         minute: '2-digit'
       });
 
-      // เปิด Pop-up พร้อมล้างค่าให้เป็นว่างเปล่าเพื่อรอคีย์
       const handleSelectProduct = (product) => {
         setActiveProduct(product);
         setWeightInput('');
         setPriceInput('');
       };
 
-      // บันทึกรายการลงบิล
       const handleAddToCart = () => {
         if (!activeProduct) return;
         
@@ -103,19 +99,18 @@
         setActiveProduct(null);
       };
 
-      // ลบรายการ
       const removeItem = (cartItemId) => {
         setCart(prev => prev.filter(item => item.cartItemId !== cartItemId));
       };
 
       const totalPrice = cart.reduce((sum, item) => sum + item.total, 0);
 
-      // ฟังก์ชัน พิมพ์ / แชร์ / บันทึก
       const handlePrint = () => {
         if (cart.length === 0) return;
         window.print();
       };
 
+      // ฟังก์ชันจับภาพสลิปแบบเต็มใบ (แก้ไขปัญหาโดนตัดขอบ)
       const handleShareReceiptImage = async () => {
         const receiptElement = document.getElementById('receipt-slip');
         if (!receiptElement || cart.length === 0) return;
@@ -123,11 +118,30 @@
         setIsGenerating(true);
 
         try {
-          const canvas = await html2canvas(receiptElement, {
+          // สร้าง Element จำลองด้านหลังเพื่อขยายความสูงสลิปจริงแบบเต็มใบ
+          const clone = receiptElement.cloneNode(true);
+          
+          // ซ่อนปุ่มลบออกจากสลิปที่จะแชร์
+          const deleteButtons = clone.querySelectorAll('.no-print');
+          deleteButtons.forEach(btn => btn.remove());
+
+          clone.style.position = 'fixed';
+          clone.style.top = '-9999px';
+          clone.style.left = '-9999px';
+          clone.style.width = '380px';
+          clone.style.height = 'auto';
+          clone.style.maxHeight = 'none';
+          clone.style.overflow = 'visible';
+          document.body.appendChild(clone);
+
+          const canvas = await html2canvas(clone, {
             scale: 3,
             backgroundColor: '#ffffff',
-            useCORS: true
+            useCORS: true,
+            logging: false
           });
+
+          document.body.removeChild(clone);
 
           canvas.toBlob(async (blob) => {
             if (!blob) {
@@ -186,13 +200,12 @@
             </div>
           </header>
 
-          {/* Main Content (iPad Split Screen) */}
+          {/* Main Content */}
           <div class="grid grid-cols-12 gap-4 flex-1 overflow-hidden">
             
-            {/* ฝั่งซ้าย: เลือกลูกค้า & เลือกสินค้า (7 คอลัมน์) */}
+            {/* ฝั่งซ้าย: เลือกลูกค้า & เลือกสินค้า */}
             <div class="col-span-7 flex flex-col space-y-3 h-full overflow-y-auto pr-1">
               
-              {/* เลือกลูกค้า */}
               <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-gray-200">
                 <h2 class="text-md font-bold text-gray-700 mb-2">1. เลือกลูกค้า</h2>
                 <div class="grid grid-cols-3 gap-2">
@@ -212,7 +225,6 @@
                 </div>
               </div>
 
-              {/* เลือกสินค้า */}
               <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-gray-200 flex-1">
                 <h2 class="text-md font-bold text-gray-700 mb-2">2. กดเลือกสินค้า (คีย์น้ำหนักและราคา)</h2>
                 <div class="grid grid-cols-2 gap-3">
@@ -231,10 +243,9 @@
 
             </div>
 
-            {/* ฝั่งขวา: Layout สลิปบิลเงินสด ออกแบบตามรูปภาพตัวอย่าง (5 คอลัมน์) */}
+            {/* ฝั่งขวา: สลิปบิลเงินสด */}
             <div class="col-span-5 flex flex-col justify-between h-full bg-white p-4 rounded-2xl border-2 border-blue-100 shadow-sm overflow-hidden">
               
-              {/* ตัวสลิปใบเสร็จ (Layout ถอดแบบจาก FlowAccount Sample) */}
               <div id="receipt-slip" class="bg-white p-5 rounded-xl border border-gray-300 font-sans text-gray-800 space-y-3 flex-1 overflow-y-auto">
                 
                 {/* 1. Header ร้าน */}
@@ -263,7 +274,7 @@
 
                 <div class="border-b border-dashed border-gray-300"></div>
 
-                {/* 3. ตารางรายการสินค้า (รูปแบบ [จำนวน/น้ำหนัก] [รายการ] [ราคารวม]) */}
+                {/* 3. รายการสินค้า */}
                 <div class="min-h-[140px]">
                   {cart.length === 0 ? (
                     <div class="text-center py-12 text-gray-400 text-sm">
@@ -273,13 +284,11 @@
                     <div class="space-y-2 text-sm pt-1">
                       {cart.map(item => (
                         <div key={item.cartItemId} class="flex items-center justify-between hover:bg-gray-50 p-1 rounded">
-                          {/* ฝั่งซ้าย: จำนวน/น้ำหนัก + ชื่อสินค้า */}
                           <div class="flex items-center space-x-2 flex-1 pr-2">
                             <span class="font-bold w-12 text-right text-gray-700">{item.weight}</span>
                             <span class="font-medium text-gray-900">{item.name} ({item.pricePerUnit}฿)</span>
                           </div>
 
-                          {/* ฝั่งขวา: ยอดรวม + ปุ่มลบ */}
                           <div class="flex items-center space-x-2">
                             <span class="font-bold text-gray-900 w-20 text-right">
                               {item.total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -299,7 +308,7 @@
 
                 <div class="border-b border-dashed border-gray-300"></div>
 
-                {/* 4. สรุปยอดเงินล่างสลิป (ตามทรง Layout ตัวอย่าง) */}
+                {/* 4. สรุปยอดเงิน */}
                 <div class="space-y-1.5 text-sm pt-1">
                   <div class="flex justify-between text-gray-600">
                     <span>จำนวนรายการรวม</span>
@@ -330,7 +339,7 @@
 
               </div>
 
-              {/* ปุ่ม 3 ปุ่มควบคุมหลักใต้สลิป */}
+              {/* ปุ่ม 3 ปุ่มควบคุม */}
               <div class="grid grid-cols-3 gap-2 mt-3 pt-2 border-t no-print">
                 <button
                   onClick={handlePrint}
@@ -376,7 +385,7 @@
 
           </div>
 
-          {/* Pop-up คีย์น้ำหนักและราคา (ตั้งค่าเริ่มต้นเป็นช่องว่างเปล่า) */}
+          {/* Pop-up คีย์น้ำหนักและราคา */}
           {activeProduct && (
             <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
               <div class="bg-white p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in duration-150">
@@ -394,7 +403,6 @@
                 </div>
 
                 <div class="space-y-4">
-                  {/* ช่องระบุน้ำหนัก (ว่างเปล่า) */}
                   <div>
                     <label class="block text-sm font-bold text-gray-700 mb-1">
                       ⚖️ น้ำหนัก / จำนวน ({activeProduct.unit})
@@ -410,7 +418,6 @@
                     />
                   </div>
 
-                  {/* ช่องระบุราคาขาย (ว่างเปล่า) */}
                   <div>
                     <label class="block text-sm font-bold text-gray-700 mb-1">
                       💵 ราคาขายต่อหน่วย (บาท / {activeProduct.unit})
@@ -424,7 +431,6 @@
                     />
                   </div>
 
-                  {/* สรุปเงินอัตโนมัติ */}
                   <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-2xl text-center">
                     <div class="text-xs text-emerald-700 font-bold">ราคารวมคำนวณได้</div>
                     <div class="text-3xl font-extrabold text-emerald-600">
@@ -433,7 +439,6 @@
                   </div>
                 </div>
 
-                {/* ปุ่มควบคุม Pop-up */}
                 <div class="flex space-x-2 pt-2">
                   <button
                     onClick={() => setActiveProduct(null)}
