@@ -2,41 +2,60 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ร้านปลาเม้า - ระบบออกบิลเงินสด</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ร้านปลาเม้า - ระบบออกบิลเงินสด iPad</title>
   <!-- React & Tailwind CSS -->
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- html2canvas แปลงสลิปหน้าจอเป็นรูปภาพ -->
+  <!-- html2canvas -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <!-- Kanit Font -->
-  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Kanit', sans-serif; }
+    /* CSS สำหรับสั่งพิมพ์สลิป ออกเฉพาะตัวสลิปเท่านั้น */
+    @media print {
+      body * { visibility: hidden; }
+      #receipt-slip, #receipt-slip * { visibility: visible; }
+      #receipt-slip {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        border: none !important;
+        box-shadow: none !important;
+      }
+      .no-print { display: none !important; }
+    }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-3 md:p-6">
-  <div id="root"></div>
+<body class="bg-gray-100 h-screen overflow-hidden select-none p-3">
+  <div id="root" class="h-full"></div>
 
   <script type="text/babel">
-    const { useState } = React;
+    const { useState, useEffect } = React;
 
     function POSApp() {
       const customers = ['หน้าร้าน', 'เฮียบ๊อบ', 'เฮียเสม'];
       
       const products = [
-        { id: 1, name: 'ปลาดุก', price: 80, unit: 'กก.' },
-        { id: 2, name: 'ปลาช่อน', price: 120, unit: 'กก.' },
-        { id: 3, name: 'ปลานิล', price: 70, unit: 'กก.' },
-        { id: 4, name: 'เกลือ', price: 10, unit: 'ถุง' },
+        { id: 1, name: 'ปลาดุก', defaultPrice: 80, unit: 'กก.' },
+        { id: 2, name: 'ปลาช่อน', defaultPrice: 120, unit: 'กก.' },
+        { id: 3, name: 'ปลานิล', defaultPrice: 70, unit: 'กก.' },
+        { id: 4, name: 'เกลือ', defaultPrice: 10, unit: 'ถุง' },
       ];
 
       const [selectedCustomer, setSelectedCustomer] = useState('หน้าร้าน');
       const [cart, setCart] = useState([]);
       const [showSuccess, setShowSuccess] = useState(false);
       const [isGenerating, setIsGenerating] = useState(false);
+
+      // Modal สำหรับคีย์น้ำหนักและราคา
+      const [activeProduct, setActiveProduct] = useState(null);
+      const [weightInput, setWeightInput] = useState('1');
+      const [priceInput, setPriceInput] = useState('80');
 
       const todayDate = new Date().toLocaleDateString('th-TH', {
         year: 'numeric',
@@ -49,37 +68,53 @@
         minute: '2-digit'
       });
 
-      // เพิ่มสินค้า
-      const addToCart = (product) => {
-        setCart(prevCart => {
-          const existing = prevCart.find(item => item.id === product.id);
-          if (existing) {
-            return prevCart.map(item =>
-              item.id === product.id ? { ...item, qty: item.qty + 1 } : item
-            );
-          }
-          return [...prevCart, { ...product, qty: 1 }];
-        });
+      // เปิดหน้าต่างคีย์น้ำหนักเมื่อกดเลือกสินค้า
+      const handleSelectProduct = (product) => {
+        setActiveProduct(product);
+        setWeightInput('1');
+        setPriceInput(product.defaultPrice.toString());
       };
 
-      // ปรับจำนวน
-      const updateQty = (id, delta) => {
-        setCart(prevCart =>
-          prevCart
-            .map(item => {
-              if (item.id === id) {
-                const newQty = item.qty + delta;
-                return newQty > 0 ? { ...item, qty: newQty } : null;
-              }
-              return item;
-            })
-            .filter(Boolean)
-        );
+      // เพิ่มลงบิล
+      const handleAddToCart = () => {
+        if (!activeProduct) return;
+        
+        const weight = parseFloat(weightInput) || 0;
+        const price = parseFloat(priceInput) || 0;
+
+        if (weight <= 0) {
+          alert('กรุณากรอกน้ำหนัก/จำนวนให้ถูกต้อง');
+          return;
+        }
+
+        const newItem = {
+          cartItemId: Date.now(),
+          id: activeProduct.id,
+          name: activeProduct.name,
+          unit: activeProduct.unit,
+          weight: weight,
+          pricePerUnit: price,
+          total: weight * price
+        };
+
+        setCart(prev => [...prev, newItem]);
+        setActiveProduct(null); // ปิด Pop-up
       };
 
-      const totalPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+      // ลบรายการออกจากบิล
+      const removeItem = (cartItemId) => {
+        setCart(prev => prev.filter(item => item.cartItemId !== cartItemId));
+      };
 
-      // แปลงสลิปเป็นรูปภาพ และแชร์เข้า LINE / ดาวน์โหลด
+      const totalPrice = cart.reduce((sum, item) => sum + item.total, 0);
+
+      // 1. ปุ่มพิมพ์ใบเสร็จ
+      const handlePrint = () => {
+        if (cart.length === 0) return;
+        window.print();
+      };
+
+      // 2. ปุ่มแชร์สลิปเข้า LINE
       const handleShareReceiptImage = async () => {
         const receiptElement = document.getElementById('receipt-slip');
         if (!receiptElement || cart.length === 0) return;
@@ -102,7 +137,6 @@
             const fileName = `Slip-ร้านปลาเม้า-${selectedCustomer}.png`;
             const file = new File([blob], fileName, { type: 'image/png' });
 
-            // ใช้ iOS / iPadOS Native Share Sheet ถ้าใช้อุปกรณ์ Apple
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
               await navigator.share({
                 files: [file],
@@ -110,7 +144,6 @@
                 text: `บิลเงินสด ร้านปลาเม้า - คุณ ${selectedCustomer}`,
               });
             } else {
-              // ดาวน์โหลดรูปกรณีเปิดบนอุปกรณ์อื่น
               const link = document.createElement('a');
               link.href = URL.createObjectURL(blob);
               link.download = fileName;
@@ -125,7 +158,7 @@
         }
       };
 
-      // บันทึกและล้างหน้าบิล
+      // 3. ปุ่มบันทึก / ล้างหน้าจอ
       const handleSave = () => {
         if (cart.length === 0) return;
         setShowSuccess(true);
@@ -133,39 +166,43 @@
           setShowSuccess(false);
           setCart([]);
           setSelectedCustomer('หน้าร้าน');
-        }, 1500);
+        }, 1200);
       };
 
       return (
-        <div class="max-w-5xl mx-auto space-y-4">
-          {/* Header */}
-          <header class="bg-blue-600 text-white p-4 rounded-2xl shadow-md text-center flex justify-between items-center px-6">
-            <div>
-              <h1 class="text-3xl font-bold">🐟 ร้านปลาเม้า</h1>
-              <p class="text-blue-100 text-sm">ระบบออกบิลเงินสดหน้าร้าน</p>
+        <div class="h-full flex flex-col justify-between max-w-[1280px] mx-auto">
+          {/* Header แถบบนสุด */}
+          <header class="bg-blue-600 text-white p-3 rounded-2xl shadow-md flex justify-between items-center mb-3">
+            <div class="flex items-center space-x-3">
+              <span class="text-3xl">🐟</span>
+              <div>
+                <h1 class="text-2xl font-bold leading-tight">ร้านปลาเม้า</h1>
+                <p class="text-blue-100 text-xs">ระบบออกบิลหน้าร้าน (iPad Mode)</p>
+              </div>
             </div>
-            <div class="text-right text-sm bg-blue-700 px-3 py-1 rounded-xl">
-              <div>{todayDate}</div>
-              <div>{currentTime} น.</div>
+            <div class="text-right text-xs bg-blue-700 px-3 py-1.5 rounded-xl font-medium">
+              <div>📅 {todayDate}</div>
+              <div>⏰ {currentTime} น.</div>
             </div>
           </header>
 
-          <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+          {/* เมนูกลาง แบ่ง 2 ฝั่ง (แนวนอน iPad) */}
+          <div class="grid grid-cols-12 gap-4 flex-1 overflow-hidden">
             
-            {/* ฝั่งซ้าย: เลือกลูกค้า & สินค้า (7 คอลัมน์) */}
-            <div class="md:col-span-7 space-y-4">
+            {/* ฝั่งซ้าย: เลือกสินค้า & เลือกลูกค้า (7 คอลัมน์) */}
+            <div class="col-span-7 flex flex-col space-y-3 h-full overflow-y-auto pr-1">
               
               {/* 1. เลือกลูกค้า */}
-              <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
-                <h2 class="text-lg font-bold text-gray-700 mb-2">1. เลือกลูกค้า</h2>
+              <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-gray-200">
+                <h2 class="text-md font-bold text-gray-700 mb-2">1. เลือกลูกค้า</h2>
                 <div class="grid grid-cols-3 gap-2">
                   {customers.map(cust => (
                     <button
                       key={cust}
                       onClick={() => setSelectedCustomer(cust)}
-                      class={`p-3 text-lg font-bold rounded-xl border-2 transition-all ${
+                      class={`py-3 text-lg font-bold rounded-xl border-2 transition-all ${
                         selectedCustomer === cust
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-102'
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-md'
                           : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
                       }`}
                     >
@@ -175,18 +212,18 @@
                 </div>
               </div>
 
-              {/* 2. กดเลือกสินค้า */}
-              <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
-                <h2 class="text-lg font-bold text-gray-700 mb-2">2. กดเลือกสินค้า</h2>
+              {/* 2. เลือกสินค้าเพื่อชั่งน้ำหนัก */}
+              <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-gray-200 flex-1">
+                <h2 class="text-md font-bold text-gray-700 mb-2">2. กดเลือกรายการสินค้า (เพื่อระบุน้ำหนัก)</h2>
                 <div class="grid grid-cols-2 gap-3">
                   {products.map(prod => (
                     <button
                       key={prod.id}
-                      onClick={() => addToCart(prod)}
-                      class="bg-emerald-50 border-2 border-emerald-500 hover:bg-emerald-100 p-4 rounded-2xl flex flex-col items-center justify-center transition-all active:scale-95 shadow-sm"
+                      onClick={() => handleSelectProduct(prod)}
+                      class="bg-emerald-50 border-2 border-emerald-500 hover:bg-emerald-100 p-5 rounded-2xl flex flex-col items-center justify-center transition-all active:scale-95 shadow-sm"
                     >
-                      <span class="text-2xl font-bold text-emerald-900">{prod.name}</span>
-                      <span class="text-md text-emerald-700 font-semibold">{prod.price} บาท/{prod.unit}</span>
+                      <span class="text-2xl font-bold text-emerald-950">{prod.name}</span>
+                      <span class="text-md text-emerald-700 font-medium">ราคาตั้งไว้ {prod.defaultPrice} ฿/{prod.unit}</span>
                     </button>
                   ))}
                 </div>
@@ -194,119 +231,200 @@
 
             </div>
 
-            {/* ฝั่งขวา: แสดงรูปสลิปใบเสร็จจริง (5 คอลัมน์) */}
-            <div class="md:col-span-5 flex flex-col justify-between space-y-4">
+            {/* ฝั่งขวา: แสดงสลิปบิลเงินสด & ปุ่มควบคุม (5 คอลัมน์) */}
+            <div class="col-span-5 flex flex-col justify-between h-full bg-white p-4 rounded-2xl border-2 border-blue-100 shadow-sm overflow-hidden">
               
-              {/* ตัวสลิปใบเสร็จ (สไตล์กระดาษสลิปความร้อน) */}
-              <div id="receipt-slip" class="bg-white p-6 rounded-xl shadow-md border border-gray-300 font-mono text-gray-800 space-y-4">
+              {/* สลิปใบเสร็จ */}
+              <div id="receipt-slip" class="bg-white p-4 rounded-xl border border-gray-200 font-mono text-gray-800 space-y-3 flex-1 overflow-y-auto">
                 
                 {/* หัวสลิป */}
-                <div class="text-center space-y-1 border-b-2 border-dashed border-gray-300 pb-3">
-                  <h2 class="text-2xl font-extrabold tracking-wide">🐟 ร้านปลาเม้า</h2>
-                  <div class="text-sm font-bold bg-gray-100 inline-block px-3 py-0.5 rounded-full">
+                <div class="text-center space-y-0.5 border-b-2 border-dashed border-gray-300 pb-2">
+                  <h2 class="text-2xl font-extrabold">🐟 ร้านปลาเม้า</h2>
+                  <div class="text-xs font-bold bg-gray-100 inline-block px-2.5 py-0.5 rounded-full">
                     บิลเงินสด / CASH RECEIPT
                   </div>
-                  <div class="text-xs text-gray-500 pt-1">
+                  <div class="text-[11px] text-gray-500 pt-1">
                     วันที่: {todayDate} | เวลา: {currentTime} น.
                   </div>
-                  <div class="text-sm font-bold text-blue-800 pt-1">
+                  <div class="text-sm font-bold text-blue-800">
                     ลูกค้า: {selectedCustomer}
                   </div>
                 </div>
 
-                {/* รายการสินค้าในสลิป */}
+                {/* รายการในสลิป */}
                 <div>
-                  <div class="flex justify-between text-xs font-bold border-b border-gray-200 pb-1 mb-2 text-gray-500">
+                  <div class="flex justify-between text-[11px] font-bold border-b border-gray-200 pb-1 mb-1.5 text-gray-500">
                     <span>รายการ</span>
-                    <span>จำนวน x ราคา</span>
+                    <span>น้ำหนักxราคา</span>
                     <span>รวม (บาท)</span>
                   </div>
 
                   {cart.length === 0 ? (
-                    <div class="text-center py-8 text-gray-400 text-sm font-sans">
-                      [ ยังไม่มีรายการสินค้า ]
+                    <div class="text-center py-10 text-gray-400 text-sm font-sans">
+                      👈 กดเลือกสินค้าฝั่งซ้ายเพื่อระบุน้ำหนัก
                     </div>
                   ) : (
-                    <div class="space-y-2 text-sm max-h-56 overflow-y-auto pr-1">
+                    <div class="space-y-1.5 text-xs font-sans">
                       {cart.map(item => (
-                        <div key={item.id} class="flex justify-between items-center">
+                        <div key={item.cartItemId} class="flex justify-between items-center bg-gray-50 p-1.5 rounded border border-gray-100">
                           <div class="flex-1">
-                            <span class="font-bold text-gray-800">{item.name}</span>
-                          </div>
-                          
-                          {/* ปุ่มปรับจำนวนแสดงในสลิป */}
-                          <div class="flex items-center space-x-1 mx-2">
-                            <button 
-                              onClick={() => updateQty(item.id, -1)}
-                              class="w-6 h-6 bg-red-100 text-red-600 font-bold rounded flex items-center justify-center text-xs"
-                            >
-                              -
-                            </button>
-                            <span class="px-1 font-bold">{item.qty} {item.unit}</span>
-                            <button 
-                              onClick={() => updateQty(item.id, 1)}
-                              class="w-6 h-6 bg-green-100 text-green-600 font-bold rounded flex items-center justify-center text-xs"
-                            >
-                              +
-                            </button>
+                            <div class="font-bold text-sm text-gray-800">{item.name}</div>
+                            <div class="text-[11px] text-gray-500">{item.weight} {item.unit} × {item.pricePerUnit}฿</div>
                           </div>
 
-                          <div class="text-right font-bold w-16">
-                            {item.price * item.qty}
+                          <div class="text-right font-extrabold text-sm w-16">
+                            {item.total}
                           </div>
+
+                          <button 
+                            onClick={() => removeItem(item.cartItemId)}
+                            class="no-print ml-2 text-red-500 font-bold px-1.5 py-0.5 hover:bg-red-50 rounded"
+                          >
+                            ✕
+                          </button>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
 
-                {/* สรุปยอดเงิน */}
-                <div class="border-t-2 border-dashed border-gray-300 pt-3 space-y-2">
-                  <div class="flex justify-between items-center text-lg font-bold">
+                {/* สรุปยอด */}
+                <div class="border-t-2 border-dashed border-gray-300 pt-2">
+                  <div class="flex justify-between items-center text-md font-bold font-sans">
                     <span>ยอดรวมสุทธิ</span>
                     <span class="text-2xl font-extrabold text-blue-700">{totalPrice} บาท</span>
                   </div>
                 </div>
 
-                {/* ท้ายสลิป */}
-                <div class="text-center text-xs text-gray-400 border-t border-gray-100 pt-2 font-sans">
+                <div class="text-center text-[10px] text-gray-400 border-t border-gray-100 pt-1 font-sans">
                   *** ขอบคุณที่อุดหนุน ร้านปลาเม้า ***
                 </div>
 
               </div>
 
-              {/* ปุ่มการทำงานใต้สลิป */}
-              <div class="space-y-2">
-                {/* ปุ่มแชร์สลิปเป็นรูปภาพเข้า LINE */}
+              {/* ด้านล่างบิล: ปุ่ม 3 ปุ่มหลักตามสั่ง */}
+              <div class="grid grid-cols-3 gap-2 mt-3 pt-2 border-t no-print">
+                {/* ปุ่มที่ 1: พิมพ์ใบเสร็จ */}
+                <button
+                  onClick={handlePrint}
+                  disabled={cart.length === 0}
+                  class={`py-3 px-1 text-sm font-bold rounded-xl flex flex-col items-center justify-center space-y-1 shadow ${
+                    cart.length === 0
+                      ? 'bg-gray-200 text-gray-400'
+                      : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95'
+                  }`}
+                >
+                  <span class="text-xl">🖨️</span>
+                  <span>พิมพ์ใบเสร็จ</span>
+                </button>
+
+                {/* ปุ่มที่ 2: แชร์บิลเข้า LINE */}
                 <button
                   onClick={handleShareReceiptImage}
                   disabled={cart.length === 0 || isGenerating}
-                  class={`w-full py-4 text-xl font-bold rounded-2xl flex items-center justify-center space-x-2 shadow-lg transition-all ${
+                  class={`py-3 px-1 text-sm font-bold rounded-xl flex flex-col items-center justify-center space-y-1 shadow ${
                     cart.length === 0 || isGenerating
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-green-500 text-white hover:bg-green-600 active:scale-98'
+                      ? 'bg-gray-200 text-gray-400'
+                      : 'bg-green-500 text-white hover:bg-green-600 active:scale-95'
                   }`}
                 >
-                  {isGenerating ? '⏳ กำลังสร้างรูปสลิป...' : '📸 แชร์รูปสลิปเข้า LINE'}
+                  <span class="text-xl">📸</span>
+                  <span>{isGenerating ? 'สร้างรูป...' : 'แชร์บิล LINE'}</span>
                 </button>
 
-                {/* ปุ่มบันทึกบิล */}
+                {/* ปุ่มที่ 3: บันทึก / ล้างหน้าจอ */}
                 <button
                   onClick={handleSave}
                   disabled={cart.length === 0}
-                  class={`w-full py-3 text-lg font-bold rounded-2xl border-2 transition-all ${
+                  class={`py-3 px-1 text-sm font-bold rounded-xl flex flex-col items-center justify-center space-y-1 border-2 ${
                     cart.length === 0
                       ? 'border-gray-200 text-gray-300'
-                      : 'border-blue-600 text-blue-600 hover:bg-blue-50'
+                      : 'border-blue-600 text-blue-600 hover:bg-blue-50 active:scale-95'
                   }`}
                 >
-                  ✅ บันทึก / ล้างบิล
+                  <span class="text-xl">✅</span>
+                  <span>บันทึกล้าง</span>
                 </button>
               </div>
 
             </div>
 
           </div>
+
+          {/* Pop-up คีย์น้ำหนักและราคาขาย (เปิดขึ้นมาเมื่อกดเลือกสินค้า) */}
+          {activeProduct && (
+            <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div class="bg-white p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in duration-150">
+                
+                <div class="flex justify-between items-center border-b pb-2">
+                  <h3 class="text-2xl font-bold text-gray-800">
+                    🐟 ระบุรายการ: <span class="text-blue-600">{activeProduct.name}</span>
+                  </h3>
+                  <button 
+                    onClick={() => setActiveProduct(null)}
+                    class="text-gray-400 hover:text-gray-600 text-2xl font-bold px-2"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div class="space-y-3">
+                  {/* ช่องระบุน้ำหนัก */}
+                  <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">
+                      ⚖️ น้ำหนัก / จำนวน ({activeProduct.unit})
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={weightInput}
+                      onChange={(e) => setWeightInput(e.target.value)}
+                      class="w-full text-3xl font-extrabold text-center p-3 border-2 border-blue-400 rounded-2xl bg-blue-50 focus:outline-none focus:border-blue-600"
+                      autoFocus
+                    />
+                  </div>
+
+                  {/* ช่องระบุราคาขายต่อหน่วย */}
+                  <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">
+                      💵 ราคาขาย (บาท / {activeProduct.unit})
+                    </label>
+                    <input
+                      type="number"
+                      value={priceInput}
+                      onChange={(e) => setPriceInput(e.target.value)}
+                      class="w-full text-2xl font-bold text-center p-2.5 border-2 border-gray-300 rounded-2xl bg-gray-50 focus:outline-none focus:border-blue-600"
+                    />
+                  </div>
+
+                  {/* สรุปคำนวณเงิน */}
+                  <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-2xl text-center">
+                    <div class="text-xs text-emerald-700 font-bold">ราคารวมคำนวณได้</div>
+                    <div class="text-3xl font-extrabold text-emerald-600">
+                      {((parseFloat(weightInput) || 0) * (parseFloat(priceInput) || 0)).toFixed(0)} <span class="text-lg">บาท</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ปุ่มส่งไปบิล */}
+                <div class="flex space-x-2 pt-2">
+                  <button
+                    onClick={() => setActiveProduct(null)}
+                    class="w-1/3 py-3.5 text-lg font-bold text-gray-600 bg-gray-100 rounded-2xl hover:bg-gray-200"
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    onClick={handleAddToCart}
+                    class="w-2/3 py-3.5 text-xl font-bold text-white bg-blue-600 rounded-2xl hover:bg-blue-700 shadow-lg active:scale-98"
+                  >
+                    ➕ ส่งไปบิล
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          )}
 
           {/* แจ้งเตือนเมื่อบันทึกสำเร็จ */}
           {showSuccess && (
