@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบออกบิลหน้าร้าน</title>
+  <!-- React & Tailwind CSS -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Kanit Font for modern Thai UI -->
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Kanit', sans-serif; }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    function POSApp() {
+      // ข้อมูลลูกค้า
+      const customers = ['หน้าร้าน', 'เฮียบ๊อบ', 'เฮียเสม'];
+      
+      // ข้อมูลสินค้า (ใส่ราคาเริ่มต้นไว้ ปรับเปลี่ยนได้)
+      const products = [
+        { id: 1, name: 'ปลาดุก', price: 80, unit: 'กก.' },
+        { id: 2, name: 'ปลาช่อน', price: 120, unit: 'กก.' },
+        { id: 3, name: 'ปลานิล', price: 70, unit: 'กก.' },
+        { id: 4, name: 'เกลือ', price: 10, unit: 'ถุง' },
+      ];
+
+      const [selectedCustomer, setSelectedCustomer] = useState('หน้าร้าน');
+      const [cart, setCart] = useState([]);
+      const [showSuccess, setShowSuccess] = useState(false);
+
+      // เพิ่มสินค้าเข้าตะกร้า
+      const addToCart = (product) => {
+        setCart(prevCart => {
+          const existing = prevCart.find(item => item.id === product.id);
+          if (existing) {
+            return prevCart.map(item =>
+              item.id === product.id ? { ...item, qty: item.qty + 1 } : item
+            );
+          }
+          return [...prevCart, { ...product, qty: 1 }];
+        });
+      };
+
+      // ปรับจำนวนสินค้า
+      const updateQty = (id, delta) => {
+        setCart(prevCart =>
+          prevCart
+            .map(item => {
+              if (item.id === id) {
+                const newQty = item.qty + delta;
+                return newQty > 0 ? { ...item, qty: newQty } : null;
+              }
+              return item;
+            })
+            .filter(Boolean)
+        );
+      };
+
+      // คำนวณราคารวม
+      const totalPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+
+      // ข้อความสรุปบิล
+      const generateBillText = () => {
+        let text = `🧾 *บิลขาย - ร้านปลา*\n`;
+        text += `👤 ลูกค้า: ${selectedCustomer}\n`;
+        text += `📅 วันที่: ${new Date().toLocaleDateString('th-TH')}\n`;
+        text += `------------------------\n`;
+        cart.forEach(item => {
+          text += `• ${item.name} x ${item.qty} ${item.unit} = ${item.price * item.qty} บาท\n`;
+        });
+        text += `------------------------\n`;
+        text += `💰 *ยอดรวมทั้งหมด: ${totalPrice} บาท*`;
+        return text;
+      };
+
+      // ส่งเข้า LINE
+      const shareToLine = () => {
+        if (cart.length === 0) return;
+        const text = encodeURIComponent(generateBillText());
+        window.open(`https://line.me/R/msg/text/?${text}`, '_blank');
+      };
+
+      // บันทึกบิล
+      const handleSave = () => {
+        if (cart.length === 0) return;
+        setShowSuccess(true);
+        setTimeout(() => {
+          setShowSuccess(false);
+          setCart([]);
+          setSelectedCustomer('หน้าร้าน');
+        }, 2000);
+      };
+
+      return (
+        <div class="max-w-4xl mx-auto space-y-6">
+          {/* Header */}
+          <header class="bg-blue-600 text-white p-4 rounded-2xl shadow-md text-center">
+            <h1 class="text-3xl font-bold">🐟 ระบบออกบิลหน้าร้าน</h1>
+          </header>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* ฝั่งซ้าย: เลือกลูกค้า & เลือกสินค้า */}
+            <div class="space-y-6">
+              
+              {/* 1. เลือกลูกค้า */}
+              <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
+                <h2 class="text-xl font-bold text-gray-700 mb-3">1. เลือกลูกค้า</h2>
+                <div class="grid grid-cols-3 gap-2">
+                  {customers.map(cust => (
+                    <button
+                      key={cust}
+                      onClick={() => setSelectedCustomer(cust)}
+                      class={`p-3 text-lg font-bold rounded-xl border-2 transition-all ${
+                        selectedCustomer === cust
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-105'
+                          : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'
+                      }`}
+                    >
+                      {cust}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 2. กดเลือกสินค้า */}
+              <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
+                <h2 class="text-xl font-bold text-gray-700 mb-3">2. กดเลือกสินค้า</h2>
+                <div class="grid grid-cols-2 gap-3">
+                  {products.map(prod => (
+                    <button
+                      key={prod.id}
+                      onClick={() => addToCart(prod)}
+                      class="bg-emerald-50 border-2 border-emerald-500 hover:bg-emerald-100 p-4 rounded-2xl flex flex-col items-center justify-center transition-all active:scale-95"
+                    >
+                      <span class="text-2xl font-bold text-emerald-900">{prod.name}</span>
+                      <span class="text-lg text-emerald-700 font-semibold">{prod.price} บาท/{prod.unit}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+
+            {/* ฝั่งขวา: สรุปบิล & ปุ่มแชร์ LINE */}
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex flex-col justify-between">
+              <div>
+                <div class="flex justify-between items-center border-b pb-3 mb-4">
+                  <h2 class="text-2xl font-bold text-gray-800">รายการในบิล</h2>
+                  <span class="bg-blue-100 text-blue-800 font-bold px-3 py-1 rounded-full text-lg">
+                    {selectedCustomer}
+                  </span>
+                </div>
+
+                {/* รายการสินค้าที่เลือก */}
+                {cart.length === 0 ? (
+                  <div class="text-center py-12 text-gray-400 text-xl">
+                    👈 กดเลือกสินค้าด้านซ้ายได้เลย
+                  </div>
+                ) : (
+                  <div class="space-y-3 max-h-64 overflow-y-auto pr-1">
+                    {cart.map(item => (
+                      <div key={item.id} class="flex justify-between items-center bg-gray-50 p-3 rounded-xl border">
+                        <div>
+                          <div class="text-xl font-bold text-gray-800">{item.name}</div>
+                          <div class="text-gray-500">{item.price} บาท/{item.unit}</div>
+                        </div>
+
+                        {/* ปุ่ม + - เพิ่มลดจำนวน */}
+                        <div class="flex items-center space-x-2">
+                          <button
+                            onClick={() => updateQty(item.id, -1)}
+                            class="w-10 h-10 bg-red-100 text-red-600 font-bold text-2xl rounded-lg flex items-center justify-center active:bg-red-200"
+                          >
+                            -
+                          </button>
+                          <span class="text-2xl font-bold px-2">{item.qty}</span>
+                          <button
+                            onClick={() => updateQty(item.id, 1)}
+                            class="w-10 h-10 bg-green-100 text-green-600 font-bold text-2xl rounded-lg flex items-center justify-center active:bg-green-200"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* ยอดรวมและปุ่มกดใหญ่ๆ */}
+              <div class="mt-6 pt-4 border-t space-y-4">
+                <div class="flex justify-between items-center">
+                  <span class="text-2xl font-bold text-gray-700">ยอดรวมทั้งหมด</span>
+                  <span class="text-4xl font-extrabold text-blue-600">{totalPrice} <span class="text-2xl">บาท</span></span>
+                </div>
+
+                {/* ปุ่มแชร์ไป LINE (สีเขียว LINE) */}
+                <button
+                  onClick={shareToLine}
+                  disabled={cart.length === 0}
+                  class={`w-full py-4 text-2xl font-bold rounded-2xl flex items-center justify-center space-x-2 shadow-lg transition-all ${
+                    cart.length === 0
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-green-500 text-white hover:bg-green-600 active:scale-98'
+                  }`}
+                >
+                  💬 ส่งบิลเข้า LINE
+                </button>
+
+                {/* ปุ่มบันทึกเปิดบิลใหม่ */}
+                <button
+                  onClick={handleSave}
+                  disabled={cart.length === 0}
+                  class={`w-full py-3 text-xl font-bold rounded-2xl border-2 transition-all ${
+                    cart.length === 0
+                      ? 'border-gray-200 text-gray-300'
+                      : 'border-blue-600 text-blue-600 hover:bg-blue-50'
+                  }`}
+                >
+                  ✅ บันทึก / ล้างหน้าจอ
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* แจ้งเตือนเมื่อบันทึกสำเร็จ */}
+          {showSuccess && (
+            <div class="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+              <div class="bg-white p-8 rounded-3xl text-center space-y-4 shadow-2xl animate-bounce">
+                <div class="text-6xl">🎉</div>
+                <div class="text-3xl font-bold text-gray-800">บันทึกบิลเรียบร้อย!</div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<POSApp />);
+  </script>
+</body>
+</html>
