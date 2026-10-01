@@ -3,44 +3,51 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>ร้านปลาเม้า - ระบบออกบิลเงินสด</title>
+  <title>ร้านปลาเม้า - ระบบบริหารจัดการร้าน POS</title>
   <!-- React & Tailwind CSS -->
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- html2canvas แปลงสลิปเป็นรูปภาพ -->
+  <!-- html2canvas -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <!-- Kanit Font -->
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Kanit', sans-serif; }
-    /* สไตล์สำหรับการสั่งพิมพ์สลิป */
+    body { font-family: 'Kanit', sans-serif; background-color: #f1f5f9; }
     @media print {
       body * { visibility: hidden; }
       #receipt-slip, #receipt-slip * { visibility: visible; }
       #receipt-slip {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        border: none !important;
-        box-shadow: none !important;
-        padding: 0 !important;
+        position: absolute; left: 0; top: 0; width: 100%;
+        border: none !important; box-shadow: none !important; padding: 0 !important;
       }
       .no-print { display: none !important; }
     }
   </style>
 </head>
-<body class="bg-gray-100 h-screen overflow-hidden select-none p-3">
+<body class="h-screen overflow-hidden select-none text-slate-800">
   <div id="root" class="h-full"></div>
 
   <script type="text/babel">
     const { useState } = React;
 
-    function POSApp() {
-      const customers = ['หน้าร้าน', 'เฮียบ๊อบ', 'เฮียเสม'];
+    function MainApp() {
+      // ===== STATE ระบบหลัก =====
+      const [currentTab, setCurrentTab] = useState('pos'); // pos, history, purchases, expenses, analytics
       
+      // ฐานข้อมูลลูกค้าประจำ + ราคาสินค้าประจำตัว
+      const [customers, setCustomers] = useState([
+        { id: 1, name: 'หน้าร้าน', isDefault: true },
+        { id: 2, name: 'เฮียบ๊อบ', prices: { 1: 75, 2: 110, 3: 65, 4: 10 } },
+        { id: 3, name: 'เฮียเสม', prices: { 1: 70, 2: 115, 3: 60, 4: 10 } },
+      ]);
+
+      const [selectedCustomer, setSelectedCustomer] = useState(customers[0]);
+      const [showCustomerModal, setShowCustomerModal] = useState(false);
+      const [newCustomerName, setNewCustomerName] = useState('');
+
+      // รายการสินค้า
       const products = [
         { id: 1, name: 'ปลาดุก', unit: 'กก.' },
         { id: 2, name: 'ปลาช่อน', unit: 'กก.' },
@@ -48,40 +55,70 @@
         { id: 4, name: 'เกลือ', unit: 'ถุง' },
       ];
 
-      const [selectedCustomer, setSelectedCustomer] = useState('หน้าร้าน');
+      // ตะกร้าสินค้าบิลปัจจุบัน
       const [cart, setCart] = useState([]);
-      const [showSuccess, setShowSuccess] = useState(false);
-      const [isGenerating, setIsGenerating] = useState(false);
+      
+      // ระบบพักบิล (Parked Bills)
+      const [parkedBills, setParkedBills] = useState([]);
 
+      // Custom Numpad Modal State
       const [activeProduct, setActiveProduct] = useState(null);
+      const [activeInput, setActiveInput] = useState('weight'); // 'weight' หรือ 'price'
       const [weightInput, setWeightInput] = useState('');
       const [priceInput, setPriceInput] = useState('');
 
-      const todayDate = new Date().toLocaleDateString('th-TH', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      });
+      const [showSuccess, setShowSuccess] = useState(false);
+      const [isGenerating, setIsGenerating] = useState(false);
 
-      const currentTime = new Date().toLocaleTimeString('th-TH', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+      const todayDate = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit' });
+      const currentTime = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 
-      const handleSelectProduct = (product) => {
+      // ===== ฟังก์ชั่นจัดการเลือกลูกค้า =====
+      const handleSelectCustomer = (cust) => {
+        setSelectedCustomer(cust);
+        setShowCustomerModal(false);
+      };
+
+      const handleAddCustomer = () => {
+        if (!newCustomerName.trim()) return;
+        const newCust = { id: Date.now(), name: newCustomerName.trim(), prices: {} };
+        setCustomers([...customers, newCust]);
+        setSelectedCustomer(newCust);
+        setNewCustomerName('');
+      };
+
+      // ===== ฟังก์ชั่น Custom Numpad =====
+      const handleOpenNumpad = (product) => {
         setActiveProduct(product);
+        setActiveInput('weight');
         setWeightInput('');
-        setPriceInput('');
+        
+        // ถ้าเป็นลูกค้าประจำ ดึงราคาเฉพาะตัวมาแสดงตั้งต้น
+        const customPrice = selectedCustomer.prices?.[product.id] || '';
+        setPriceInput(customPrice ? customPrice.toString() : '');
+      };
+
+      const handleNumpadPress = (val) => {
+        const currentVal = activeInput === 'weight' ? weightInput : priceInput;
+        const setVal = activeInput === 'weight' ? setWeightInput : setPriceInput;
+
+        if (val === 'CLEAR') {
+          setVal('');
+        } else if (val === 'DEL') {
+          setVal(currentVal.slice(0, -1));
+        } else if (val === '.') {
+          if (!currentVal.includes('.')) setVal(currentVal + '.');
+        } else {
+          setVal(currentVal + val);
+        }
       };
 
       const handleAddToCart = () => {
-        if (!activeProduct) return;
-        
         const weight = parseFloat(weightInput) || 0;
         const price = parseFloat(priceInput) || 0;
 
         if (weight <= 0 || price <= 0) {
-          alert('กรุณากรอกน้ำหนักและราคาให้ครบถ้วนถูกต้อง');
+          alert('กรุณากรอกน้ำหนักและราคาให้ถูกต้อง');
           return;
         }
 
@@ -95,33 +132,53 @@
           total: weight * price
         };
 
-        setCart(prev => [...prev, newItem]);
+        setCart([...cart, newItem]);
         setActiveProduct(null);
       };
 
       const removeItem = (cartItemId) => {
-        setCart(prev => prev.filter(item => item.cartItemId !== cartItemId));
+        setCart(cart.filter(item => item.cartItemId !== cartItemId));
       };
 
       const totalPrice = cart.reduce((sum, item) => sum + item.total, 0);
 
+      // ===== ฟังก์ชั่นพักบิล =====
+      const handleParkBill = () => {
+        if (cart.length === 0) return;
+        const newParked = {
+          id: Date.now(),
+          customer: selectedCustomer,
+          cart: cart,
+          time: currentTime
+        };
+        setParkedBills([...parkedBills, newParked]);
+        setCart([]);
+        setSelectedCustomer(customers[0]);
+      };
+
+      const handleRestoreParkedBill = (parked) => {
+        if (cart.length > 0) {
+          if (!confirm('มีรายการค้างในบิลปัจจุบัน ต้องการพักบิลนี้ก่อนหรือไม่?')) return;
+          handleParkBill();
+        }
+        setSelectedCustomer(parked.customer);
+        setCart(parked.cart);
+        setParkedBills(parkedBills.filter(p => p.id !== parked.id));
+      };
+
+      // ===== ฟังก์ชั่นพิมพ์ / แชร์ / บันทึก =====
       const handlePrint = () => {
         if (cart.length === 0) return;
         window.print();
       };
 
-      // ฟังก์ชันจับภาพสลิปแบบเต็มใบ (แก้ไขปัญหาโดนตัดขอบ)
       const handleShareReceiptImage = async () => {
         const receiptElement = document.getElementById('receipt-slip');
         if (!receiptElement || cart.length === 0) return;
 
         setIsGenerating(true);
-
         try {
-          // สร้าง Element จำลองด้านหลังเพื่อขยายความสูงสลิปจริงแบบเต็มใบ
           const clone = receiptElement.cloneNode(true);
-          
-          // ซ่อนปุ่มลบออกจากสลิปที่จะแชร์
           const deleteButtons = clone.querySelectorAll('.no-print');
           deleteButtons.forEach(btn => btn.remove());
 
@@ -130,45 +187,27 @@
           clone.style.left = '-9999px';
           clone.style.width = '380px';
           clone.style.height = 'auto';
-          clone.style.maxHeight = 'none';
-          clone.style.overflow = 'visible';
           document.body.appendChild(clone);
 
-          const canvas = await html2canvas(clone, {
-            scale: 3,
-            backgroundColor: '#ffffff',
-            useCORS: true,
-            logging: false
-          });
-
+          const canvas = await html2canvas(clone, { scale: 3, backgroundColor: '#ffffff', useCORS: true });
           document.body.removeChild(clone);
 
           canvas.toBlob(async (blob) => {
-            if (!blob) {
-              setIsGenerating(false);
-              return;
-            }
-
-            const fileName = `Slip-ร้านปลาเม้า-${selectedCustomer}.png`;
-            const file = new File([blob], fileName, { type: 'image/png' });
+            if (!blob) return setIsGenerating(false);
+            const file = new File([blob], `Slip-${selectedCustomer.name}.png`, { type: 'image/png' });
 
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
-              await navigator.share({
-                files: [file],
-                title: 'บิลเงินสด ร้านปลาเม้า',
-                text: `บิลเงินสด ร้านปลาเม้า - คุณ ${selectedCustomer}`,
-              });
+              await navigator.share({ files: [file], title: 'บิลเงินสด ร้านปลาเม้า' });
             } else {
               const link = document.createElement('a');
               link.href = URL.createObjectURL(blob);
-              link.download = fileName;
+              link.download = `Slip-${selectedCustomer.name}.png`;
               link.click();
             }
             setIsGenerating(false);
           }, 'image/png');
-        } catch (error) {
-          console.error(error);
-          alert('ไม่สามารถสร้างรูปภาพได้ กรุณาลองใหม่อีกครั้ง');
+        } catch (e) {
+          alert('ไม่สามารถแชร์รูปได้');
           setIsGenerating(false);
         }
       };
@@ -179,299 +218,411 @@
         setTimeout(() => {
           setShowSuccess(false);
           setCart([]);
-          setSelectedCustomer('หน้าร้าน');
-        }, 1200);
+          setSelectedCustomer(customers[0]);
+        }, 1000);
       };
 
       return (
-        <div class="h-full flex flex-col justify-between max-w-[1280px] mx-auto">
-          {/* Header */}
-          <header class="bg-blue-600 text-white p-3 rounded-2xl shadow-md flex justify-between items-center mb-3">
+        <div class="h-full flex flex-col justify-between max-w-[1366px] mx-auto p-2">
+          
+          {/* HEADER NAV - สีเข้ม อ่านง่าย สำหรับผู้สูงอายุ */}
+          <header class="bg-slate-900 text-white p-3 rounded-2xl shadow-lg flex justify-between items-center mb-2">
             <div class="flex items-center space-x-3">
-              <span class="text-3xl">🐟</span>
-              <div>
-                <h1 class="text-2xl font-bold leading-tight">ร้านปลาเม้า</h1>
-                <p class="text-blue-100 text-xs">ระบบออกบิลหน้าร้าน (iPad Mode)</p>
-              </div>
+              <button 
+                onClick={() => setCurrentTab('pos')}
+                class="bg-blue-600 hover:bg-blue-700 px-3.5 py-2 rounded-xl text-lg font-bold flex items-center space-x-2 active:scale-95 transition"
+              >
+                <span>🏠 หน้าหลัก</span>
+              </button>
+              <span class="text-2xl font-bold border-l pl-3 border-slate-700 text-blue-400">ร้านปลาเม้า</span>
             </div>
-            <div class="text-right text-xs bg-blue-700 px-3 py-1.5 rounded-xl font-medium">
+
+            {/* ปุ่มเปลี่ยน Tab */}
+            <div class="flex space-x-1.5 bg-slate-800 p-1 rounded-xl text-sm font-bold">
+              <button onClick={() => setCurrentTab('pos')} class={`px-3 py-2 rounded-lg transition ${currentTab === 'pos' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:text-white'}`}>🛒 ออกบิลขาย</button>
+              <button onClick={() => setCurrentTab('history')} class={`px-3 py-2 rounded-lg transition ${currentTab === 'history' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:text-white'}`}>📜 ประวัติบิล</button>
+              <button onClick={() => setCurrentTab('purchases')} class={`px-3 py-2 rounded-lg transition ${currentTab === 'purchases' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:text-white'}`}>📦 ซื้อเข้า</button>
+              <button onClick={() => setCurrentTab('expenses')} class={`px-3 py-2 rounded-lg transition ${currentTab === 'expenses' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:text-white'}`}>💸 รายจ่าย/ค่าจ้าง</button>
+              <button onClick={() => setCurrentTab('analytics')} class={`px-3 py-2 rounded-lg transition ${currentTab === 'analytics' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:text-white'}`}>📊 สรุปบัญชี</button>
+            </div>
+
+            <div class="text-right text-xs text-slate-300 font-medium">
               <div>📅 {todayDate}</div>
               <div>⏰ {currentTime} น.</div>
             </div>
           </header>
 
-          {/* Main Content */}
-          <div class="grid grid-cols-12 gap-4 flex-1 overflow-hidden">
-            
-            {/* ฝั่งซ้าย: เลือกลูกค้า & เลือกสินค้า */}
-            <div class="col-span-7 flex flex-col space-y-3 h-full overflow-y-auto pr-1">
+          {/* PAGE CONTENT: 🛒 หน้าออกบิลขาย (POS) */}
+          {currentTab === 'pos' && (
+            <div class="grid grid-cols-12 gap-3 flex-1 overflow-hidden">
               
-              <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-gray-200">
-                <h2 class="text-md font-bold text-gray-700 mb-2">1. เลือกลูกค้า</h2>
-                <div class="grid grid-cols-3 gap-2">
-                  {customers.map(cust => (
+              {/* ฝั่งซ้าย (7 คอลัมน์): ลูกค้า & สินค้า */}
+              <div class="col-span-7 flex flex-col space-y-3 h-full overflow-y-auto pr-1">
+                
+                {/* 1. เลือกประเภทลูกค้า */}
+                <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200">
+                  <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-lg font-bold text-slate-800">1. เลือกลูกค้า</h2>
+                    <span class="text-sm font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                      เลือกอยู่: {selectedCustomer.name}
+                    </span>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-3">
                     <button
-                      key={cust}
-                      onClick={() => setSelectedCustomer(cust)}
-                      class={`py-3 text-lg font-bold rounded-xl border-2 transition-all ${
-                        selectedCustomer === cust
+                      onClick={() => setSelectedCustomer(customers[0])}
+                      class={`py-4 text-xl font-bold rounded-2xl border-2 transition-all ${
+                        selectedCustomer.id === 1
                           ? 'bg-blue-600 text-white border-blue-600 shadow-md'
-                          : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                       }`}
                     >
-                      {cust}
+                      🏪 หน้าร้านทั่วไป
                     </button>
-                  ))}
-                </div>
-              </div>
 
-              <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-gray-200 flex-1">
-                <h2 class="text-md font-bold text-gray-700 mb-2">2. กดเลือกสินค้า (คีย์น้ำหนักและราคา)</h2>
-                <div class="grid grid-cols-2 gap-3">
-                  {products.map(prod => (
                     <button
-                      key={prod.id}
-                      onClick={() => handleSelectProduct(prod)}
-                      class="bg-emerald-50 border-2 border-emerald-500 hover:bg-emerald-100 p-6 rounded-2xl flex flex-col items-center justify-center transition-all active:scale-95 shadow-sm"
+                      onClick={() => setShowCustomerModal(true)}
+                      class={`py-4 text-xl font-bold rounded-2xl border-2 transition-all ${
+                        selectedCustomer.id !== 1
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+                          : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                      }`}
                     >
-                      <span class="text-3xl font-extrabold text-emerald-950">{prod.name}</span>
-                      <span class="text-sm text-emerald-700 font-semibold mt-1">หน่วย: {prod.unit}</span>
+                      🤝 ลูกค้าประจำ {selectedCustomer.id !== 1 ? `(${selectedCustomer.name})` : ''}
                     </button>
-                  ))}
-                </div>
-              </div>
-
-            </div>
-
-            {/* ฝั่งขวา: สลิปบิลเงินสด */}
-            <div class="col-span-5 flex flex-col justify-between h-full bg-white p-4 rounded-2xl border-2 border-blue-100 shadow-sm overflow-hidden">
-              
-              <div id="receipt-slip" class="bg-white p-5 rounded-xl border border-gray-300 font-sans text-gray-800 space-y-3 flex-1 overflow-y-auto">
-                
-                {/* 1. Header ร้าน */}
-                <div class="text-center space-y-1 pb-2">
-                  <div class="flex justify-center mb-1">
-                    <div class="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center text-xl font-bold">
-                      🐟
-                    </div>
-                  </div>
-                  <h2 class="text-xl font-bold tracking-wide text-black">ร้านปลาเม้า</h2>
-                  <p class="text-xs text-gray-500">ตลาดสด / หน้าร้านขายปลา</p>
-                </div>
-
-                <div class="border-b border-gray-300"></div>
-
-                {/* 2. หัวข้อสลิป และ ข้อมูลบิล */}
-                <div class="space-y-1 text-sm">
-                  <div class="font-bold text-center text-gray-800 py-1">
-                    ใบเสร็จรับเงิน / บิลเงินสด
-                  </div>
-                  <div class="flex justify-between text-xs text-gray-600 pt-1">
-                    <span>ลูกค้า: <strong class="text-gray-900">{selectedCustomer}</strong></span>
-                    <span>วันที่: {todayDate}</span>
                   </div>
                 </div>
 
-                <div class="border-b border-dashed border-gray-300"></div>
+                {/* 2. เลือกรายการสินค้า */}
+                <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200 flex-1">
+                  <h2 class="text-lg font-bold text-slate-800 mb-2">2. กดเลือกสินค้า (เพื่อระบุน้ำหนักและราคา)</h2>
+                  <div class="grid grid-cols-2 gap-3">
+                    {products.map(prod => (
+                      <button
+                        key={prod.id}
+                        onClick={() => handleOpenNumpad(prod)}
+                        class="bg-sky-50 border-2 border-sky-400 hover:bg-sky-100 p-6 rounded-2xl flex flex-col items-center justify-center transition-all active:scale-95 shadow-sm"
+                      >
+                        <span class="text-3xl font-extrabold text-slate-900">{prod.name}</span>
+                        <span class="text-sm text-sky-700 font-bold mt-1">หน่วย: {prod.unit}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-                {/* 3. รายการสินค้า */}
-                <div class="min-h-[140px]">
-                  {cart.length === 0 ? (
-                    <div class="text-center py-12 text-gray-400 text-sm">
-                      👈 กดเลือกสินค้าเพื่อเริ่มออกบิล
-                    </div>
-                  ) : (
-                    <div class="space-y-2 text-sm pt-1">
-                      {cart.map(item => (
-                        <div key={item.cartItemId} class="flex items-center justify-between hover:bg-gray-50 p-1 rounded">
-                          <div class="flex items-center space-x-2 flex-1 pr-2">
-                            <span class="font-bold w-12 text-right text-gray-700">{item.weight}</span>
-                            <span class="font-medium text-gray-900">{item.name} ({item.pricePerUnit}฿)</span>
-                          </div>
-
-                          <div class="flex items-center space-x-2">
-                            <span class="font-bold text-gray-900 w-20 text-right">
-                              {item.total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                            <button 
-                              onClick={() => removeItem(item.cartItemId)}
-                              class="no-print text-red-400 hover:text-red-600 font-bold px-1"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        </div>
+                {/* แถบบิลที่พักไว้ (Parked Bills) */}
+                {parkedBills.length > 0 && (
+                  <div class="bg-amber-50 border-2 border-amber-300 p-3 rounded-2xl">
+                    <div class="text-sm font-bold text-amber-900 mb-1.5">⏸️ รายการบิลที่พักไว้ ({parkedBills.length})</div>
+                    <div class="flex space-x-2 overflow-x-auto pb-1">
+                      {parkedBills.map(parked => (
+                        <button
+                          key={parked.id}
+                          onClick={() => handleRestoreParkedBill(parked)}
+                          class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap shadow active:scale-95"
+                        >
+                          คุณ {parked.customer.name} ({parked.cart.length} รายการ) - {parked.time}
+                        </button>
                       ))}
                     </div>
-                  )}
-                </div>
-
-                <div class="border-b border-dashed border-gray-300"></div>
-
-                {/* 4. สรุปยอดเงิน */}
-                <div class="space-y-1.5 text-sm pt-1">
-                  <div class="flex justify-between text-gray-600">
-                    <span>จำนวนรายการรวม</span>
-                    <span class="font-bold text-gray-800">{cart.length} รายการ</span>
                   </div>
-
-                  <div class="flex justify-between text-gray-600">
-                    <span>รวมเป็นเงิน</span>
-                    <span class="font-bold text-gray-800">
-                      {totalPrice.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท
-                    </span>
-                  </div>
-
-                  <div class="border-b border-gray-200 my-1"></div>
-
-                  <div class="flex justify-between items-center text-lg font-bold text-black pt-1">
-                    <span>รวมทั้งสิ้น</span>
-                    <span class="text-2xl font-extrabold border-b-4 border-double border-black pb-0.5">
-                      {totalPrice.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                </div>
-
-                {/* 5. ท้ายสลิป */}
-                <div class="text-center text-xs text-gray-400 pt-4 pb-1">
-                  *** ขอบคุณที่อุดหนุน ร้านปลาเม้า ***
-                </div>
+                )}
 
               </div>
 
-              {/* ปุ่ม 3 ปุ่มควบคุม */}
-              <div class="grid grid-cols-3 gap-2 mt-3 pt-2 border-t no-print">
-                <button
-                  onClick={handlePrint}
-                  disabled={cart.length === 0}
-                  class={`py-3 px-1 text-sm font-bold rounded-xl flex flex-col items-center justify-center space-y-1 shadow ${
-                    cart.length === 0
-                      ? 'bg-gray-200 text-gray-400'
-                      : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95'
-                  }`}
-                >
-                  <span class="text-xl">🖨️</span>
-                  <span>พิมพ์ใบเสร็จ</span>
-                </button>
-
-                <button
-                  onClick={handleShareReceiptImage}
-                  disabled={cart.length === 0 || isGenerating}
-                  class={`py-3 px-1 text-sm font-bold rounded-xl flex flex-col items-center justify-center space-y-1 shadow ${
-                    cart.length === 0 || isGenerating
-                      ? 'bg-gray-200 text-gray-400'
-                      : 'bg-green-500 text-white hover:bg-green-600 active:scale-95'
-                  }`}
-                >
-                  <span class="text-xl">📸</span>
-                  <span>{isGenerating ? 'สร้างรูป...' : 'แชร์บิล LINE'}</span>
-                </button>
-
-                <button
-                  onClick={handleSave}
-                  disabled={cart.length === 0}
-                  class={`py-3 px-1 text-sm font-bold rounded-xl flex flex-col items-center justify-center space-y-1 border-2 ${
-                    cart.length === 0
-                      ? 'border-gray-200 text-gray-300'
-                      : 'border-blue-600 text-blue-600 hover:bg-blue-50 active:scale-95'
-                  }`}
-                >
-                  <span class="text-xl">✅</span>
-                  <span>บันทึกล้าง</span>
-                </button>
-              </div>
-
-            </div>
-
-          </div>
-
-          {/* Pop-up คีย์น้ำหนักและราคา */}
-          {activeProduct && (
-            <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-              <div class="bg-white p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in duration-150">
+              {/* ฝั่งขวา (5 คอลัมน์): แสดงสลิปและปุ่มควบคุม */}
+              <div class="col-span-5 flex flex-col justify-between h-full bg-white p-4 rounded-2xl border-2 border-slate-200 shadow-sm overflow-hidden">
                 
-                <div class="flex justify-between items-center border-b pb-2">
-                  <h3 class="text-2xl font-bold text-gray-800">
-                    🐟 คีย์รายการ: <span class="text-blue-600">{activeProduct.name}</span>
-                  </h3>
-                  <button 
-                    onClick={() => setActiveProduct(null)}
-                    class="text-gray-400 hover:text-gray-600 text-2xl font-bold px-2"
+                {/* สลิปใบเสร็จ (Layout สไตล์ตัวอย่าง) */}
+                <div id="receipt-slip" class="bg-white p-4 rounded-xl border border-slate-300 font-sans text-slate-800 space-y-2 flex-1 overflow-y-auto">
+                  
+                  <div class="text-center space-y-0.5 pb-2">
+                    <div class="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-1">🐟</div>
+                    <h2 class="text-xl font-bold text-black tracking-wide">ร้านปลาเม้า</h2>
+                    <p class="text-xs text-slate-500">ตลาดสด / หน้าร้านขายปลา</p>
+                  </div>
+
+                  <div class="border-b border-slate-300"></div>
+
+                  <div class="space-y-0.5 text-sm">
+                    <div class="font-bold text-center text-slate-800 py-0.5">ใบเสร็จรับเงิน / บิลเงินสด</div>
+                    <div class="flex justify-between text-xs text-slate-600 pt-1">
+                      <span>ลูกค้า: <strong class="text-slate-900">{selectedCustomer.name}</strong></span>
+                      <span>วันที่: {todayDate}</span>
+                    </div>
+                  </div>
+
+                  <div class="border-b border-dashed border-slate-300"></div>
+
+                  {/* ตารางรายการ */}
+                  <div class="min-h-[120px]">
+                    {cart.length === 0 ? (
+                      <div class="text-center py-10 text-slate-400 text-sm">👈 เลือกสินค้าฝั่งซ้ายเพื่อออกบิล</div>
+                    ) : (
+                      <div class="space-y-1.5 text-sm pt-1">
+                        {cart.map(item => (
+                          <div key={item.cartItemId} class="flex items-center justify-between hover:bg-slate-50 p-1 rounded">
+                            <div class="flex items-center space-x-2 flex-1 pr-2">
+                              <span class="font-bold w-10 text-right text-slate-700">{item.weight}</span>
+                              <span class="font-medium text-slate-900">{item.name} ({item.pricePerUnit}฿)</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                              <span class="font-bold text-slate-900 w-16 text-right">
+                                {item.total.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                              <button onClick={() => removeItem(item.cartItemId)} class="no-print text-red-500 hover:text-red-700 font-bold px-1">✕</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div class="border-b border-dashed border-slate-300"></div>
+
+                  {/* สรุปยอด */}
+                  <div class="space-y-1 text-sm pt-1">
+                    <div class="flex justify-between text-slate-600">
+                      <span>จำนวนรายการรวม</span>
+                      <span class="font-bold text-slate-800">{cart.length} รายการ</span>
+                    </div>
+                    <div class="flex justify-between text-slate-600">
+                      <span>รวมเป็นเงิน</span>
+                      <span class="font-bold text-slate-800">
+                        {totalPrice.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท
+                      </span>
+                    </div>
+                    <div class="border-b border-slate-200 my-1"></div>
+                    <div class="flex justify-between items-center text-lg font-bold text-black pt-1">
+                      <span>รวมทั้งสิ้น</span>
+                      <span class="text-2xl font-extrabold border-b-4 border-double border-black pb-0.5">
+                        {totalPrice.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="text-center text-[11px] text-slate-400 pt-3 pb-1">*** ขอบคุณที่อุดหนุน ร้านปลาเม้า ***</div>
+                </div>
+
+                {/* ปุ่มควบคุม 4 ปุ่ม (รวมปุ่มพักบิล) */}
+                <div class="grid grid-cols-4 gap-2 mt-3 pt-2 border-t no-print">
+                  <button
+                    onClick={handleParkBill}
+                    disabled={cart.length === 0}
+                    class={`py-3 px-1 text-xs font-bold rounded-xl flex flex-col items-center justify-center space-y-1 ${
+                      cart.length === 0 ? 'bg-slate-200 text-slate-400' : 'bg-amber-500 text-white hover:bg-amber-600 active:scale-95'
+                    }`}
                   >
-                    ✕
+                    <span class="text-lg">⏸️</span>
+                    <span>พักบิล</span>
+                  </button>
+
+                  <button
+                    onClick={handlePrint}
+                    disabled={cart.length === 0}
+                    class={`py-3 px-1 text-xs font-bold rounded-xl flex flex-col items-center justify-center space-y-1 ${
+                      cart.length === 0 ? 'bg-slate-200 text-slate-400' : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95'
+                    }`}
+                  >
+                    <span class="text-lg">🖨️</span>
+                    <span>พิมพ์สลิป</span>
+                  </button>
+
+                  <button
+                    onClick={handleShareReceiptImage}
+                    disabled={cart.length === 0 || isGenerating}
+                    class={`py-3 px-1 text-xs font-bold rounded-xl flex flex-col items-center justify-center space-y-1 ${
+                      cart.length === 0 || isGenerating ? 'bg-slate-200 text-slate-400' : 'bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95'
+                    }`}
+                  >
+                    <span class="text-lg">📸</span>
+                    <span>{isGenerating ? 'สร้าง...' : 'แชร์ LINE'}</span>
+                  </button>
+
+                  <button
+                    onClick={handleSave}
+                    disabled={cart.length === 0}
+                    class={`py-3 px-1 text-xs font-bold rounded-xl flex flex-col items-center justify-center space-y-1 border-2 ${
+                      cart.length === 0 ? 'border-slate-200 text-slate-300' : 'border-blue-600 text-blue-600 hover:bg-blue-50 active:scale-95'
+                    }`}
+                  >
+                    <span class="text-lg">✅</span>
+                    <span>บันทึก/ล้าง</span>
                   </button>
                 </div>
 
-                <div class="space-y-4">
-                  <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">
-                      ⚖️ น้ำหนัก / จำนวน ({activeProduct.unit})
-                    </label>
+              </div>
+
+            </div>
+          )}
+
+          {/* PAGE CONTENT: 📜 หน้าประวัติบิล (ตัวอย่างโครง V.2) */}
+          {currentTab === 'history' && (
+            <div class="bg-white p-6 rounded-2xl shadow border flex-1 overflow-y-auto">
+              <h2 class="text-2xl font-bold text-slate-800 mb-4">📜 ประวัติการขาย & รวมบิลค้างชำระ</h2>
+              <div class="p-8 text-center text-slate-500 border-2 border-dashed rounded-2xl">
+                [ส่วนประวัติบิล แยกรายวัน / สถานะจ่ายแล้ว - ค้างจ่าย / ปุ่มรวมบิลลูกค้าประจำ จะเชื่อมต่อใน Phase 2]
+              </div>
+            </div>
+          )}
+
+          {/* PAGE CONTENT: 📦 บันทึกซื้อเข้า */}
+          {currentTab === 'purchases' && (
+            <div class="bg-white p-6 rounded-2xl shadow border flex-1 overflow-y-auto">
+              <h2 class="text-2xl font-bold text-slate-800 mb-4">📦 บันทึกซื้อสินค้าเข้า (ต้นทุนสินค้า)</h2>
+              <div class="p-8 text-center text-slate-500 border-2 border-dashed rounded-2xl">
+                [ส่วนเพิ่มรายชื่อแพปลา / คีย์ซื้อปลาเข้าหน้าร้าน จะเชื่อมต่อใน Phase 2]
+              </div>
+            </div>
+          )}
+
+          {/* PAGE CONTENT: 💸 รายจ่าย & ค่าจ้าง */}
+          {currentTab === 'expenses' && (
+            <div class="bg-white p-6 rounded-2xl shadow border flex-1 overflow-y-auto">
+              <h2 class="text-2xl font-bold text-slate-800 mb-4">💸 บันทึกรายจ่าย & ค่าจ้างพนักงาน</h2>
+              <div class="p-8 text-center text-slate-500 border-2 border-dashed rounded-2xl">
+                [ส่วนบันทึกค่าน้ำ/ไฟ และระบบฝาก/เบิกค่าจ้างพนักงานรายวัน จะเชื่อมต่อใน Phase 2]
+              </div>
+            </div>
+          )}
+
+          {/* PAGE CONTENT: 📊 สรุปบัญชี */}
+          {currentTab === 'analytics' && (
+            <div class="bg-white p-6 rounded-2xl shadow border flex-1 overflow-y-auto">
+              <h2 class="text-2xl font-bold text-slate-800 mb-4">📊 รายงานสรุปบัญชีและกำไรสุทธิ</h2>
+              <div class="p-8 text-center text-slate-500 border-2 border-dashed rounded-2xl">
+                [ส่วนดูรายงานยอดขาย กำไร-ขาดทุนย้อนหลัง 1 วัน / 7 วัน / 1 เดือน / 6 เดือน จะเชื่อมต่อใน Phase 2]
+              </div>
+            </div>
+          )}
+
+          {/* MODAL 1: CUSTOM NUMPAD (คีย์ตัวเลขใหญ่พิเศษ ไม่เด้งคีย์บอร์ด iPad) */}
+          {activeProduct && (
+            <div class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div class="bg-white p-6 rounded-3xl max-w-lg w-full shadow-2xl space-y-4 animate-in fade-in zoom-in duration-150">
+                
+                <div class="flex justify-between items-center border-b pb-2">
+                  <h3 class="text-2xl font-bold text-slate-800">
+                    🐟 คีย์รายการ: <span class="text-blue-600">{activeProduct.name}</span>
+                  </h3>
+                  <button onClick={() => setActiveProduct(null)} class="text-slate-400 hover:text-slate-600 text-3xl font-bold px-2">✕</button>
+                </div>
+
+                {/* ช่องแสดงผลตัวเลข (เลือกกดสลับช่องได้) */}
+                <div class="grid grid-cols-2 gap-3">
+                  <div 
+                    onClick={() => setActiveInput('weight')}
+                    class={`p-3 rounded-2xl border-2 text-center cursor-pointer transition ${
+                      activeInput === 'weight' ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-300' : 'border-slate-200 bg-slate-50'
+                    }`}
+                  >
+                    <div class="text-xs font-bold text-slate-600">⚖️ น้ำหนัก ({activeProduct.unit})</div>
                     <input
-                      type="number"
-                      step="0.1"
+                      type="text"
+                      readOnly
                       placeholder="0.0"
                       value={weightInput}
-                      onChange={(e) => setWeightInput(e.target.value)}
-                      class="w-full text-3xl font-extrabold text-center p-3 border-2 border-blue-400 rounded-2xl bg-blue-50 focus:outline-none focus:border-blue-600"
-                      autoFocus
+                      class="w-full text-3xl font-extrabold text-center bg-transparent focus:outline-none cursor-pointer text-slate-900"
                     />
                   </div>
 
-                  <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">
-                      💵 ราคาขายต่อหน่วย (บาท / {activeProduct.unit})
-                    </label>
+                  <div 
+                    onClick={() => setActiveInput('price')}
+                    class={`p-3 rounded-2xl border-2 text-center cursor-pointer transition ${
+                      activeInput === 'price' ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-300' : 'border-slate-200 bg-slate-50'
+                    }`}
+                  >
+                    <div class="text-xs font-bold text-slate-600">💵 ราคา/หน่วย (บาท)</div>
                     <input
-                      type="number"
+                      type="text"
+                      readOnly
                       placeholder="0"
                       value={priceInput}
-                      onChange={(e) => setPriceInput(e.target.value)}
-                      class="w-full text-3xl font-extrabold text-center p-3 border-2 border-gray-300 rounded-2xl bg-gray-50 focus:outline-none focus:border-blue-600"
+                      class="w-full text-3xl font-extrabold text-center bg-transparent focus:outline-none cursor-pointer text-slate-900"
                     />
                   </div>
+                </div>
 
-                  <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-2xl text-center">
-                    <div class="text-xs text-emerald-700 font-bold">ราคารวมคำนวณได้</div>
-                    <div class="text-3xl font-extrabold text-emerald-600">
-                      {((parseFloat(weightInput) || 0) * (parseFloat(priceInput) || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span class="text-lg">บาท</span>
-                    </div>
-                  </div>
+                {/* ปุ่ม CUSTOM NUMPAD ปุ่มใหญ่จิ้มง่าย */}
+                <div class="grid grid-cols-3 gap-2 pt-2">
+                  {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'DEL'].map((btn) => (
+                    <button
+                      key={btn}
+                      onClick={() => handleNumpadPress(btn)}
+                      class={`py-4 text-2xl font-extrabold rounded-2xl transition active:scale-95 shadow ${
+                        btn === 'DEL' ? 'bg-red-100 text-red-600 hover:bg-red-200' : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
+                      }`}
+                    >
+                      {btn === 'DEL' ? '⌫' : btn}
+                    </button>
+                  ))}
                 </div>
 
                 <div class="flex space-x-2 pt-2">
-                  <button
-                    onClick={() => setActiveProduct(null)}
-                    class="w-1/3 py-3.5 text-lg font-bold text-gray-600 bg-gray-100 rounded-2xl hover:bg-gray-200"
-                  >
-                    ยกเลิก
-                  </button>
-                  <button
-                    onClick={handleAddToCart}
-                    class="w-2/3 py-3.5 text-xl font-bold text-white bg-blue-600 rounded-2xl hover:bg-blue-700 shadow-lg active:scale-98"
-                  >
-                    ➕ ส่งไปบิล
-                  </button>
+                  <button onClick={() => handleNumpadPress('CLEAR')} class="w-1/3 py-3.5 text-md font-bold text-slate-600 bg-slate-200 rounded-2xl">ล้างค่า</button>
+                  <button onClick={handleAddToCart} class="w-2/3 py-3.5 text-xl font-bold text-white bg-blue-600 rounded-2xl hover:bg-blue-700 shadow-lg active:scale-98">➕ ส่งไปบิล</button>
                 </div>
 
               </div>
             </div>
           )}
 
-          {/* แจ้งเตือนเมื่อบันทึกสำเร็จ */}
+          {/* MODAL 2: เลือกลูกค้าประจำ / เพิ่มรายชื่อ */}
+          {showCustomerModal && (
+            <div class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div class="bg-white p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-4">
+                <div class="flex justify-between items-center border-b pb-2">
+                  <h3 class="text-2xl font-bold text-slate-800">🤝 เลือกรายชื่อลูกค้าประจำ</h3>
+                  <button onClick={() => setShowCustomerModal(false)} class="text-slate-400 text-2xl font-bold px-2">✕</button>
+                </div>
+
+                {/* รายชื่อลูกค้า */}
+                <div class="max-h-60 overflow-y-auto space-y-2 pr-1">
+                  {customers.filter(c => c.id !== 1).map(cust => (
+                    <button
+                      key={cust.id}
+                      onClick={() => handleSelectCustomer(cust)}
+                      class="w-full text-left p-4 rounded-2xl border-2 border-slate-200 hover:border-emerald-500 hover:bg-emerald-50 text-xl font-bold text-slate-800 flex justify-between items-center transition"
+                    >
+                      <span>คุณ {cust.name}</span>
+                      <span class="text-xs text-emerald-600 bg-emerald-100 px-2.5 py-1 rounded-full">เลือก</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* ช่องเพิ่มลูกค้าใหม่ */}
+                <div class="border-t pt-3 space-y-2">
+                  <label class="block text-sm font-bold text-slate-700">➕ เพิ่มรายชื่อลูกค้าใหม่</label>
+                  <div class="flex space-x-2">
+                    <input
+                      type="text"
+                      placeholder="พิมพ์ชื่อลูกค้า..."
+                      value={newCustomerName}
+                      onChange={(e) => setNewCustomerName(e.target.value)}
+                      class="flex-1 text-lg p-3 border-2 border-slate-300 rounded-2xl focus:outline-none focus:border-emerald-600"
+                    />
+                    <button onClick={handleAddCustomer} class="bg-emerald-600 text-white font-bold px-5 rounded-2xl hover:bg-emerald-700">เพิ่ม</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* แจ้งเตือนบันทึกสำเร็จ */}
           {showSuccess && (
             <div class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
               <div class="bg-white p-8 rounded-3xl text-center space-y-3 shadow-2xl animate-bounce">
                 <div class="text-6xl">🎉</div>
-                <div class="text-3xl font-bold text-gray-800">บันทึกบิลเรียบร้อย!</div>
+                <div class="text-3xl font-bold text-slate-800">บันทึกบิลเรียบร้อย!</div>
               </div>
             </div>
           )}
+
         </div>
       );
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<POSApp />);
+    ReactDOM.createRoot(document.getElementById('root')).render(<MainApp />);
   </script>
 </body>
 </html>
