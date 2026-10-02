@@ -3,334 +3,295 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>ระบบบริหารจัดการร้านค้า (Modern POS)</title>
+  <title>ระบบบริหารจัดการร้านค้า (Modern POS 80mm)</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Google Font: Prompt -->
-  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <style>
-    * {
-      font-family: 'Prompt', sans-serif;
-      -webkit-tap-highlight-color: transparent;
-    }
-    /* จำลองขนาดกระดาษใบเสร็จ 80mm */
-    .receipt-80mm {
-      width: 100%;
-      max-width: 320px;
-      font-family: 'Courier New', Courier, monospace;
-      font-size: 14px;
-    }
-    .numpad-btn {
-      @apply bg-slate-100 hover:bg-slate-200 active:bg-slate-300 font-bold text-xl py-4 rounded-2xl transition-all shadow-sm active:scale-95 text-slate-800;
-    }
-  </style>
+  <!-- ไฟล์สไตล์ภายนอก -->
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
 
   <!-- TOP BAR / HEADER -->
-  <header class="bg-indigo-900 text-white px-6 py-4 shadow-md flex justify-between items-center sticky top-0 z-40">
+  <header class="bg-indigo-900 text-white px-6 py-4 shadow-md flex justify-between items-center sticky top-0 z-40 no-print">
     <div class="flex items-center gap-3">
       <div class="bg-indigo-600 p-2.5 rounded-xl">
         <i data-lucide="store" class="w-6 h-6"></i>
       </div>
       <div>
-        <h1 class="text-xl font-bold tracking-wide">POS SYSTEM</h1>
-        <p class="text-xs text-indigo-200">ระบบบริหารจัดการร้านค้า</p>
+        <h1 class="text-xl font-extrabold tracking-wide">STORE POS</h1>
+        <p class="text-xs text-indigo-200">ระบบจัดการขายหน้าร้าน (รองรับสลิป 80mm)</p>
       </div>
     </div>
     
-    <!-- ปุ่มกลับหน้าหลัก -->
-    <button id="btn-home" onclick="navToHome()" class="hidden bg-slate-700 hover:bg-slate-600 active:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition-all shadow-sm">
+    <button id="btn-home" onclick="navTo('screen-home')" class="hidden bg-slate-700 hover:bg-slate-600 active:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-sm">
       <i data-lucide="home" class="w-5 h-5"></i>
-      <span>กลับหน้าหลัก</span>
+      <span>หน้าหลัก</span>
     </button>
   </header>
 
   <!-- MAIN CONTAINER -->
-  <main class="flex-1 p-4 md:p-6 max-w-7xl w-full mx-auto">
+  <main class="flex-1 p-3 md:p-6 max-w-7xl w-full mx-auto no-print">
 
     <!-- Notification Toast -->
-    <div id="toast" class="hidden fixed bottom-6 right-6 bg-emerald-600 text-white px-6 py-3.5 rounded-2xl shadow-xl z-50 flex items-center gap-3 transition-all transform">
-      <i data-lucide="check-circle" class="w-6 h-6"></i>
-      <span id="toast-msg" class="font-medium">การทำงานสำเร็จ</span>
+    <div id="toast" class="hidden fixed bottom-6 right-6 bg-slate-900 text-white px-6 py-3.5 rounded-2xl shadow-2xl z-50 flex items-center gap-3 transition-all border border-slate-700">
+      <i data-lucide="check-circle-2" class="w-6 h-6 text-emerald-400"></i>
+      <span id="toast-msg" class="font-bold text-sm">การทำงานสำเร็จ</span>
     </div>
 
-    <!-- ================= 1. หน้าแรก (HOME) ================= -->
+    <!-- 1. หน้าแรก (HOME) -->
     <section id="screen-home" class="space-y-6">
-      <div class="text-center py-4">
-        <h2 class="text-2xl font-bold text-slate-700">เมนูหลัก</h2>
+      <div class="text-center py-2">
+        <h2 class="text-3xl font-black text-slate-800">เมนูหลัก</h2>
         <p class="text-slate-500 text-sm">เลือกระบบงานที่ต้องการรายการ</p>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-        <!-- ปุ่มหลัก: เมนูการขาย -->
-        <button onclick="navTo('screen-sales-customer')" class="col-span-1 md:col-span-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white p-8 rounded-3xl shadow-lg hover:shadow-xl transition-all flex flex-col md:flex-row items-center justify-between gap-4 group">
+        <button onclick="navTo('screen-sales-customer')" class="col-span-1 md:col-span-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white p-8 rounded-3xl shadow-xl transition-all flex flex-col md:flex-row items-center justify-between gap-4 group active:scale-98">
           <div class="flex items-center gap-6">
             <div class="bg-white/20 p-5 rounded-2xl group-hover:scale-110 transition-transform">
-              <i data-lucide="shopping-cart" class="w-12 h-12"></i>
+              <i data-lucide="shopping-bag" class="w-14 h-14"></i>
             </div>
             <div class="text-left">
-              <span class="text-xs font-semibold bg-white/20 px-3 py-1 rounded-full uppercase tracking-wider">เมนูหลัก</span>
-              <h3 class="text-3xl font-bold mt-1">เมนูการขาย</h3>
-              <p class="text-indigo-100 text-sm mt-1">ออกบิล คิดเงิน พักบิล และจัดการลูกค้า</p>
+              <span class="text-xs font-bold bg-white/20 px-3 py-1 rounded-full uppercase tracking-wider">เข้าสู่เมนูหลัก</span>
+              <h3 class="text-3xl font-black mt-1">เข้าสู่เมนูการขาย</h3>
+              <p class="text-indigo-100 text-sm mt-1">ออกบิล คิดเงิน ชั่งน้ำหนัก พักบิล และจัดการลูกค้า</p>
             </div>
           </div>
           <i data-lucide="chevron-right" class="w-10 h-10 text-indigo-200 group-hover:translate-x-2 transition-transform"></i>
         </button>
 
-        <!-- ปุ่ม: ประวัติบิล -->
-        <button onclick="navTo('screen-bill-history')" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:border-indigo-500 hover:shadow-md transition-all flex flex-col items-center text-center gap-3 group">
-          <div class="bg-amber-100 text-amber-600 p-4 rounded-xl group-hover:scale-110 transition-transform">
+        <button onclick="navTo('screen-bill-history')" class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 hover:border-indigo-500 hover:shadow-md transition-all flex flex-col items-center text-center gap-3 group active:scale-95">
+          <div class="bg-indigo-100 text-indigo-600 p-4 rounded-2xl group-hover:scale-110 transition-transform">
             <i data-lucide="receipt" class="w-8 h-8"></i>
           </div>
           <div>
-            <h4 class="font-bold text-lg text-slate-800">ประวัติบิล</h4>
-            <p class="text-xs text-slate-500">ตรวจสอบบิลขายย้อนหลัง</p>
+            <h4 class="font-extrabold text-xl text-slate-800">ประวัติบิล</h4>
+            <p class="text-xs text-slate-500 mt-1">ติดตามยอดค้าง ชำระเงิน พิมพ์/แชร์บิล</p>
           </div>
         </button>
 
-        <!-- ปุ่ม: ซื้อเข้า -->
-        <button onclick="navTo('screen-purchase')" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:border-indigo-500 hover:shadow-md transition-all flex flex-col items-center text-center gap-3 group">
-          <div class="bg-emerald-100 text-emerald-600 p-4 rounded-xl group-hover:scale-110 transition-transform">
+        <button onclick="navTo('screen-purchase')" class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 hover:border-emerald-500 hover:shadow-md transition-all flex flex-col items-center text-center gap-3 group active:scale-95">
+          <div class="bg-emerald-100 text-emerald-600 p-4 rounded-2xl group-hover:scale-110 transition-transform">
             <i data-lucide="package-plus" class="w-8 h-8"></i>
           </div>
           <div>
-            <h4 class="font-bold text-lg text-slate-800">ซื้อเข้า</h4>
-            <p class="text-xs text-slate-500">บันทึกรายการสินค้าเข้าคลัง</p>
+            <h4 class="font-extrabold text-xl text-slate-800">ซื้อเข้า</h4>
+            <p class="text-xs text-slate-500 mt-1">บันทึกรายการสินค้าเข้าคลัง</p>
           </div>
         </button>
 
-        <!-- ปุ่ม: รายจ่าย / ค่าแรงพนักงาน -->
-        <button onclick="navTo('screen-expenses')" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:border-indigo-500 hover:shadow-md transition-all flex flex-col items-center text-center gap-3 group">
-          <div class="bg-rose-100 text-rose-600 p-4 rounded-xl group-hover:scale-110 transition-transform">
+        <button onclick="navTo('screen-expenses')" class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 hover:border-amber-500 hover:shadow-md transition-all flex flex-col items-center text-center gap-3 group active:scale-95">
+          <div class="bg-amber-100 text-amber-600 p-4 rounded-2xl group-hover:scale-110 transition-transform">
             <i data-lucide="wallet" class="w-8 h-8"></i>
           </div>
           <div>
-            <h4 class="font-bold text-lg text-slate-800">รายจ่าย / ค่าแรง</h4>
-            <p class="text-xs text-slate-500">บันทึกค่าใช้จ่ายและค่าจ้าง</p>
+            <h4 class="font-extrabold text-xl text-slate-800">รายจ่าย / ค่าแรง</h4>
+            <p class="text-xs text-slate-500 mt-1">บันทึกค่าใช้จ่ายร้านและค่าจ้าง</p>
           </div>
-        </button>
-
-        <!-- ปุ่ม: สรุปบัญชี -->
-        <button onclick="navTo('screen-reports')" class="col-span-1 md:col-span-3 bg-slate-800 hover:bg-slate-900 text-white p-5 rounded-2xl shadow-md transition-all flex items-center justify-between px-8">
-          <div class="flex items-center gap-4">
-            <i data-lucide="bar-chart-3" class="w-6 h-6 text-indigo-400"></i>
-            <span class="font-bold text-lg">สรุปบัญชี / รายงานการขาย</span>
-          </div>
-          <i data-lucide="arrow-right" class="w-5 h-5"></i>
         </button>
       </div>
     </section>
 
-    <!-- ================= 2. เลือกลูกค้า (MAIN CUSTOMER SELECTION) ================= -->
+    <!-- 2. เลือกลูกค้า -->
     <section id="screen-sales-customer" class="hidden space-y-6 max-w-4xl mx-auto">
       <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
-        <h2 class="text-2xl font-bold text-slate-800 mb-2">เลือกลูกค้าสำหรับบิลนี้</h2>
-        <p class="text-slate-500 text-sm mb-8">โปรดเลือประเภทลูกค้าก่อนเข้าสู่หน้าคิดเงิน</p>
+        <h2 class="text-3xl font-black text-slate-800 mb-2 text-center">เลือกประเภทลูกค้า</h2>
+        <p class="text-slate-500 text-sm mb-8 text-center">โปรดเลือกประเภทลูกค้ก่อนเข้าสู่หน้าขาย</p>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- ปุ่ม 1: หน้าร้าน -->
-          <button onclick="selectCustomer('หน้าร้าน (ทั่วไป)')" class="bg-gradient-to-br from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white p-10 rounded-3xl flex flex-col items-center justify-center gap-4 transition-all shadow-md active:scale-98">
-            <div class="bg-white/20 p-5 rounded-2xl">
-              <i data-lucide="store" class="w-12 h-12 text-white"></i>
+          <button onclick="selectCustomer('ลูกค้าหน้าร้าน (ทั่วไป)')" class="bg-slate-800 hover:bg-slate-900 text-white p-10 rounded-3xl flex flex-col items-center justify-center gap-4 transition-all shadow-lg active:scale-95">
+            <div class="bg-white/10 p-5 rounded-2xl">
+              <i data-lucide="user" class="w-14 h-14 text-white"></i>
             </div>
-            <span class="text-2xl font-bold">ลูกค้าหน้าร้าน (ทั่วไป)</span>
-            <span class="text-xs bg-white/20 text-indigo-100 px-4 py-1 rounded-full">เปิดบิลขายด่วน</span>
+            <span class="text-2xl font-extrabold">ลูกค้าหน้าร้าน (ทั่วไป)</span>
+            <span class="text-xs bg-white/20 px-4 py-1 rounded-full">เปิดบิลขายด่วน</span>
           </button>
 
-          <!-- ปุ่ม 2: ลูกค้าประจำ (กดเพื่อเข้าไปเลือกลูกค้า) -->
-          <button onclick="navTo('screen-regular-customers')" class="bg-gradient-to-br from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 text-white p-10 rounded-3xl flex flex-col items-center justify-center gap-4 transition-all shadow-md active:scale-98">
-            <div class="bg-white/20 p-5 rounded-2xl">
-              <i data-lucide="users" class="w-12 h-12 text-white"></i>
+          <button onclick="navTo('screen-regular-customers')" class="bg-indigo-600 hover:bg-indigo-700 text-white p-10 rounded-3xl flex flex-col items-center justify-center gap-4 transition-all shadow-lg active:scale-95">
+            <div class="bg-white/10 p-5 rounded-2xl">
+              <i data-lucide="users" class="w-14 h-14 text-white"></i>
             </div>
-            <span class="text-2xl font-bold">ลูกค้าประจำ</span>
-            <span class="text-xs bg-white/20 text-slate-200 px-4 py-1 rounded-full">เลือกจากรายชื่อที่บันทึกไว้</span>
+            <span class="text-2xl font-extrabold">ลูกค้าประจำ</span>
+            <span class="text-xs bg-white/20 px-4 py-1 rounded-full">เลือกจากรายชื่อที่บันทึกไว้</span>
           </button>
         </div>
       </div>
     </section>
 
-    <!-- ================= 2.1 หน้าปุ่มรายชื่อลูกค้าประจำ ================= -->
+    <!-- 2.1 รายชื่อลูกค้าประจำ -->
     <section id="screen-regular-customers" class="hidden space-y-6 max-w-4xl mx-auto">
       <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 space-y-6">
         <div class="flex justify-between items-center border-b pb-4">
           <div>
-            <h2 class="text-2xl font-bold text-slate-800">เลือกลูกค้าประจำ</h2>
-            <p class="text-slate-500 text-xs mt-1">กดเลือกลูกค้าเพื่อเข้าสู่หน้าการขาย</p>
+            <h2 class="text-2xl font-black text-slate-800">รายชื่อลูกค้าประจำ</h2>
+            <p class="text-slate-500 text-xs mt-1">กดเลือกลูกค้าเพื่อเปิดบิลขาย</p>
           </div>
           <button onclick="showAddCustomerModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 shadow-sm">
-            <i data-lucide="user-plus" class="w-5 h-5"></i> เพิ่มรายชื่อลูกค้า
+            <i data-lucide="user-plus" class="w-5 h-5"></i> + เพิ่มรายชื่อลูกค้า
           </button>
         </div>
 
-        <!-- รายชื่อลูกค้าประจำในรูปแบบปุ่มกด -->
-        <div id="regular-customer-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <!-- JS Dynamic Customer Buttons -->
-        </div>
+        <div id="regular-customer-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
       </div>
     </section>
 
-    <!-- ================= 3. หน้ารายการสินค้า & คิดเงิน (POS PAGE) ================= -->
+    <!-- 3. หน้าขายสินค้า & POS -->
     <section id="screen-pos" class="hidden space-y-4">
-      
-      <!-- Sub-header: ข้อมูลลูกค้า + ปุ่มเปิดลิ้นชัก + ปุ่มดูบิลที่พัก -->
       <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
         <div class="flex items-center gap-3">
-          <span class="text-sm text-slate-500">ลูกค้า:</span>
-          <span id="pos-customer-name" class="bg-indigo-100 text-indigo-800 font-bold px-3 py-1 rounded-lg text-sm">หน้าร้าน</span>
-          <button onclick="navTo('screen-sales-customer')" class="text-xs text-indigo-600 hover:underline font-medium">เปลี่ยนลูกค้า</button>
+          <span class="text-sm font-bold text-slate-500">ลูกค้าปัจจุบัน:</span>
+          <span id="pos-customer-name" class="bg-indigo-100 text-indigo-900 font-extrabold px-4 py-1.5 rounded-xl text-base">ทั่วไป</span>
+          <button onclick="navTo('screen-sales-customer')" class="text-xs text-indigo-600 hover:underline font-bold">เปลี่ยนลูกค้า</button>
         </div>
 
         <div class="flex items-center gap-3">
-          <!-- ปุ่มเปิดลิ้นชัก -->
-          <button onclick="openCashDrawerManual()" class="bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-sm transition-all">
-            <i data-lucide="archive" class="w-4 h-4"></i>
-            <span>เปิดลิ้นชักเก็บเงิน</span>
+          <button onclick="openCashDrawerManual()" class="bg-slate-100 hover:bg-slate-200 text-slate-800 px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-all">
+            <i data-lucide="archive" class="w-4 h-4 text-slate-600"></i>
+            <span>เปิดลิ้นชัก</span>
           </button>
 
-          <!-- ปุ่มดูบิลที่พัก (ย้ายมาจากคอลัมน์เดิม) -->
-          <button onclick="showParkedBillsModal()" class="bg-slate-700 hover:bg-slate-800 active:bg-slate-900 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-sm transition-all relative">
-            <i data-lucide="clock" class="w-4 h-4 text-amber-400"></i>
+          <button onclick="showParkedBillsModal()" class="bg-amber-100 hover:bg-amber-200 text-amber-900 px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-all relative">
+            <i data-lucide="clock" class="w-4 h-4 text-amber-600"></i>
             <span>ดูบิลที่พัก</span>
-            <span id="parked-badge" class="bg-rose-500 text-white text-xs px-2 py-0.5 rounded-full font-bold ml-1">0</span>
+            <span id="parked-badge" class="bg-amber-600 text-white text-xs px-2 py-0.5 rounded-full font-bold ml-1">0</span>
           </button>
         </div>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        <!-- ฝั่งซ้าย: ปุ่มรายการสินค้า (7 Cols) -->
-        <div class="lg:col-span-7 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-          <div class="flex justify-between items-center">
-            <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2">
-              <i data-lucide="grid" class="w-5 h-5 text-indigo-600"></i>
-              เลือกสินค้า
+        <!-- ปุ่มเลือกสินค้า -->
+        <div class="lg:col-span-7 bg-white p-5 rounded-3xl shadow-sm border border-slate-200 flex flex-col h-[calc(100vh-220px)]">
+          <div class="flex justify-between items-center mb-4 pb-2 border-b">
+            <h3 class="font-extrabold text-xl text-slate-800 flex items-center gap-2">
+              <i data-lucide="layout-grid" class="w-6 h-6 text-indigo-600"></i>
+              เลือกรายการสินค้า
             </h3>
             <button onclick="showAddProductModal()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all">
               <i data-lucide="plus-circle" class="w-4 h-4"></i> + สร้างปุ่มสินค้าใหม่
             </button>
           </div>
 
-          <!-- GRID แสดงปุ่มสินค้า -->
-          <div id="product-buttons-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <!-- Dynamic Product Buttons inserted by JS -->
-          </div>
+          <div id="product-buttons-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 overflow-y-auto pr-1 flex-1"></div>
         </div>
 
-        <!-- ฝั่งขวา: ตัวอย่างใบเสร็จ 80mm ขยายกว้าง + ปุ่มการขาย (5 Cols) -->
-        <div class="lg:col-span-5 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between space-y-4">
-          <div class="space-y-3">
-            <div class="flex justify-between items-center">
-              <h3 class="font-bold text-base text-slate-800 flex items-center gap-2">
-                <i data-lucide="printer" class="w-4 h-4 text-slate-600"></i>
-                ตัวอย่างใบเสร็จ (80mm)
+        <!-- ตัวอย่างใบเสร็จ 80mm -->
+        <div class="lg:col-span-5 bg-white p-5 rounded-3xl shadow-sm border border-slate-200 flex flex-col justify-between h-[calc(100vh-220px)]">
+          <div class="flex-1 flex flex-col overflow-hidden">
+            <div class="flex justify-between items-center mb-2">
+              <h3 class="font-extrabold text-base text-slate-800 flex items-center gap-2">
+                <i data-lucide="printer" class="w-5 h-5 text-indigo-600"></i>
+                ตัวอย่างสลิปใบเสร็จ (80mm)
               </h3>
-              <!-- ปุ่มยกเลิกบิล -->
-              <button onclick="cancelCurrentBill()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all">
-                <i data-lucide="trash-2" class="w-4 h-4"></i> ยกเลิกบิล
+              <button onclick="cancelCurrentBill()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1 transition-all">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> ยกเลิกบิล
               </button>
             </div>
 
-            <!-- ใบเสร็จ 80mm ขยายใหญ่ขึ้น -->
-            <div class="bg-slate-50 p-4 rounded-2xl border border-dashed border-slate-300 receipt-80mm mx-auto text-slate-800 shadow-inner">
-              <div class="text-center font-bold text-base mb-1">=== ใบเสร็จรับเงิน ===</div>
-              <div class="text-xs text-center text-slate-500 mb-2" id="receipt-date">2026-10-02 12:00</div>
-              <div class="border-b border-dashed border-slate-400 mb-3"></div>
+            <div class="bg-slate-50 p-4 rounded-2xl border-2 border-dashed border-slate-300 receipt-80mm flex-1 overflow-y-auto shadow-inner">
+              <div class="text-center font-black text-2xl tracking-tight text-black">STORE POS</div>
+              <div class="text-xs text-center text-black font-semibold">สาขาหลัก เมือง พิษณุโลก 65000</div>
+              <div class="text-xs text-center text-black font-semibold">โทร: 081-234-5678</div>
+              <div class="font-extrabold text-center border-y-2 border-black my-2 py-1 text-base">ใบเสร็จรับเงิน</div>
               
-              <!-- รายการสินค้าในใบเสร็จ -->
-              <div id="receipt-items-list" class="space-y-2 min-h-[160px]">
-                <!-- JS Populate Receipt Lines -->
+              <div class="text-xs text-black space-y-0.5 mb-2 font-semibold">
+                <div class="flex justify-between"><span>เลขที่: <span id="receipt-no">--</span></span><span>เวลา: <span id="receipt-time">--</span></span></div>
+                <div>ลูกค้า: <span id="receipt-customer" class="font-bold">ทั่วไป</span></div>
               </div>
 
-              <div class="border-b border-dashed border-slate-400 my-3"></div>
-              <div class="flex justify-between items-center font-bold text-base">
-                <span>ราคารวมทั้งสิ้น</span>
-                <span id="receipt-total" class="text-xl text-indigo-700">0.00</span>
+              <div class="border-t-2 border-black pt-2 mb-2">
+                <div id="receipt-items-list" class="space-y-2 min-h-[120px]"></div>
+              </div>
+
+              <div class="border-t-2 border-black pt-2 my-2 space-y-1">
+                <div class="flex justify-between items-center font-black text-xl text-black">
+                  <span>ราคารวมทั้งสิ้น</span>
+                  <span>฿<span id="receipt-total">0.00</span></span>
+                </div>
+              </div>
+
+              <div class="text-center mt-4 pt-2 border-t border-dashed border-gray-400 text-xs text-black font-semibold">
+                <p>Line: @yourstore</p>
+                <p class="font-bold text-sm mt-1">" THANK YOU "</p>
               </div>
             </div>
           </div>
 
-          <!-- ปุ่มยืนยันการขาย -->
-          <div class="grid grid-cols-2 gap-3 pt-2">
-            <button onclick="parkBillManual()" class="col-span-1 bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all">
+          <div class="grid grid-cols-2 gap-3 pt-3">
+            <button onclick="parkBillManual()" class="col-span-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all">
               <i data-lucide="pause-circle" class="w-5 h-5"></i>
               <span>พักบิล</span>
             </button>
 
-            <button onclick="showPaymentModal()" class="col-span-1 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold py-3.5 rounded-2xl text-lg flex items-center justify-center gap-2 shadow-md transition-all">
-              <i data-lucide="credit-card" class="w-6 h-6"></i>
+            <button onclick="showPaymentModal()" class="col-span-1 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-extrabold py-3.5 rounded-2xl text-xl flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95">
               <span>ชำระเงิน</span>
             </button>
           </div>
-
         </div>
-
       </div>
     </section>
 
-    <!-- ================= 4. ซื้อเข้า (PURCHASE) ================= -->
+    <!-- 4. ซื้อเข้า -->
     <section id="screen-purchase" class="hidden space-y-6 max-w-4xl mx-auto">
       <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 space-y-4">
         <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
           <i data-lucide="package-plus" class="w-7 h-7 text-emerald-600"></i>
           บันทึกรายการซื้อสินค้าเข้า
         </h2>
-        <p class="text-slate-500 text-sm">เพิ่มรายการสินค้าและบันทึกลงแฟ้มรายการซื้อเข้า</p>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-          <input type="text" id="p-name" placeholder="ชื่อสินค้าซื้อเข้า" class="p-3 border rounded-xl">
-          <input type="text" id="p-qty" placeholder="จำนวน/น้ำหนัก" class="p-3 border rounded-xl">
-          <input type="number" id="p-price" placeholder="ราคาทั้งหมด (บาท)" class="p-3 border rounded-xl">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+          <input type="text" id="p-name" placeholder="ชื่อสินค้าซื้อเข้า" class="p-3 border rounded-xl font-medium">
+          <input type="text" id="p-qty" placeholder="จำนวน/น้ำหนัก" class="p-3 border rounded-xl font-medium">
+          <input type="number" id="p-price" placeholder="ราคาทั้งหมด (บาท)" class="p-3 border rounded-xl font-medium">
           <button onclick="addPurchaseItem()" class="md:col-span-3 bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700">
             + เพิ่มรายการซื้อเข้า
           </button>
         </div>
 
         <table class="w-full text-left text-sm mt-4">
-          <thead class="bg-slate-100 text-slate-700">
+          <thead class="bg-slate-100 text-slate-700 font-bold">
             <tr>
               <th class="p-3">สินค้า</th>
               <th class="p-3">จำนวน</th>
               <th class="p-3 text-right">ยอดรวม</th>
             </tr>
           </thead>
-          <tbody id="purchase-table-body" class="divide-y divide-slate-100">
-            <!-- JS Insert Purchase Items -->
-          </tbody>
+          <tbody id="purchase-table-body" class="divide-y divide-slate-100"></tbody>
         </table>
 
         <div class="pt-4 border-t flex justify-end">
           <button onclick="savePurchaseOrder()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-3 rounded-xl shadow-md">
-            บันทึกรายการซื้อเข้าแฟ้ม
+            บันทึกรายการซื้อเข้า
           </button>
         </div>
       </div>
     </section>
 
-    <!-- ================= 5. รายจ่าย / ค่าแรงพนักงาน ================= -->
+    <!-- 5. รายจ่าย / ค่าแรง -->
     <section id="screen-expenses" class="hidden space-y-6 max-w-4xl mx-auto">
       <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 space-y-6">
         <h2 class="text-2xl font-bold text-slate-800">เลือกประเภทรายการจ่าย</h2>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <button onclick="alert('ฟังก์ชันนี้เตรียมไว้สำหรับปรับปรุงในรอบถัดไป')" class="p-8 border-2 border-slate-200 hover:border-indigo-500 rounded-2xl text-left flex items-center gap-4 hover:bg-indigo-50/50 transition-all">
-            <div class="bg-rose-100 text-rose-600 p-4 rounded-xl">
+          <button onclick="alert('บันทึกค่าแรงเรียบร้อย')" class="p-8 border-2 border-slate-200 hover:border-amber-500 rounded-3xl text-left flex items-center gap-4 hover:bg-amber-50/50 transition-all">
+            <div class="bg-amber-100 text-amber-600 p-4 rounded-2xl">
               <i data-lucide="users" class="w-8 h-8"></i>
             </div>
             <div>
-              <h3 class="font-bold text-xl text-slate-800">ค่าแรงพนักงาน</h3>
+              <h3 class="font-extrabold text-xl text-slate-800">ค่าแรงพนักงาน</h3>
               <p class="text-slate-500 text-xs">บันทึกจ่ายเงินจ้างและเบิกค่าแรง</p>
             </div>
           </button>
 
-          <button onclick="alert('ฟังก์ชันนี้เตรียมไว้สำหรับปรับปรุงในรอบถัดไป')" class="p-8 border-2 border-slate-200 hover:border-indigo-500 rounded-2xl text-left flex items-center gap-4 hover:bg-indigo-50/50 transition-all">
-            <div class="bg-amber-100 text-amber-600 p-4 rounded-xl">
+          <button onclick="alert('บันทึกรายจ่ายทั่วไปเรียบร้อย')" class="p-8 border-2 border-slate-200 hover:border-rose-500 rounded-3xl text-left flex items-center gap-4 hover:bg-rose-50/50 transition-all">
+            <div class="bg-rose-100 text-rose-600 p-4 rounded-2xl">
               <i data-lucide="file-text" class="w-8 h-8"></i>
             </div>
             <div>
-              <h3 class="font-bold text-xl text-slate-800">รายจ่ายทั่วไป</h3>
+              <h3 class="font-extrabold text-xl text-slate-800">รายจ่ายทั่วไป</h3>
               <p class="text-slate-500 text-xs">ค่าน้ำ ค่าไฟ ค่าขนส่ง และอื่นๆ</p>
             </div>
           </button>
@@ -338,61 +299,99 @@
       </div>
     </section>
 
-    <!-- ================= 6. ประวัติบิล & สรุปบัญชี ================= -->
+    <!-- 6. ประวัติบิล -->
     <section id="screen-bill-history" class="hidden space-y-6">
-      <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
-        <h2 class="text-2xl font-bold text-slate-800 mb-4">ประวัติบิลการขาย</h2>
-        <table class="w-full text-left text-sm">
-          <thead class="bg-slate-50 text-slate-600">
-            <tr>
-              <th class="p-3">เลขที่บิล</th>
-              <th class="p-3">ลูกค้า</th>
-              <th class="p-3">ยอดรวม</th>
-              <th class="p-3">สถานะชำระเงิน</th>
-            </tr>
-          </thead>
-          <tbody id="bill-history-table-body" class="divide-y divide-slate-100">
-            <!-- JS Populated Bill History -->
-          </tbody>
-        </table>
-      </div>
-    </section>
+      <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 space-y-4">
+        <div class="flex flex-wrap justify-between items-center gap-4 border-b pb-4">
+          <div>
+            <h2 class="text-2xl font-black text-slate-800">ประวัติบิล / ติดตามยอดค้างชำระ</h2>
+            <p class="text-slate-500 text-xs mt-1">สามารถรวมบิล เปลี่ยนสถานะ และพิมพ์/แชร์สลิปย้อนหลังได้</p>
+          </div>
 
-    <section id="screen-reports" class="hidden space-y-6">
-      <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 text-center py-12">
-        <i data-lucide="bar-chart-3" class="w-16 h-16 text-slate-300 mx-auto mb-4"></i>
-        <h2 class="text-2xl font-bold text-slate-700">สรุปบัญชี</h2>
-        <p class="text-slate-500">คงโครงสร้างเดิมไว้ตามระบุ ปรับปรุงเพิ่มเติมในรอบถัดไป</p>
+          <button onclick="mergeSelectedBills()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl text-sm shadow-md flex items-center gap-2">
+            <i data-lucide="layers" class="w-4 h-4"></i> รวมบิลที่เลือก
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 bg-slate-50 p-3 rounded-2xl">
+          <div>
+            <label class="text-xs font-bold text-slate-500 block mb-1">ช่วงเวลา (ย้อนหลัง)</label>
+            <select id="filter-period" onchange="renderBillHistory()" class="w-full p-2.5 border rounded-xl font-bold text-sm bg-white">
+              <option value="all">ทั้งหมด</option>
+              <option value="day">วันนี้ (รายวัน)</option>
+              <option value="week">สัปดาห์นี้ (รายสัปดาห์)</option>
+              <option value="month">เดือนนี้ (รายเดือน)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-slate-500 block mb-1">กลุ่มรายชื่อลูกค้า</label>
+            <select id="filter-customer-group" onchange="renderBillHistory()" class="w-full p-2.5 border rounded-xl font-bold text-sm bg-white">
+              <option value="all">ลูกค้าทั้งหมด</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-slate-500 block mb-1">สถานะชำระเงิน</label>
+            <select id="filter-status" onchange="renderBillHistory()" class="w-full p-2.5 border rounded-xl font-bold text-sm bg-white">
+              <option value="all">ทุกสถานะ</option>
+              <option value="ค้างชำระ">ค้างชำระ</option>
+              <option value="ชำระแล้ว">ชำระแล้ว</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-slate-100 text-slate-700 font-bold">
+              <tr>
+                <th class="p-3 text-center">เลือก</th>
+                <th class="p-3">เลขที่บิล</th>
+                <th class="p-3">วันที่ / เวลา</th>
+                <th class="p-3">ลูกค้า</th>
+                <th class="p-3 text-right">ยอดรวม</th>
+                <th class="p-3 text-center">สถานะ</th>
+                <th class="p-3 text-center">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="bill-history-table-body" class="divide-y divide-slate-100 font-medium"></tbody>
+          </table>
+        </div>
       </div>
     </section>
 
   </main>
 
-  <!-- ================= MODALS / POPUPS ================= -->
-
-  <!-- Modal: NUMPAD ป้อนน้ำหนักและราคา -->
-  <div id="modal-numpad" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <!-- MODALS -->
+  <!-- Numpad Modal -->
+  <div id="modal-numpad" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 no-print">
     <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
       <div class="flex justify-between items-center border-b pb-3">
-        <h3 id="numpad-product-title" class="text-xl font-bold text-indigo-900">ระบุน้ำหนักและราคา</h3>
+        <div>
+          <h3 id="numpad-product-title" class="text-2xl font-black text-indigo-900">ชื่อสินค้า</h3>
+          <p class="text-xs text-slate-500">กรอกน้ำหนักและราคาเพื่อคำนวณราคารวม</p>
+        </div>
         <button onclick="closeModal('modal-numpad')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-6 h-6"></i></button>
       </div>
 
-      <!-- ช่องกรอกข้อมูล 2 ช่อง (กดเลือกช่องที่จะป้อนด้วย Numpad) -->
       <div class="grid grid-cols-2 gap-3">
-        <div id="field-qty-container" onclick="setActiveNumpadField('qty')" class="p-3 border-2 border-indigo-500 bg-indigo-50/50 rounded-2xl cursor-pointer">
-          <span class="text-xs text-indigo-600 font-bold block">จำนวน / น้ำหนัก (kg)</span>
-          <input type="text" id="input-numpad-qty" readonly class="w-full bg-transparent text-xl font-bold text-slate-800 outline-none" value="1">
+        <div id="field-weight-container" onclick="setActiveNumpadField('weight')" class="p-3 border-2 border-indigo-500 bg-indigo-50/50 rounded-2xl cursor-pointer">
+          <span class="text-xs text-indigo-700 font-bold block">1. น้ำหนัก (kg)</span>
+          <input type="text" id="input-numpad-weight" readonly class="w-full bg-transparent text-2xl font-black text-slate-800 outline-none" value="1">
         </div>
 
         <div id="field-price-container" onclick="setActiveNumpadField('price')" class="p-3 border-2 border-slate-200 rounded-2xl cursor-pointer">
-          <span class="text-xs text-slate-500 font-bold block">ราคารวม (บาท)</span>
-          <input type="text" id="input-numpad-price" readonly class="w-full bg-transparent text-xl font-bold text-slate-800 outline-none" value="0">
+          <span class="text-xs text-slate-500 font-bold block">2. ราคาต่อ 1 kg (บาท)</span>
+          <input type="text" id="input-numpad-price" readonly class="w-full bg-transparent text-2xl font-black text-slate-800 outline-none" value="0">
         </div>
       </div>
 
-      <!-- คีย์บอร์ด NUMPAD หน้าจอ -->
-      <div class="grid grid-cols-3 gap-2 pt-2">
+      <div class="bg-slate-100 p-3 rounded-2xl text-right">
+        <span class="text-xs text-slate-500 font-bold">ราคารวมบรรทัดนี้:</span>
+        <div class="text-3xl font-black text-indigo-700">฿<span id="numpad-calculated-total">0.00</span></div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2 pt-1">
         <button onclick="pressNumpad('1')" class="numpad-btn">1</button>
         <button onclick="pressNumpad('2')" class="numpad-btn">2</button>
         <button onclick="pressNumpad('3')" class="numpad-btn">3</button>
@@ -408,14 +407,38 @@
       </div>
 
       <div class="flex gap-2 pt-2">
-        <button onclick="pressNumpad('CLEAR')" class="w-1/3 bg-slate-100 text-slate-600 py-3 rounded-2xl font-bold">ล้างข้อมูล</button>
-        <button onclick="confirmNumpadAdd()" class="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-2xl font-bold text-lg shadow-md">เพิ่มลงบิล</button>
+        <button onclick="pressNumpad('CLEAR')" class="w-1/3 bg-slate-100 text-slate-600 py-3 rounded-2xl font-bold">ล้าง</button>
+        <button onclick="confirmNumpadAdd()" class="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-2xl font-bold text-xl shadow-lg">เพิ่มลงบิล</button>
       </div>
     </div>
   </div>
 
-  <!-- Modal: ดูรายการบิลที่พักไว้ (PARKED BILLS MODAL) -->
-  <div id="modal-parked-bills" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <!-- Bill Details Modal -->
+  <div id="modal-bill-detail" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 max-h-[90vh] flex flex-col justify-between">
+      <div class="flex justify-between items-center border-b pb-3 no-print">
+        <h3 class="text-xl font-bold text-slate-800">รายละเอียดใบเสร็จ</h3>
+        <button onclick="closeModal('modal-bill-detail')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+      </div>
+
+      <div id="print-receipt-modal" class="overflow-y-auto flex-1"></div>
+
+      <div class="space-y-2 pt-2 border-t no-print">
+        <div id="toggle-status-container"></div>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="shareBillModal()" class="bg-sky-100 text-sky-800 hover:bg-sky-200 py-3 rounded-2xl font-bold flex items-center justify-center gap-2">
+            <i data-lucide="share-2" class="w-4 h-4"></i> แชร์บิล
+          </button>
+          <button onclick="printCurrentBillModal()" class="bg-indigo-600 text-white hover:bg-indigo-700 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-md">
+            <i data-lucide="printer" class="w-4 h-4"></i> พิมพ์บิล (80mm)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Parked Bills Modal -->
+  <div id="modal-parked-bills" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 no-print">
     <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
       <div class="flex justify-between items-center border-b pb-3">
         <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -424,35 +447,33 @@
         <button onclick="closeModal('modal-parked-bills')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-6 h-6"></i></button>
       </div>
 
-      <div id="parked-bills-modal-list" class="space-y-3 max-h-96 overflow-y-auto pr-1">
-        <!-- Dynamic Parked Bills -->
-      </div>
+      <div id="parked-bills-modal-list" class="space-y-3 max-h-96 overflow-y-auto pr-1"></div>
     </div>
   </div>
 
-  <!-- Modal: ชำระเงิน -->
-  <div id="modal-payment" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <!-- Payment Modal -->
+  <div id="modal-payment" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 no-print">
     <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-6">
       <div class="text-center">
         <h3 class="text-2xl font-bold text-slate-800">ยืนยันการชำระเงิน</h3>
         <p class="text-slate-500 text-sm mt-1">ยอดเงินรวมทั้งสิ้น</p>
-        <div id="payment-modal-total" class="text-4xl font-extrabold text-emerald-600 mt-2">฿0.00</div>
+        <div id="payment-modal-total" class="text-5xl font-black text-emerald-600 mt-2">฿0.00</div>
       </div>
 
       <div class="space-y-3">
-        <button onclick="processPayment('เงินสด')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-2xl font-bold flex items-center justify-between shadow-md">
-          <span class="flex items-center gap-3"><i data-lucide="banknote" class="w-6 h-6"></i> เงินสด</span>
-          <span class="text-xs bg-emerald-800/40 px-3 py-1 rounded-full">เปิดลิ้นชักอัตโนมัติ</span>
+        <button onclick="processPayment('ชำระแล้ว (เงินสด)')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-2xl font-bold flex items-center justify-between shadow-md">
+          <span class="flex items-center gap-3 text-lg"><i data-lucide="banknote" class="w-6 h-6"></i> เงินสด</span>
+          <span class="text-xs bg-emerald-800/40 px-3 py-1 rounded-full">เปิดลิ้นชัก</span>
         </button>
 
-        <button onclick="processPayment('เงินโอน')" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-2xl font-bold flex items-center justify-between shadow-md">
-          <span class="flex items-center gap-3"><i data-lucide="qr-code" class="w-6 h-6"></i> โอนจ่าย</span>
-          <span class="text-xs bg-blue-800/40 px-3 py-1 rounded-full">สแกน QR Code</span>
+        <button onclick="processPayment('ชำระแล้ว (เงินโอน)')" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-2xl font-bold flex items-center justify-between shadow-md">
+          <span class="flex items-center gap-3 text-lg"><i data-lucide="qr-code" class="w-6 h-6"></i> โอนจ่าย</span>
+          <span class="text-xs bg-blue-800/40 px-3 py-1 rounded-full">เงินโอน/QR</span>
         </button>
 
         <button onclick="processPayment('ค้างชำระ')" class="w-full bg-amber-500 hover:bg-amber-600 text-white p-4 rounded-2xl font-bold flex items-center justify-between shadow-md">
-          <span class="flex items-center gap-3"><i data-lucide="alert-circle" class="w-6 h-6"></i> ค้างชำระ</span>
-          <span class="text-xs bg-amber-700/40 px-3 py-1 rounded-full">บันทึกยอดติดค้าง</span>
+          <span class="flex items-center gap-3 text-lg"><i data-lucide="clock" class="w-6 h-6"></i> ค้างชำระ</span>
+          <span class="text-xs bg-amber-700/40 px-3 py-1 rounded-full">บันทึกยอดค้าง</span>
         </button>
       </div>
 
@@ -460,11 +481,11 @@
     </div>
   </div>
 
-  <!-- Modal: เพิ่มรายชื่อลูกค้าประจำ -->
-  <div id="modal-add-customer" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <!-- Add Customer Modal -->
+  <div id="modal-add-customer" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 no-print">
     <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
       <h3 class="text-xl font-bold text-slate-800">เพิ่มลูกค้าประจำ</h3>
-      <input type="text" id="new-customer-name" placeholder="ชื่อ-นามสกุล หรือชื่อร้าน" class="w-full p-3.5 border rounded-2xl">
+      <input type="text" id="new-customer-name" placeholder="ชื่อ-นามสกุล หรือชื่อร้าน" class="w-full p-3.5 border rounded-2xl font-medium">
       <div class="flex gap-2">
         <button onclick="closeModal('modal-add-customer')" class="w-1/2 bg-slate-100 text-slate-600 py-3 rounded-2xl font-medium">ยกเลิก</button>
         <button onclick="saveNewCustomer()" class="w-1/2 bg-emerald-600 text-white py-3 rounded-2xl font-bold">บันทึก</button>
@@ -472,11 +493,12 @@
     </div>
   </div>
 
-  <!-- Modal: สร้างปุ่มสินค้าใหม่ -->
-  <div id="modal-add-product" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <!-- Add Product Modal -->
+  <div id="modal-add-product" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 no-print">
     <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
       <h3 class="text-xl font-bold text-slate-800">สร้างปุ่มสินค้าใหม่</h3>
-      <input type="text" id="new-product-name" placeholder="ชื่อสินค้า (เช่น สามชั้น, หมูเนื้อแดง)" class="w-full p-3.5 border rounded-2xl">
+      <input type="text" id="new-product-name" placeholder="ชื่อสินค้า (เช่น สามชั้น, หมูเนื้อแดง)" class="w-full p-3.5 border rounded-2xl font-medium">
+      <input type="number" id="new-product-default-price" placeholder="ราคามาตรฐานต่อ kg (บาท)" class="w-full p-3.5 border rounded-2xl font-medium">
       <div class="flex gap-2">
         <button onclick="closeModal('modal-add-product')" class="w-1/2 bg-slate-100 text-slate-600 py-3 rounded-2xl font-medium">ยกเลิก</button>
         <button onclick="saveNewProductButton()" class="w-1/2 bg-indigo-600 text-white py-3 rounded-2xl font-bold">สร้างปุ่ม</button>
@@ -484,417 +506,635 @@
     </div>
   </div>
 
-  <!-- JAVASCRIPT LOGIC -->
-  <script>
-    // App States
-    let currentCustomer = "หน้าร้าน (ทั่วไป)";
-    let regularCustomers = JSON.parse(localStorage.getItem('regularCustomers')) || ['ร้านเจ๊พร', 'คุณสมชาย', 'ร้านก๋วยเตี๋ยวป้าป้อม'];
-    let productButtons = JSON.parse(localStorage.getItem('productButtons')) || [
-      { id: 1, name: 'หมูเนื้อแดง' },
-      { id: 2, name: 'สามชั้น' },
-      { id: 3, name: 'สันนอก' },
-      { id: 4, name: 'ซี่โครงหมู' },
-      { id: 5, name: 'หมูบด' }
-    ];
-
-    let cart = [];
-    let parkedBills = [];
-    let billHistory = [];
-    let purchaseItems = [];
-
-    // Numpad Modal Temporary State
-    let selectedProductName = '';
-    let activeNumpadField = 'qty'; // 'qty' or 'price'
-
-    // Initialize Lucide Icons
-    lucide.createIcons();
-
-    // Navigation Function
-    function navTo(screenId) {
-      const currentVisibleScreen = document.querySelector('section:not(.hidden)');
-      if (currentVisibleScreen && currentVisibleScreen.id === 'screen-pos' && screenId !== 'screen-pos' && cart.length > 0) {
-        autoParkBill();
-      }
-
-      document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
-      document.getElementById(screenId).classList.remove('hidden');
-
-      const btnHome = document.getElementById('btn-home');
-      if (screenId === 'screen-home') {
-        btnHome.classList.add('hidden');
-      } else {
-        btnHome.classList.remove('hidden');
-      }
-
-      if(screenId === 'screen-regular-customers') renderRegularCustomersGrid();
-      if(screenId === 'screen-pos') renderPOS();
-      if(screenId === 'screen-bill-history') renderBillHistory();
-    }
-
-    function navToHome() {
-      navTo('screen-home');
-    }
-
-    // Customer Functions
-    function renderRegularCustomersGrid() {
-      const container = document.getElementById('regular-customer-grid');
-      if (regularCustomers.length === 0) {
-        container.innerHTML = `<div class="col-span-full text-center py-8 text-slate-400">ยังไม่มีรายชื่อลูกค้าประจำ<br>กดปุ่ม "+ เพิ่มรายชื่อลูกค้า" ด้านบน</div>`;
-        return;
-      }
-      container.innerHTML = regularCustomers.map((cust, idx) => `
-        <div class="bg-slate-50 border border-slate-200 hover:border-indigo-500 rounded-2xl p-4 flex flex-col justify-between space-y-3 group transition-all">
-          <span class="font-bold text-slate-800 text-lg group-hover:text-indigo-600">${cust}</span>
-          <div class="flex gap-2">
-            <button onclick="selectCustomer('${cust}')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-xl text-xs shadow-sm">เลือก</button>
-            <button onclick="deleteCustomer(${idx})" class="text-rose-500 hover:bg-rose-100 p-2 rounded-xl"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-          </div>
-        </div>
-      `).join('');
-      lucide.createIcons();
-    }
-
-    function selectCustomer(name) {
-      currentCustomer = name;
-      document.getElementById('pos-customer-name').innerText = name;
-      navTo('screen-pos');
-    }
-
-    function showAddCustomerModal() {
-      document.getElementById('modal-add-customer').classList.remove('hidden');
-    }
-
-    function saveNewCustomer() {
-      const nameInput = document.getElementById('new-customer-name');
-      if (nameInput.value.trim()) {
-        regularCustomers.push(nameInput.value.trim());
-        localStorage.setItem('regularCustomers', JSON.stringify(regularCustomers));
-        nameInput.value = '';
-        closeModal('modal-add-customer');
-        renderRegularCustomersGrid();
-        showToast('เพิ่มรายชื่อลูกค้าประจำเรียบร้อย');
-      }
-    }
-
-    function deleteCustomer(idx) {
-      if (confirm('ยืนยันลบรายชื่อลูกค้านี้?')) {
-        regularCustomers.splice(idx, 1);
-        localStorage.setItem('regularCustomers', JSON.stringify(regularCustomers));
-        renderRegularCustomersGrid();
-        showToast('ลบรายชื่อเรียบร้อย');
-      }
-    }
-
-    // Product Buttons Management
-    function renderProductButtons() {
-      const grid = document.getElementById('product-buttons-grid');
-      grid.innerHTML = productButtons.map(p => `
-        <button onclick="openNumpadModal('${p.name}')" class="bg-indigo-50/70 hover:bg-indigo-100 active:bg-indigo-200 border-2 border-indigo-200 hover:border-indigo-400 p-5 rounded-2xl text-left flex flex-col justify-between space-y-2 transition-all active:scale-95 group">
-          <i data-lucide="package" class="w-6 h-6 text-indigo-600 group-hover:scale-110 transition-transform"></i>
-          <span class="font-bold text-slate-800 text-lg group-hover:text-indigo-900">${p.name}</span>
-        </button>
-      `).join('');
-      lucide.createIcons();
-    }
-
-    function showAddProductModal() {
-      document.getElementById('modal-add-product').classList.remove('hidden');
-    }
-
-    function saveNewProductButton() {
-      const nameInput = document.getElementById('new-product-name');
-      if (nameInput.value.trim()) {
-        productButtons.push({ id: Date.now(), name: nameInput.value.trim() });
-        localStorage.setItem('productButtons', JSON.stringify(productButtons));
-        nameInput.value = '';
-        closeModal('modal-add-product');
-        renderProductButtons();
-        showToast('สร้างปุ่มสินค้าใหม่เรียบร้อย');
-      }
-    }
-
-    // Numpad Modal Logic
-    function openNumpadModal(productName) {
-      selectedProductName = productName;
-      document.getElementById('numpad-product-title').innerText = productName;
-      document.getElementById('input-numpad-qty').value = '1';
-      document.getElementById('input-numpad-price').value = '0';
-      setActiveNumpadField('qty');
-      document.getElementById('modal-numpad').classList.remove('hidden');
-    }
-
-    function setActiveNumpadField(field) {
-      activeNumpadField = field;
-      const qtyBox = document.getElementById('field-qty-container');
-      const priceBox = document.getElementById('field-price-container');
-
-      if (field === 'qty') {
-        qtyBox.className = "p-3 border-2 border-indigo-500 bg-indigo-50/50 rounded-2xl cursor-pointer";
-        priceBox.className = "p-3 border-2 border-slate-200 rounded-2xl cursor-pointer";
-      } else {
-        priceBox.className = "p-3 border-2 border-indigo-500 bg-indigo-50/50 rounded-2xl cursor-pointer";
-        qtyBox.className = "p-3 border-2 border-slate-200 rounded-2xl cursor-pointer";
-      }
-    }
-
-    function pressNumpad(val) {
-      const activeInput = activeNumpadField === 'qty' 
-        ? document.getElementById('input-numpad-qty') 
-        : document.getElementById('input-numpad-price');
-
-      let currentVal = activeInput.value;
-
-      if (val === 'CLEAR') {
-        activeInput.value = '0';
-        return;
-      }
-
-      if (val === 'DEL') {
-        activeInput.value = currentVal.length > 1 ? currentVal.slice(0, -1) : '0';
-        return;
-      }
-
-      if (currentVal === '0' && val !== '.') {
-        activeInput.value = val;
-      } else {
-        activeInput.value += val;
-      }
-    }
-
-    function confirmNumpadAdd() {
-      const qtyStr = document.getElementById('input-numpad-qty').value;
-      const price = parseFloat(document.getElementById('input-numpad-price').value) || 0;
-
-      if (selectedProductName) {
-        cart.push({
-          id: Date.now(),
-          name: selectedProductName,
-          qty: qtyStr.includes('kg') ? qtyStr : `${qtyStr} kg`,
-          price: price
-        });
-        closeModal('modal-numpad');
-        renderPOS();
-      }
-    }
-
-    // POS & Cart Functions
-    function removeItemFromCart(id) {
-      cart = cart.filter(item => item.id !== id);
-      renderPOS();
-    }
-
-    function cancelCurrentBill() {
-      if(cart.length === 0) return;
-      if(confirm('คุณต้องการยกเลิกบิลนี้ใช่หรือไม่? รายการสินค้าทั้งหมดจะถูกลบ')) {
-        cart = [];
-        renderPOS();
-        showToast('ยกเลิกบิลเรียบร้อยแล้ว');
-      }
-    }
-
-    function renderPOS() {
-      renderProductButtons();
-
-      // 80mm Receipt Items Render
-      const receiptList = document.getElementById('receipt-items-list');
-      const totalSum = cart.reduce((sum, item) => sum + item.price, 0);
-
-      document.getElementById('receipt-total').innerText = totalSum.toFixed(2);
-      document.getElementById('parked-badge').innerText = parkedBills.length;
-
-      if(cart.length === 0) {
-        receiptList.innerHTML = `<div class="text-center text-slate-400 py-8">- ยังไม่มีรายการ -</div>`;
-      } else {
-        receiptList.innerHTML = cart.map(item => `
-          <div class="flex justify-between items-start border-b border-slate-100 pb-1 group">
-            <div class="max-w-[200px]">
-              <div class="font-bold text-slate-800">${item.name} / ${item.qty}</div>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="font-bold text-slate-900">฿${item.price.toFixed(2)}</span>
-              <button onclick="removeItemFromCart(${item.id})" class="text-rose-500 hover:bg-rose-50 p-1 rounded-lg"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-            </div>
-          </div>
-        `).join('');
-      }
-      lucide.createIcons();
-    }
-
-    // Manual Open Drawer Function
-    function openCashDrawerManual() {
-      showToast('🔊 สั่งเปิดลิ้นชักเก็บเงินแล้ว!');
-    }
-
-    // Parking Bills Functions & Modal
-    function parkBillManual() {
-      if(cart.length === 0) return alert('ไม่มีสินค้าในบิลให้พัก');
-      parkedBills.push({
-        id: Date.now(),
-        customer: currentCustomer,
-        items: [...cart],
-        time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-      });
-      cart = [];
-      showToast('พักบิลเรียบร้อยแล้ว');
-      renderPOS();
-    }
-
-    function autoParkBill() {
-      parkedBills.push({
-        id: Date.now(),
-        customer: currentCustomer,
-        items: [...cart],
-        time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' (Auto)'
-      });
-      cart = [];
-      showToast('ระบบพักบิลให้อัตโนมัติเรียบร้อย');
-    }
-
-    function showParkedBillsModal() {
-      renderParkedBillsModalList();
-      document.getElementById('modal-parked-bills').classList.remove('hidden');
-    }
-
-    function renderParkedBillsModalList() {
-      const container = document.getElementById('parked-bills-modal-list');
-      if(parkedBills.length === 0) {
-        container.innerHTML = `<p class="text-sm text-slate-400 py-8 text-center">ไม่มีบิลที่พักไว้</p>`;
-        return;
-      }
-      container.innerHTML = parkedBills.map(b => {
-        const total = b.items.reduce((s, i) => s + i.price, 0);
-        return `
-          <div class="bg-amber-50/80 border border-amber-200 p-4 rounded-2xl flex justify-between items-center">
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="font-bold text-slate-800">${b.customer}</span>
-                <span class="text-[10px] bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full font-bold">${b.time}</span>
-              </div>
-              <div class="text-xs text-slate-500 mt-1">${b.items.length} รายการ - ยอดรวม: <strong class="text-slate-800">฿${total.toFixed(2)}</strong></div>
-            </div>
-            <button onclick="restoreParkedBill(${b.id})" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3 py-2 rounded-xl">ดึงบิลมาทำต่อ</button>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function restoreParkedBill(id) {
-      if(cart.length > 0) {
-        if(!confirm('มีรายการค้างอยู่ ต้องการพักบิลปัจจุบันแล้วดึงบิลนี้มาทำต่อหรือไม่?')) return;
-        autoParkBill();
-      }
-      const bill = parkedBills.find(b => b.id === id);
-      if(bill) {
-        cart = [...bill.items];
-        currentCustomer = bill.customer;
-        document.getElementById('pos-customer-name').innerText = currentCustomer;
-        parkedBills = parkedBills.filter(b => b.id !== id);
-        closeModal('modal-parked-bills');
-        renderPOS();
-        showToast('ดึงบิลกลับมาทำรายการต่อเรียบร้อย');
-      }
-    }
-
-    // Payment Processing
-    function showPaymentModal() {
-      if(cart.length === 0) return alert('กรุณาเพิ่มสินค้าก่อนชำระเงิน');
-      const totalSum = cart.reduce((sum, item) => sum + item.price, 0);
-      document.getElementById('payment-modal-total').innerText = `฿${totalSum.toFixed(2)}`;
-      document.getElementById('modal-payment').classList.remove('hidden');
-    }
-
-    function processPayment(type) {
-      const totalSum = cart.reduce((sum, item) => sum + item.price, 0);
-      let status = '';
-
-      if (type === 'เงินสด') {
-        status = 'ชำระแล้ว (เงินสด)';
-        showToast('🔊 เปิดลิ้นชัก + บันทึกพิมพ์ใบเสร็จเรียบร้อย!');
-      } else if (type === 'เงินโอน') {
-        status = 'ชำระแล้ว (เงินโอน)';
-        showToast('บันทึกและพิมพ์ใบเสร็จเรียบร้อย!');
-      } else {
-        status = 'ค้างชำระ';
-        showToast('บันทึกสถานะค้างชำระเรียบร้อย!');
-      }
-
-      billHistory.unshift({
-        id: 'INV-' + Math.floor(1000 + Math.random() * 9000),
-        customer: currentCustomer,
-        total: totalSum,
-        status: status
-      });
-
-      cart = [];
-      closeModal('modal-payment');
-      renderPOS();
-    }
-
-    function renderBillHistory() {
-      const body = document.getElementById('bill-history-table-body');
-      if(billHistory.length === 0) {
-        body.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-400">ยังไม่มีประวัติการขาย</td></tr>`;
-      } else {
-        body.innerHTML = billHistory.map(b => `
-          <tr>
-            <td class="p-3 font-bold text-slate-700">${b.id}</td>
-            <td class="p-3 text-slate-600">${b.customer}</td>
-            <td class="p-3 font-bold text-slate-800">฿${b.total.toFixed(2)}</td>
-            <td class="p-3">
-              <span class="px-3 py-1 rounded-full text-xs font-bold ${
-                b.status.includes('เงินสด') ? 'bg-emerald-100 text-emerald-800' :
-                b.status.includes('เงินโอน') ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
-              }">${b.status}</span>
-            </td>
-          </tr>
-        `).join('');
-      }
-    }
-
-    // Purchase Functions
-    function addPurchaseItem() {
-      const name = document.getElementById('p-name').value.trim();
-      const qty = document.getElementById('p-qty').value.trim();
-      const price = parseFloat(document.getElementById('p-price').value) || 0;
-
-      if(name && qty) {
-        purchaseItems.push({ name, qty, price });
-        document.getElementById('p-name').value = '';
-        document.getElementById('p-qty').value = '';
-        document.getElementById('p-price').value = '';
-        renderPurchaseTable();
-      }
-    }
-
-    function renderPurchaseTable() {
-      const body = document.getElementById('purchase-table-body');
-      body.innerHTML = purchaseItems.map(i => `
-        <tr>
-          <td class="p-3 font-medium text-slate-800">${i.name}</td>
-          <td class="p-3 text-slate-600">${i.qty}</td>
-          <td class="p-3 text-right font-bold text-slate-800">฿${i.price.toFixed(2)}</td>
-        </tr>
-      `).join('');
-    }
-
-    function savePurchaseOrder() {
-      if(purchaseItems.length === 0) return alert('ไม่มีรายการซื้อเข้า');
-      showToast('บันทึกลงแฟ้มรายการซื้อเข้าเรียบร้อย');
-      purchaseItems = [];
-      renderPurchaseTable();
-    }
-
-    // Helper Modals & Toast
-    function closeModal(id) {
-      document.getElementById(id).classList.add('hidden');
-    }
-
-    function showToast(msg) {
-      const toast = document.getElementById('toast');
-      document.getElementById('toast-msg').innerText = msg;
-      toast.classList.remove('hidden');
-      setTimeout(() => toast.classList.add('hidden'), 3000);
-    }
-  </script>
+  <!-- เรียกใช้งานสคริปต์การทำงาน -->
+  <script src="app.js"></script>
 </body>
 </html>
+
+* {
+  font-family: 'Prompt', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* สไตล์ใบเสร็จขนาด 80mm สำหรับหน้าจอและงานพิมพ์ */
+.receipt-80mm {
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
+  background: #ffffff;
+  color: #000000;
+  padding: 16px;
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+/* ปุ่ม Numpad ตัวเลขใหญ่ กดง่าย */
+.numpad-btn {
+  background-color: #f1f5f9;
+  font-weight: 700;
+  font-size: 1.5rem;
+  padding-top: 0.875rem;
+  padding-bottom: 0.875rem;
+  border-radius: 1rem;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.numpad-btn:hover {
+  background-color: #e2e8f0;
+}
+
+.numpad-btn:active {
+  background-color: #cbd5e1;
+  transform: scale(0.95);
+}
+
+/* คำสั่ง CSS สำหรับเครื่องพิมพ์สลิปความร้อน 80mm */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #print-receipt-modal, #print-receipt-modal * {
+    visibility: visible;
+  }
+  #print-receipt-modal {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white;
+    padding: 0;
+    margin: 0;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+// สถานะของระบบและการเก็บข้อมูลใน LocalStorage
+let currentCustomer = "ลูกค้าหน้าร้าน (ทั่วไป)";
+let regularCustomers = JSON.parse(localStorage.getItem('regularCustomers')) || ['ร้านเจ๊พร', 'คุณสมชาย', 'ร้านก๋วยเตี๋ยวป้าป้อม'];
+let productButtons = JSON.parse(localStorage.getItem('productButtons')) || [
+  { id: 1, name: 'หมูเนื้อแดง', defaultPrice: 150 },
+  { id: 2, name: 'สามชั้น', defaultPrice: 180 },
+  { id: 3, name: 'สันนอก', defaultPrice: 160 },
+  { id: 4, name: 'ซี่โครงหมู', defaultPrice: 170 },
+  { id: 5, name: 'หมูบด', defaultPrice: 140 }
+];
+
+let cart = [];
+let parkedBills = JSON.parse(localStorage.getItem('parkedBills')) || [];
+let billHistory = JSON.parse(localStorage.getItem('billHistory')) || [];
+let purchaseItems = [];
+
+// ตัวแปรชั่วคราวสำหรับ Popups
+let selectedProduct = null;
+let activeNumpadField = 'weight';
+let currentViewingBill = null;
+
+// เริ่มต้นระบบ
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  updateCustomerDropdownFilter();
+});
+
+// การสลับหน้าจอ (Navigation)
+function navTo(screenId) {
+  document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+  document.getElementById(screenId).classList.remove('hidden');
+
+  const btnHome = document.getElementById('btn-home');
+  if (screenId === 'screen-home') {
+    btnHome.classList.add('hidden');
+  } else {
+    btnHome.classList.remove('hidden');
+  }
+
+  if(screenId === 'screen-regular-customers') renderRegularCustomersGrid();
+  if(screenId === 'screen-pos') renderPOS();
+  if(screenId === 'screen-bill-history') {
+    updateCustomerDropdownFilter();
+    renderBillHistory();
+  }
+}
+
+// จัดการลูกค้าประจำ
+function renderRegularCustomersGrid() {
+  const container = document.getElementById('regular-customer-grid');
+  if (regularCustomers.length === 0) {
+    container.innerHTML = `<div class="col-span-full text-center py-8 text-slate-400">ยังไม่มีรายชื่อลูกค้าประจำ</div>`;
+    return;
+  }
+  container.innerHTML = regularCustomers.map((cust, idx) => `
+    <div class="bg-slate-50 border border-slate-200 hover:border-indigo-500 rounded-2xl p-4 flex flex-col justify-between space-y-3 transition-all">
+      <span class="font-bold text-slate-800 text-lg">${cust}</span>
+      <div class="flex gap-2">
+        <button onclick="selectCustomer('${cust}')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-xl text-xs shadow-sm">เลือก</button>
+        <button onclick="deleteCustomer(${idx})" class="text-rose-500 hover:bg-rose-100 p-2 rounded-xl"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+      </div>
+    </div>
+  `).join('');
+  lucide.createIcons();
+}
+
+function selectCustomer(name) {
+  currentCustomer = name;
+  document.getElementById('pos-customer-name').innerText = name;
+  navTo('screen-pos');
+}
+
+function showAddCustomerModal() {
+  document.getElementById('modal-add-customer').classList.remove('hidden');
+}
+
+function saveNewCustomer() {
+  const nameInput = document.getElementById('new-customer-name');
+  if (nameInput.value.trim()) {
+    regularCustomers.push(nameInput.value.trim());
+    localStorage.setItem('regularCustomers', JSON.stringify(regularCustomers));
+    nameInput.value = '';
+    closeModal('modal-add-customer');
+    renderRegularCustomersGrid();
+    showToast('เพิ่มลูกค้าประจำเรียบร้อย');
+  }
+}
+
+function deleteCustomer(idx) {
+  if (confirm('ยืนยันลบรายชื่อลูกค้านี้?')) {
+    regularCustomers.splice(idx, 1);
+    localStorage.setItem('regularCustomers', JSON.stringify(regularCustomers));
+    renderRegularCustomersGrid();
+    showToast('ลบรายชื่อเรียบร้อย');
+  }
+}
+
+// จัดการปุ่มสินค้า (พร้อมปุ่มลบสินค้า)
+function renderProductButtons() {
+  const grid = document.getElementById('product-buttons-grid');
+  grid.innerHTML = productButtons.map((p, idx) => `
+    <div class="bg-indigo-50/80 hover:bg-indigo-100 border-2 border-indigo-200 p-4 rounded-2xl flex flex-col justify-between space-y-2 relative group transition-all">
+      <button onclick="deleteProductButton(${idx})" class="absolute top-2 right-2 text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-white transition-all">
+        <i data-lucide="trash-2" class="w-4 h-4"></i>
+      </button>
+      <div onclick="openNumpadModal(${p.id})" class="cursor-pointer space-y-1">
+        <i data-lucide="package" class="w-6 h-6 text-indigo-600"></i>
+        <div class="font-extrabold text-slate-800 text-lg leading-tight">${p.name}</div>
+        <div class="text-xs font-bold text-indigo-600">฿${p.defaultPrice} / kg</div>
+      </div>
+    </div>
+  `).join('');
+  lucide.createIcons();
+}
+
+function showAddProductModal() {
+  document.getElementById('modal-add-product').classList.remove('hidden');
+}
+
+function saveNewProductButton() {
+  const name = document.getElementById('new-product-name').value.trim();
+  const price = parseFloat(document.getElementById('new-product-default-price').value) || 0;
+  if (name) {
+    productButtons.push({ id: Date.now(), name, defaultPrice: price });
+    localStorage.setItem('productButtons', JSON.stringify(productButtons));
+    document.getElementById('new-product-name').value = '';
+    document.getElementById('new-product-default-price').value = '';
+    closeModal('modal-add-product');
+    renderProductButtons();
+    showToast('สร้างปุ่มสินค้าใหม่เรียบร้อย');
+  }
+}
+
+function deleteProductButton(idx) {
+  if(confirm('คุณต้องการลบปุ่มสินค้านี้ใช่หรือไม่?')) {
+    productButtons.splice(idx, 1);
+    localStorage.setItem('productButtons', JSON.stringify(productButtons));
+    renderProductButtons();
+    showToast('ลบปุ่มสินค้าเรียบร้อย');
+  }
+}
+
+// Numpad และ คำนวณน้ำหนัก * ราคาต่อ 1 กก.
+function openNumpadModal(productId) {
+  selectedProduct = productButtons.find(p => p.id === productId);
+  if(!selectedProduct) return;
+
+  document.getElementById('numpad-product-title').innerText = selectedProduct.name;
+  document.getElementById('input-numpad-weight').value = '1';
+  document.getElementById('input-numpad-price').value = selectedProduct.defaultPrice || 0;
+  
+  setActiveNumpadField('weight');
+  calculateNumpadTotal();
+  document.getElementById('modal-numpad').classList.remove('hidden');
+}
+
+function setActiveNumpadField(field) {
+  activeNumpadField = field;
+  const wBox = document.getElementById('field-weight-container');
+  const pBox = document.getElementById('field-price-container');
+
+  if (field === 'weight') {
+    wBox.className = "p-3 border-2 border-indigo-500 bg-indigo-50/50 rounded-2xl cursor-pointer";
+    pBox.className = "p-3 border-2 border-slate-200 rounded-2xl cursor-pointer";
+  } else {
+    pBox.className = "p-3 border-2 border-indigo-500 bg-indigo-50/50 rounded-2xl cursor-pointer";
+    wBox.className = "p-3 border-2 border-slate-200 rounded-2xl cursor-pointer";
+  }
+}
+
+function pressNumpad(val) {
+  const input = activeNumpadField === 'weight' 
+    ? document.getElementById('input-numpad-weight') 
+    : document.getElementById('input-numpad-price');
+
+  let cur = input.value;
+
+  if (val === 'CLEAR') {
+    input.value = '0';
+  } else if (val === 'DEL') {
+    input.value = cur.length > 1 ? cur.slice(0, -1) : '0';
+  } else if (cur === '0' && val !== '.') {
+    input.value = val;
+  } else {
+    input.value += val;
+  }
+
+  calculateNumpadTotal();
+}
+
+function calculateNumpadTotal() {
+  const weight = parseFloat(document.getElementById('input-numpad-weight').value) || 0;
+  const pricePerKg = parseFloat(document.getElementById('input-numpad-price').value) || 0;
+  const total = weight * pricePerKg;
+  document.getElementById('numpad-calculated-total').innerText = total.toFixed(2);
+}
+
+function confirmNumpadAdd() {
+  const weight = parseFloat(document.getElementById('input-numpad-weight').value) || 0;
+  const pricePerKg = parseFloat(document.getElementById('input-numpad-price').value) || 0;
+  const total = weight * pricePerKg;
+
+  if (selectedProduct && weight > 0) {
+    cart.push({
+      id: Date.now(),
+      name: selectedProduct.name,
+      weight: weight,
+      pricePerKg: pricePerKg,
+      total: total
+    });
+    closeModal('modal-numpad');
+    renderPOS();
+  }
+}
+
+// POS & Cart Operations
+function removeItemFromCart(id) {
+  cart = cart.filter(item => item.id !== id);
+  renderPOS();
+}
+
+function cancelCurrentBill() {
+  if(cart.length === 0) return;
+  if(confirm('ยกเลิกบิลนี้และล้างรายการสินค้าทั้งหมด?')) {
+    cart = [];
+    renderPOS();
+    showToast('ยกเลิกบิลเรียบร้อย');
+  }
+}
+
+function renderPOS() {
+  renderProductButtons();
+
+  const receiptList = document.getElementById('receipt-items-list');
+  const totalSum = cart.reduce((s, i) => s + i.total, 0);
+
+  document.getElementById('receipt-total').innerText = totalSum.toFixed(2);
+  document.getElementById('receipt-customer').innerText = currentCustomer;
+  document.getElementById('parked-badge').innerText = parkedBills.length;
+  document.getElementById('receipt-no').innerText = 'INV-' + Math.floor(1000 + Math.random() * 9000);
+  
+  const now = new Date();
+  document.getElementById('receipt-time').innerText = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+  if(cart.length === 0) {
+    receiptList.innerHTML = `<div class="text-center text-slate-400 py-6 text-sm font-semibold">- ยังไม่มีรายการสินค้า -</div>`;
+  } else {
+    receiptList.innerHTML = cart.map(item => `
+      <div class="flex justify-between items-start text-black font-semibold">
+        <div class="max-w-[200px]">
+          <div class="font-extrabold text-base">${item.name} /${item.weight} kg</div>
+          <div class="text-[11px] text-slate-600">(@฿${item.pricePerKg.toFixed(2)}/kg)</div>
+        </div>
+        <div class="flex items-center gap-1">
+          <span class="font-extrabold text-base">฿${item.total.toFixed(2)}</span>
+          <button onclick="removeItemFromCart(${item.id})" class="text-rose-500 hover:bg-rose-100 p-0.5 rounded no-print">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+  lucide.createIcons();
+}
+
+function openCashDrawerManual() {
+  showToast('🔊 เปิดลิ้นชักเก็บเงินแล้ว!');
+}
+
+// พักบิล
+function parkBillManual() {
+  if(cart.length === 0) return alert('ไม่มีรายการในบิลให้พัก');
+  parkedBills.push({
+    id: Date.now(),
+    customer: currentCustomer,
+    items: [...cart],
+    time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+  });
+  localStorage.setItem('parkedBills', JSON.stringify(parkedBills));
+  cart = [];
+  showToast('พักบิลเรียบร้อยแล้ว');
+  renderPOS();
+}
+
+function showParkedBillsModal() {
+  const container = document.getElementById('parked-bills-modal-list');
+  if(parkedBills.length === 0) {
+    container.innerHTML = `<p class="text-sm text-slate-400 py-8 text-center font-bold">ไม่มีบิลที่พักไว้</p>`;
+  } else {
+    container.innerHTML = parkedBills.map(b => {
+      const total = b.items.reduce((s, i) => s + i.total, 0);
+      return `
+        <div class="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex justify-between items-center">
+          <div>
+            <div class="font-extrabold text-slate-800">${b.customer} <span class="text-xs bg-amber-200 px-2 py-0.5 rounded-full">${b.time}</span></div>
+            <div class="text-xs text-slate-600 mt-1">${b.items.length} รายการ - รวม: <strong>฿${total.toFixed(2)}</strong></div>
+          </div>
+          <button onclick="restoreParkedBill(${b.id})" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3 py-2 rounded-xl">ดึงบิลทำต่อ</button>
+        </div>
+      `;
+    }).join('');
+  }
+  document.getElementById('modal-parked-bills').classList.remove('hidden');
+}
+
+function restoreParkedBill(id) {
+  const bill = parkedBills.find(b => b.id === id);
+  if(bill) {
+    cart = [...bill.items];
+    currentCustomer = bill.customer;
+    parkedBills = parkedBills.filter(b => b.id !== id);
+    localStorage.setItem('parkedBills', JSON.stringify(parkedBills));
+    closeModal('modal-parked-bills');
+    renderPOS();
+    showToast('ดึงบิลกลับมาทำต่อเรียบร้อย');
+  }
+}
+
+// ชำระเงิน
+function showPaymentModal() {
+  if(cart.length === 0) return alert('กรุณาเพิ่มสินค้าก่อนชำระเงิน');
+  const totalSum = cart.reduce((sum, item) => sum + item.total, 0);
+  document.getElementById('payment-modal-total').innerText = `฿${totalSum.toFixed(2)}`;
+  document.getElementById('modal-payment').classList.remove('hidden');
+}
+
+function processPayment(status) {
+  const totalSum = cart.reduce((sum, item) => sum + item.total, 0);
+  const newBill = {
+    id: 'INV-' + Math.floor(100000 + Math.random() * 900000),
+    date: new Date().toISOString(),
+    customer: currentCustomer,
+    items: [...cart],
+    total: totalSum,
+    status: status
+  };
+
+  billHistory.unshift(newBill);
+  localStorage.setItem('billHistory', JSON.stringify(billHistory));
+
+  cart = [];
+  closeModal('modal-payment');
+  renderPOS();
+  showToast('บันทึกการขายเรียบร้อย!');
+}
+
+// ประวัติบิลและการกรอง
+function updateCustomerDropdownFilter() {
+  const select = document.getElementById('filter-customer-group');
+  const uniqueCustomers = ['ลูกค้าทั้งหมด', 'ลูกค้าหน้าร้าน (ทั่วไป)', ...regularCustomers];
+  select.innerHTML = uniqueCustomers.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function renderBillHistory() {
+  const period = document.getElementById('filter-period').value;
+  const customerGroup = document.getElementById('filter-customer-group').value;
+  const statusFilter = document.getElementById('filter-status').value;
+
+  const now = new Date();
+  let filtered = billHistory.filter(b => {
+    const bDate = new Date(b.date);
+    
+    if(period === 'day' && bDate.toDateString() !== now.toDateString()) return false;
+    if(period === 'week') {
+      const diffDays = (now - bDate) / (1000 * 3600 * 24);
+      if(diffDays > 7) return false;
+    }
+    if(period === 'month' && (bDate.getMonth() !== now.getMonth() || bDate.getFullYear() !== now.getFullYear())) return false;
+
+    if(customerGroup !== 'ลูกค้าทั้งหมด' && b.customer !== customerGroup) return false;
+    if(statusFilter !== 'all' && !b.status.includes(statusFilter)) return false;
+
+    return true;
+  });
+
+  const body = document.getElementById('bill-history-table-body');
+  if(filtered.length === 0) {
+    body.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-400 font-bold">ไม่พบประวัติบิลตามเงื่อนไขที่เลือก</td></tr>`;
+  } else {
+    body.innerHTML = filtered.map(b => `
+      <tr class="hover:bg-slate-50 border-b border-slate-100">
+        <td class="p-3 text-center">
+          <input type="checkbox" class="bill-checkbox w-4 h-4 text-indigo-600 rounded" value="${b.id}" ${b.status.includes('ค้างชำระ') ? '' : 'disabled'}>
+        </td>
+        <td class="p-3 font-extrabold text-slate-800">${b.id}</td>
+        <td class="p-3 text-xs text-slate-500">${new Date(b.date).toLocaleString('th-TH')}</td>
+        <td class="p-3 font-bold text-slate-700">${b.customer}</td>
+        <td class="p-3 text-right font-black text-indigo-700">฿${b.total.toFixed(2)}</td>
+        <td class="p-3 text-center">
+          <span class="px-3 py-1 rounded-full text-xs font-bold ${             b.status.includes('ชำระแล้ว') ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'           }">${b.status}</span>
+        </td>
+        <td class="p-3 text-center">
+          <button onclick="viewBillDetails('${b.id}')" class="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-1.5 rounded-xl font-bold text-xs">เปิดดู</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+}
+
+// ดูรายละเอียด พิมพ์ แชร์ เปลี่ยนสถานะ
+function viewBillDetails(billId) {
+  currentViewingBill = billHistory.find(b => b.id === billId);
+  if(!currentViewingBill) return;
+
+  const container = document.getElementById('print-receipt-modal');
+  container.innerHTML = `
+    <div class="receipt-80mm shadow-none border p-4 font-mono text-slate-900">
+      <div class="text-center font-black text-2xl tracking-tight text-black">STORE POS</div>
+      <div class="text-xs text-center text-black font-semibold">สาขาหลัก เมือง พิษณุโลก 65000</div>
+      <div class="text-xs text-center text-black font-semibold">โทร: 081-234-5678</div>
+      <div class="font-extrabold text-center border-y-2 border-black my-2 py-1 text-base">ใบเสร็จรับเงิน</div>
+      
+      <div class="text-xs text-black mb-2 space-y-0.5">
+        <div>เลขที่: ${currentViewingBill.id}</div>
+        <div>เวลา: ${new Date(currentViewingBill.date).toLocaleString('th-TH')}</div>
+        <div>ลูกค้า: <strong>${currentViewingBill.customer}</strong></div>
+        <div>สถานะ: <strong>${currentViewingBill.status}</strong></div>
+      </div>
+
+      <div class="border-t-2 border-black pt-2 mb-2 space-y-2">
+        ${currentViewingBill.items.map(i => `
+          <div class="flex justify-between items-start text-black">
+            <div>
+              <div class="font-extrabold text-base">${i.name} / ${i.weight} kg</div>
+              <div class="text-[11px] text-slate-600">(@฿${i.pricePerKg.toFixed(2)}/kg)</div>
+            </div>
+            <span class="font-extrabold text-base">฿${i.total.toFixed(2)}</span>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="border-t-2 border-black pt-2 my-2 flex justify-between items-center font-black text-xl text-black">
+        <span>ทั้งสิ้น</span>
+        <span>฿${currentViewingBill.total.toFixed(2)}</span>
+      </div>
+
+      <div class="text-center mt-4 pt-2 border-t border-dashed border-gray-400 text-xs text-black">
+        <p>" THANK YOU "</p>
+      </div>
+    </div>
+  `;
+
+  const toggleContainer = document.getElementById('toggle-status-container');
+  if(currentViewingBill.status.includes('ค้างชำระ')) {
+    toggleContainer.innerHTML = `
+      <button onclick="markBillAsPaid('${currentViewingBill.id}')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-2xl mb-2 flex items-center justify-center gap-2">
+        <i data-lucide="check-circle" class="w-5 h-5"></i> เปลี่ยนสถานะเป็น "ชำระแล้ว"
+      </button>
+    `;
+  } else {
+    toggleContainer.innerHTML = ``;
+  }
+
+  lucide.createIcons();
+  document.getElementById('modal-bill-detail').classList.remove('hidden');
+}
+
+function markBillAsPaid(billId) {
+  const bill = billHistory.find(b => b.id === billId);
+  if(bill) {
+    bill.status = 'ชำระแล้ว (เงินสด)';
+    localStorage.setItem('billHistory', JSON.stringify(billHistory));
+    viewBillDetails(billId);
+    renderBillHistory();
+    showToast('อัปเดตสถานะเป็นชำระแล้ว');
+  }
+}
+
+function printCurrentBillModal() {
+  window.print();
+}
+
+function shareBillModal() {
+  if(!currentViewingBill) return;
+  const text = `ใบเสร็จเลขที่: ${currentViewingBill.id}\nลูกค้า: ${currentViewingBill.customer}\nยอดรวม: ฿${currentViewingBill.total.toFixed(2)}\nสถานะ: ${currentViewingBill.status}`;
+  if (navigator.share) {
+    navigator.share({ title: 'ใบเสร็จรับเงิน', text: text });
+  } else {
+    navigator.clipboard.writeText(text);
+    showToast('คัดลอกรายละเอียดบิลลง Clipboard แล้ว');
+  }
+}
+
+// รวมบิล
+function mergeSelectedBills() {
+  const selectedBoxes = document.querySelectorAll('.bill-checkbox:checked');
+  if(selectedBoxes.length < 2) return alert('กรุณาเลือกบิลค้างชำระอย่างน้อย 2 บิลขึ้นไปเพื่อรวมบิล');
+
+  const selectedIds = Array.from(selectedBoxes).map(cb => cb.value);
+  const billsToMerge = billHistory.filter(b => selectedIds.includes(b.id));
+
+  const customerNames = [...new Set(billsToMerge.map(b => b.customer))];
+  if(customerNames.length > 1) return alert('สามารถรวมบิลได้เฉพาะลูกค้ารายเดียวกันเท่านั้น');
+
+  let combinedItems = [];
+  let combinedTotal = 0;
+
+  billsToMerge.forEach(b => {
+    combinedItems = [...combinedItems, ...b.items];
+    combinedTotal += b.total;
+  });
+
+  const mergedBill = {
+    id: 'MERGE-' + Math.floor(1000 + Math.random() * 9000),
+    date: new Date().toISOString(),
+    customer: customerNames[0] + ' (รวมบิล)',
+    items: combinedItems,
+    total: combinedTotal,
+    status: 'ค้างชำระ'
+  };
+
+  billHistory = billHistory.filter(b => !selectedIds.includes(b.id));
+  billHistory.unshift(mergedBill);
+  localStorage.setItem('billHistory', JSON.stringify(billHistory));
+
+  renderBillHistory();
+  showToast('รวมบิลค้างชำระเรียบร้อยแล้ว');
+}
+
+// ซื้อเข้า
+function addPurchaseItem() {
+  const name = document.getElementById('p-name').value.trim();
+  const qty = document.getElementById('p-qty').value.trim();
+  const price = parseFloat(document.getElementById('p-price').value) || 0;
+
+  if(name && qty) {
+    purchaseItems.push({ name, qty, price });
+    document.getElementById('p-name').value = '';
+    document.getElementById('p-qty').value = '';
+    document.getElementById('p-price').value = '';
+    renderPurchaseTable();
+  }
+}
+
+function renderPurchaseTable() {
+  const body = document.getElementById('purchase-table-body');
+  body.innerHTML = purchaseItems.map(i => `
+    <tr>
+      <td class="p-3 font-bold text-slate-800">${i.name}</td>
+      <td class="p-3 text-slate-600">${i.qty}</td>
+      <td class="p-3 text-right font-black text-slate-800">฿${i.price.toFixed(2)}</td>
+    </tr>
+  `).join('');
+}
+
+function savePurchaseOrder() {
+  if(purchaseItems.length === 0) return alert('ไม่มีรายการซื้อเข้า');
+  showToast('บันทึกรายการซื้อเข้าเรียบร้อย');
+  purchaseItems = [];
+  renderPurchaseTable();
+}
+
+// ฟังก์ชันเปิด/ปิด Modal และแจ้งเตือน Toast
+function closeModal(id) {
+  document.getElementById(id).classList.add('hidden');
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  document.getElementById('toast-msg').innerText = msg;
+  toast.classList.remove('hidden');
+  setTimeout(() => toast.classList.add('hidden'), 3000);
+}
