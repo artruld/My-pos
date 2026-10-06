@@ -1,627 +1,579 @@
-let appState = {
-  products: JSON.parse(localStorage.getItem('pos_products')) || [
-    { id: 1, name: 'หมูเนื้อแดง', price: 150, type: 'weight' },
-    { id: 2, name: 'หมูสามชั้น', price: 180, type: 'weight' },
-    { id: 3, name: 'เกลือ (ถุง)', price: 20, type: 'unit' }
-  ],
-  customers: JSON.parse(localStorage.getItem('pos_customers')) || [{ id: 'walkin', name: 'ลูกค้าหน้าร้าน' }],
-  suppliers: JSON.parse(localStorage.getItem('pos_suppliers')) || [{ id: 1, name: 'ฟาร์มหมูนครราชสีมา' }],
-  employees: JSON.parse(localStorage.getItem('pos_employees')) || [{ id: 1, name: 'สมชาย สายขยัน' }],
-  sales: JSON.parse(localStorage.getItem('pos_sales')) || [],
-  purchases: JSON.parse(localStorage.getItem('pos_purchases')) || [],
-  expenses: JSON.parse(localStorage.getItem('pos_expenses')) || [],
-  wages: JSON.parse(localStorage.getItem('pos_wages')) || []
-};
+// --- Initial Data & State ---
+const defaultProducts = [
+  { id: 1, name: 'ปลากะพง', type: 'weighted', defaultPrice: 180 },
+  { id: 2, name: 'ปลาทับทิม', type: 'weighted', defaultPrice: 100 },
+  { id: 3, name: 'ปลาหมึกสด', type: 'weighted', defaultPrice: 220 },
+  { id: 4, name: 'กุ้งขาว', type: 'weighted', defaultPrice: 250 },
+  { id: 5, name: 'เกลือ (ถุง)', type: 'fixed', defaultPrice: 20 },
+  { id: 6, name: 'น้ำนวดปลา', type: 'fixed', defaultPrice: 15 }
+];
 
-let currentCart = [];
-let activeProduct = null;
-let activeInputTarget = 'param2';
-let historyFilter = 'all';
-let historyGroupMode = false;
-let selectedUnpaidBillId = null;
+let products = [...defaultProducts];
+let cart = [];
+let selectedProduct = null;
 
+// Database State (Stored in localStorage)
+let bills = JSON.parse(localStorage.getItem('pos_bills')) || [];
+let purchases = JSON.parse(localStorage.getItem('pos_purchases')) || [];
+let employees = JSON.parse(localStorage.getItem('pos_employees')) || [];
+let empTransactions = JSON.parse(localStorage.getItem('pos_emp_tx')) || [];
+let expenses = JSON.parse(localStorage.getItem('pos_expenses')) || [];
+
+let summaryFilterState = 'daily';
+
+// --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-  renderProductGrid();
-  renderSuppliersDropdown();
-  renderEmployeesDropdown();
-  updateReceiptDate();
-  renderSalesHistory();
-  renderPurchaseHistory();
-  renderGeneralExpenses();
-  renderEmployeeLedger();
-  setDashboardRange('daily');
+  renderProducts();
+  renderCart();
+  renderHistory();
+  renderPurchases();
+  renderEmployees();
+  renderExpenses();
+  renderSummary();
 });
 
+// Save State Helper
 function saveData() {
-  localStorage.setItem('pos_products', JSON.stringify(appState.products));
-  localStorage.setItem('pos_customers', JSON.stringify(appState.customers));
-  localStorage.setItem('pos_suppliers', JSON.stringify(appState.suppliers));
-  localStorage.setItem('pos_employees', JSON.stringify(appState.employees));
-  localStorage.setItem('pos_sales', JSON.stringify(appState.sales));
-  localStorage.setItem('pos_purchases', JSON.stringify(appState.purchases));
-  localStorage.setItem('pos_expenses', JSON.stringify(appState.expenses));
-  localStorage.setItem('pos_wages', JSON.stringify(appState.wages));
+  localStorage.setItem('pos_bills', JSON.stringify(bills));
+  localStorage.setItem('pos_purchases', JSON.stringify(purchases));
+  localStorage.setItem('pos_employees', JSON.stringify(employees));
+  localStorage.setItem('pos_emp_tx', JSON.stringify(empTransactions));
+  localStorage.setItem('pos_expenses', JSON.stringify(expenses));
 }
 
-function switchTab(tabName, event) {
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
-  document.getElementById(`tab-${tabName}`).classList.add('active');
-  if (event) event.currentTarget.classList.add('active');
-  if (tabName === 'dashboard') calculateDashboard();
+// Navigation Tabs
+function switchTab(tabId) {
+  document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+  
+  event.target.classList.add('active');
+  document.getElementById(`tab-${tabId}`).classList.add('active');
+
+  if (tabId === 'history') renderHistory();
+  if (tabId === 'purchases') renderPurchases();
+  if (tabId === 'payroll') { renderEmployees(); renderExpenses(); }
+  if (tabId === 'summary') renderSummary();
 }
 
-function renderProductGrid() {
-  const grid = document.getElementById('product-grid');
-  grid.innerHTML = appState.products.map(p => `
-    <div class="product-btn" onclick="selectProduct(${p.id})">
-      <div style="font-weight:600">${p.name}</div>
-      <div style="font-size:0.75rem; color:#64748b">${p.price} ฿/${p.type === 'weight' ? 'กก.' : 'ชิ้น'}</div>
+function switchPayrollSub(subId) {
+  document.querySelectorAll('.btn-sub').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
+
+  event.target.classList.add('active');
+  document.getElementById(`sub-${subId}`).classList.add('active');
+}
+
+// --- Sales & Product Grid ---
+function renderProducts() {
+  const grid = document.getElementById('productGrid');
+  grid.innerHTML = products.map(p => `
+    <div class="product-card" onclick="handleProductClick(${p.id})">
+      <div class="p-name">${p.name}</div>
+      <div class="p-price">฿${p.defaultPrice} ${p.type === 'weighted' ? '/ กก.' : '/ ชิ้น'}</div>
+      <div class="p-badge">${p.type === 'weighted' ? 'ชั่งน้ำหนัก' : 'นับชิ้น/ถุง'}</div>
     </div>
   `).join('');
 }
 
-function selectProduct(id) {
-  activeProduct = appState.products.find(p => p.id === id);
-  document.getElementById('active-item-title').innerText = `รายการ: ${activeProduct.name}`;
+function handleProductClick(productId) {
+  selectedProduct = products.find(p => p.id === productId);
+  document.getElementById('modalProductName').textContent = selectedProduct.name;
   
-  const p1 = document.getElementById('input-param1');
-  const p2 = document.getElementById('input-param2');
+  // ให้ช่องคีย์ราคาและน้ำหนักเป็นช่องว่างเปล่า (Empty) ตั้งแต่แรก
+  document.getElementById('inputQty').value = '';
+  document.getElementById('inputUnitPrice').value = selectedProduct.defaultPrice || '';
+  
+  openModal('modalWeightInput');
+}
 
-  p1.value = activeProduct.price;
+function confirmAddToCart() {
+  const qty = parseFloat(document.getElementById('inputQty').value);
+  const unitPrice = parseFloat(document.getElementById('inputUnitPrice').value);
 
-  if (activeProduct.type === 'unit') {
-    document.getElementById('input-param1-label').innerText = 'ราคา/ชิ้น';
-    document.getElementById('input-param2-label').innerText = 'จำนวน (ชิ้น)';
-    p2.value = '1';
-    activeInputTarget = 'param2';
-    p2.focus();
-  } else {
-    document.getElementById('input-param1-label').innerText = 'ราคา/กก.';
-    document.getElementById('input-param2-label').innerText = 'น้ำหนัก (กก.)';
-    p2.value = ''; // ว่างเปล่าเริ่มต้นให้คีย์เอง
-    activeInputTarget = 'param2';
-    p2.focus();
+  if (!qty || qty <= 0 || !unitPrice || unitPrice <= 0) {
+    alert('กรุณากรอกจำนวน/น้ำหนัก และราคาให้ถูกต้อง');
+    return;
   }
-  calculateActiveTotal();
+
+  const itemTotal = qty * unitPrice;
+  cart.push({
+    id: Date.now(),
+    productId: selectedProduct.id,
+    name: selectedProduct.name,
+    qty: qty,
+    unitPrice: unitPrice,
+    total: itemTotal,
+    type: selectedProduct.type
+  });
+
+  closeModal('modalWeightInput');
+  renderCart();
 }
 
-function setActiveInput(target) { activeInputTarget = target; }
-
-function pressNumpad(val) {
-  const input = document.getElementById(`input-${activeInputTarget}`);
-  if (!input) return;
-  if (val === 'C') input.value = '';
-  else input.value += val;
-  calculateActiveTotal();
+function removeFromCart(index) {
+  cart.splice(index, 1);
+  renderCart();
 }
 
-function calculateActiveTotal() {
-  const p1 = parseFloat(document.getElementById('input-param1').value) || 0;
-  const p2 = parseFloat(document.getElementById('input-param2').value) || 0;
-  const total = p1 * p2;
-  document.getElementById('input-total').value = total > 0 ? total.toFixed(2) : '';
+function renderCart() {
+  const tbody = document.getElementById('cartTableBody');
+  tbody.innerHTML = cart.map((item, idx) => `
+    <tr>
+      <td>${item.name}</td>
+      <td>${item.qty} ${item.type === 'weighted' ? 'กก.' : 'ชิ้น'}</td>
+      <td>฿${item.unitPrice}</td>
+      <td>฿${item.total.toFixed(2)}</td>
+      <td><button class="btn-danger" style="padding: 2px 6px; font-size: 0.75rem;" onclick="removeFromCart(${idx})">X</button></td>
+    </tr>
+  `).join('');
+
+  const grandTotal = cart.reduce((sum, i) => sum + i.total, 0);
+  document.getElementById('cartTotalDisplay').textContent = `฿${grandTotal.toFixed(2)}`;
 }
 
-function addItemToCart() {
-  if (!activeProduct) return alert('กรุณาเลือกรายการสินค้าก่อนครับ');
-  const qty = parseFloat(document.getElementById('input-param2').value);
-  const price = parseFloat(document.getElementById('input-param1').value);
-  const total = parseFloat(document.getElementById('input-total').value);
-
-  if (!qty || qty <= 0) return alert('กรุณากรอกจำนวนหรือน้ำหนัก');
-
-  currentCart.push({ name: activeProduct.name, type: activeProduct.type, price, qty, total });
-  renderReceiptCart();
-
-  // รีเซ็ตช่องป้อนข้อมูลเป็นว่างเปล่า
-  document.getElementById('input-param1').value = '';
-  document.getElementById('input-param2').value = '';
-  document.getElementById('input-total').value = '';
-  document.getElementById('active-item-title').innerText = 'กรุณาเลือกรายการสินค้า';
-  activeProduct = null;
+// --- Payment & Checkout ---
+function openPaymentModal() {
+  if (cart.length === 0) {
+    alert('ไม่มีสินค้าในตะกร้า');
+    return;
+  }
+  openModal('modalPayment');
 }
 
-function renderReceiptCart() {
-  const container = document.getElementById('rec-items-list');
-  let grandTotal = 0;
-  container.innerHTML = currentCart.map((item, idx) => {
-    grandTotal += item.total;
+function processPayment(paymentMethod) {
+  const customerName = document.getElementById('customerName').value.trim() || 'ลูกค้าหน้าร้าน';
+  const grandTotal = cart.reduce((sum, i) => sum + i.total, 0);
+
+  const newBill = {
+    billNo: 'POS-' + Date.now().toString().slice(-6),
+    dateTime: new Date().toISOString(),
+    customerName: customerName,
+    items: [...cart],
+    total: grandTotal,
+    paymentMethod: paymentMethod, // 'เงินสด' หรือ 'เงินโอน'
+    status: 'ชำระแล้ว'
+  };
+
+  bills.unshift(newBill);
+  saveData();
+
+  // พิมพ์ใบเสร็จสลิป
+  printReceipt(newBill);
+
+  // รีเซ็ตหน้าขาย
+  cart = [];
+  renderCart();
+  closeModal('modalPayment');
+
+  if (paymentMethod === 'เงินสด') {
+    alert('ชำระเงินสดเรียบร้อย (ส่งสัญญาณเปิดลิ้นชักเก็บเงิน)');
+  } else {
+    alert('ชำระเงินโอนเรียบร้อย');
+  }
+}
+
+// --- Thermal Receipt Printing ---
+function printReceipt(bill) {
+  const printArea = document.getElementById('printContainer');
+  const dateObj = new Date(bill.dateTime);
+  const formattedDate = dateObj.toLocaleDateString('th-TH') + ' ' + dateObj.toLocaleTimeString('th-TH');
+
+  printArea.innerHTML = `
+    <div class="receipt-header">
+      <div class="receipt-title">ร้านปลาเม้า</div>
+      <div>551/145 ถนนมิตรภาพ (ซอย 10) ตำบลในเมือง</div>
+      <div>อำเภอเมืองนครราชสีมา จังหวัดนครราชสีมา 30000</div>
+      <div>เบอร์โทร 081-760-2807</div>
+    </div>
+    <div class="receipt-divider"></div>
+    <div>บิลเลขที่: ${bill.billNo}</div>
+    <div>วันที่: ${formattedDate}</div>
+    <div>ลูกค้า: ${bill.customerName}</div>
+    <div class="receipt-divider"></div>
+    <table class="receipt-table">
+      <thead>
+        <tr>
+          <th>รายการ</th>
+          <th class="num">จำนวน</th>
+          <th class="num">รวม</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${bill.items.map(i => `
+          <tr>
+            <td>${i.name}</td>
+            <td class="num">${i.qty} x${i.unitPrice}</td>
+            <td class="num">${i.total.toFixed(2)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    <div class="receipt-divider"></div>
+    <div style="display:flex; justify-content:space-between; font-weight:bold;">
+      <span>รวมทั้งสิ้น:</span>
+      <span>฿${bill.total.toFixed(2)}</span>
+    </div>
+    <div>ชำระโดย: ${bill.paymentMethod}</div>
+    <div class="receipt-divider"></div>
+    <div style="text-align:center; margin-top:10px;">ขอบคุณที่อุดหนุนครับ</div>
+  `;
+
+  window.print();
+}
+
+// --- Bill History ---
+function renderHistory() {
+  const container = document.getElementById('historyListContainer');
+  const filterDate = document.getElementById('historyDateFilter').value;
+
+  let filteredBills = bills;
+  if (filterDate) {
+    filteredBills = bills.filter(b => b.dateTime.startsWith(filterDate));
+  }
+
+  if (filteredBills.length === 0) {
+    container.innerHTML = '<p style="color:#64748b;">ไม่พบประวัติบิลขาย</p>';
+    return;
+  }
+
+  container.innerHTML = filteredBills.map(b => `
+    <div style="border:1px solid #cbd5e1; border-radius:8px; padding:12px; margin-bottom:12px; background:${b.status === 'ยกเลิก' ? '#fef2f2' : '#fff'};">
+      <div style="display:flex; justify-style:space-between; align-items:center; border-bottom:1px solid #f1f5f9; padding-bottom:6px; margin-bottom:8px;">
+        <div>
+          <strong>เลขที่: ${b.billNo}</strong> | ลูกค้า: ${b.customerName} | วันที่: ${new Date(b.dateTime).toLocaleString('th-TH')}
+        </div>
+        <div>
+          <span style="font-weight:bold; color:${b.status === 'ชำระแล้ว' ? '#16a34a' : '#dc2626'};">${b.status} (${b.paymentMethod})</span>
+          ${b.status !== 'ยกเลิก' ? `<button class="btn-danger" style="margin-left:10px; padding:4px 8px; font-size:0.8rem;" onclick="cancelBill('${b.billNo}')">ยกเลิกบิล</button>` : ''}
+        </div>
+      </div>
+      <table style="width:100%; font-size:0.85rem;">
+        ${b.items.map(i => `
+          <tr>
+            <td>- ${i.name} (${i.qty} x ฿${i.unitPrice})</td>
+            <td style="text-align:right;">฿${i.total.toFixed(2)}</td>
+          </tr>
+        `).join('')}
+      </table>
+      <div style="text-align:right; font-weight:bold; margin-top:6px; color:#0f172a;">
+        ยอดสุทธิ: ฿${b.total.toFixed(2)}
+      </div>
+    </div>
+  `).join('');
+}
+
+function cancelBill(billNo) {
+  if (confirm(`คุณต้องการยกเลิกบิลเลขที่ ${billNo} ใช่หรือไม่?`)) {
+    const bill = bills.find(b => b.billNo === billNo);
+    if (bill) {
+      bill.status = 'ยกเลิก';
+      saveData();
+      renderHistory();
+    }
+  }
+}
+
+// --- Purchases (เจ้าหนี้) ---
+function openAddPurchaseModal() {
+  document.getElementById('purchaseVendor').value = '';
+  document.getElementById('purchaseItemName').value = '';
+  document.getElementById('purchaseTotal').value = '';
+  openModal('modalAddPurchase');
+}
+
+function savePurchase() {
+  const vendor = document.getElementById('purchaseVendor').value.trim();
+  const itemName = document.getElementById('purchaseItemName').value.trim();
+  const total = parseFloat(document.getElementById('purchaseTotal').value);
+
+  if (!vendor || !itemName || !total) {
+    alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+    return;
+  }
+
+  purchases.unshift({
+    id: 'PUR-' + Date.now().toString().slice(-6),
+    dateTime: new Date().toISOString(),
+    vendor: vendor,
+    itemName: itemName,
+    total: total,
+    status: 'ค้างชำระ' // เริ่มต้นคงสถานะค้างชำระก่อน
+  });
+
+  saveData();
+  renderPurchases();
+  closeModal('modalAddPurchase');
+}
+
+function togglePurchasePaid(id) {
+  const pur = purchases.find(p => p.id === id);
+  if (pur) {
+    pur.status = pur.status === 'ค้างชำระ' ? 'ชำระแล้ว' : 'ค้างชำระ';
+    saveData();
+    renderPurchases();
+  }
+}
+
+function renderPurchases() {
+  const tbody = document.getElementById('purchasesTableBody');
+  tbody.innerHTML = purchases.map(p => `
+    <tr>
+      <td>${new Date(p.dateTime).toLocaleDateString('th-TH')}</td>
+      <td>${p.vendor}</td>
+      <td>${p.itemName}</td>
+      <td>฿${p.total.toFixed(2)}</td>
+      <td>
+        <span style="color: ${p.status === 'ชำระแล้ว' ? '#16a34a' : '#ea580c'}; font-weight:bold;">
+          ${p.status}
+        </span>
+      </td>
+      <td>
+        <button class="${p.status === 'ค้างชำระ' ? 'btn-success' : 'btn-secondary'}" onclick="togglePurchasePaid('${p.id}')">
+          ${p.status === 'ค้างชำระ' ? 'เปลี่ยนเป็นชำระแล้ว' : 'เปลี่ยนเป็นค้างชำระ'}
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// --- Employee & Payroll ---
+function openAddEmployeeModal() {
+  document.getElementById('empName').value = '';
+  openModal('modalAddEmployee');
+}
+
+function saveEmployee() {
+  const name = document.getElementById('empName').value.trim();
+  const type = document.getElementById('empType').value;
+
+  if (!name) return;
+
+  employees.push({ id: Date.now(), name: name, type: type });
+  saveData();
+  renderEmployees();
+  closeModal('modalAddEmployee');
+}
+
+function openEmpTxModal(empId, empName) {
+  document.getElementById('empTxEmpId').value = empId;
+  document.getElementById('empTxTitle').textContent = `บันทึกรายการ: ${empName}`;
+  document.getElementById('empTxAmount').value = '';
+  document.getElementById('empTxNote').value = '';
+  openModal('modalEmpTx');
+}
+
+function saveEmpTx() {
+  const empId = parseInt(document.getElementById('empTxEmpId').value);
+  const type = document.getElementById('empTxType').value;
+  const amount = parseFloat(document.getElementById('empTxAmount').value);
+  const note = document.getElementById('empTxNote').value.trim();
+
+  if (!amount || amount <= 0) {
+    alert('กรุณากรอกจำนวนเงิน');
+    return;
+  }
+
+  empTransactions.unshift({
+    id: Date.now(),
+    empId: empId,
+    dateTime: new Date().toISOString(),
+    type: type,
+    amount: amount,
+    note: note
+  });
+
+  saveData();
+  renderEmployees();
+  closeModal('modalEmpTx');
+}
+
+function viewEmpHistory(empId, empName) {
+  document.getElementById('empHistoryTitle').textContent = `ประวัติทางการเงิน: ${empName}`;
+  const tbody = document.getElementById('empHistoryTableBody');
+  const txs = empTransactions.filter(t => t.empId === empId);
+
+  tbody.innerHTML = txs.map(t => `
+    <tr>
+      <td>${new Date(t.dateTime).toLocaleDateString('th-TH')}</td>
+      <td>${t.type}</td>
+      <td style="color: ${t.type === 'จ่ายค่าจ้าง' ? '#dc2626' : '#0284c7'}; font-weight:bold;">฿${t.amount.toFixed(2)}</td>
+      <td>${t.note || '-'}</td>
+    </tr>
+  `).join('');
+
+  openModal('modalEmpHistory');
+}
+
+function renderEmployees() {
+  const grid = document.getElementById('employeeGrid');
+  grid.innerHTML = employees.map(e => {
+    const txs = empTransactions.filter(t => t.empId === e.id);
+    const paid = txs.filter(t => t.type === 'จ่ายค่าจ้าง').reduce((s, t) => s + t.amount, 0);
+    const advance = txs.filter(t => t.type === 'เบิกล่วงหน้า').reduce((s, t) => s + t.amount, 0);
+    const deposit = txs.filter(t => t.type === 'ฝากเงิน').reduce((s, t) => s + t.amount, 0);
+
     return `
-      <div class="r-item">
-        <span>${item.name} (${item.qty} ${item.type === 'weight' ? 'กก.' : 'ชิ้น'})</span>
-        <span>${item.total.toFixed(2)} <button class="btn-sm text-danger" onclick="removeItemFromCart(${idx})">x</button></span>
+      <div class="emp-card">
+        <h4>${e.name} (${e.type})</h4>
+        <p>จ่ายค่าจ้างรวม: <strong>฿${paid.toFixed(2)}</strong></p>
+        <p>เบิกล่วงหน้าคงค้าง: <strong style="color:#dc2626;">฿${advance.toFixed(2)}</strong></p>
+        <p>ยอดเงินฝาก: <strong style="color:#16a34a;">฿${deposit.toFixed(2)}</strong></p>
+        <div class="emp-card-actions">
+          <button class="btn-primary" onclick="openEmpTxModal(${e.id}, '${e.name}')">+ ทำรายการ</button>
+          <button class="btn-secondary" onclick="viewEmpHistory(${e.id}, '${e.name}')">ดูประวัติ</button>
+        </div>
       </div>
     `;
   }).join('');
-  document.getElementById('rec-grand-total').innerText = `${grandTotal.toFixed(2)} บาท`;
 }
 
-function removeItemFromCart(idx) {
-  currentCart.splice(idx, 1);
-  renderReceiptCart();
+// --- Expenses ---
+function openAddExpenseModal() {
+  document.getElementById('expTitle').value = '';
+  document.getElementById('expAmount').value = '';
+  openModal('modalAddExpense');
 }
 
-function clearCart() {
-  currentCart = [];
-  renderReceiptCart();
-}
+function saveExpense() {
+  const title = document.getElementById('expTitle').value.trim();
+  const amount = parseFloat(document.getElementById('expAmount').value);
 
-function updateReceiptDate() {
-  document.getElementById('rec-date').innerText = new Date().toLocaleString('th-TH');
-}
+  if (!title || !amount) {
+    alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+    return;
+  }
 
-function handleCustomerSelect() {
-  const name = document.getElementById('sales-cust-name').value;
-  document.getElementById('rec-cust-name').innerText = name || 'ลูกค้าหน้าร้าน';
-}
-
-function updateReceiptCustomerName() {
-  const name = document.getElementById('sales-cust-name').value;
-  document.getElementById('rec-cust-name').innerText = name || 'ลูกค้าหน้าร้าน';
-}
-
-function openPaymentModal() {
-  if (currentCart.length === 0) return alert('ไม่มีรายการในสลิป');
-  const grandTotal = currentCart.reduce((s, i) => s + i.total, 0);
-  document.getElementById('modal-pay-amount').innerText = grandTotal.toFixed(2);
-  document.getElementById('modal-payment').style.display = 'flex';
-}
-
-function confirmPayment(method) {
-  const grandTotal = currentCart.reduce((s, i) => s + i.total, 0);
-  appState.sales.unshift({
-    id: 'POS-' + Date.now().toString().slice(-6),
-    date: new Date().toISOString(),
-    customer: document.getElementById('sales-cust-name').value || 'ลูกค้าหน้าร้าน',
-    items: [...currentCart],
-    total: grandTotal,
-    paymentMethod: method === 'cash' ? 'เงินสด' : 'เงินโอน',
-    status: 'paid'
+  expenses.unshift({
+    id: Date.now(),
+    dateTime: new Date().toISOString(),
+    title: title,
+    amount: amount
   });
+
   saveData();
-  closeModal('modal-payment');
-  if (method === 'cash') alert('สั่งเปิดลิ้นชักเก็บเงินเรียบร้อย');
-  printReceipt();
-  clearCart();
-  renderSalesHistory();
+  renderExpenses();
+  closeModal('modalAddExpense');
 }
 
-function saveCartAsUnpaid() {
-  if (currentCart.length === 0) return alert('ไม่มีรายการในสลิป');
-  const grandTotal = currentCart.reduce((s, i) => s + i.total, 0);
-  appState.sales.unshift({
-    id: 'POS-' + Date.now().toString().slice(-6),
-    date: new Date().toISOString(),
-    customer: document.getElementById('sales-cust-name').value || 'ลูกค้าหน้าร้าน',
-    items: [...currentCart],
-    total: grandTotal,
-    paymentMethod: 'ค้างชำระ',
-    status: 'unpaid'
-  });
-  saveData();
-  alert('บันทึกพักบิลค้างชำระเรียบร้อย');
-  clearCart();
-  renderSalesHistory();
-}
-
-function printReceipt() {
-  const target = document.getElementById('receipt-preview');
-  target.classList.add('print-target');
-  window.print();
-  target.classList.remove('print-target');
-}
-
-function setHistoryFilter(filter, event) {
-  historyFilter = filter;
-  if (event) {
-    const parent = event.currentTarget.parentElement;
-    parent.querySelectorAll('.btn-sm').forEach(b => b.classList.remove('active'));
-    event.currentTarget.classList.add('active');
-  }
-  renderSalesHistory();
-}
-
-function toggleHistoryGrouping(event) {
-  historyGroupMode = !historyGroupMode;
-  renderSalesHistory();
-}
-
-function renderSalesHistory() {
-  const container = document.getElementById('history-container');
-  let list = appState.sales;
-  if (historyFilter === 'unpaid') list = list.filter(s => s.status === 'unpaid');
-  if (historyFilter === 'paid') list = list.filter(s => s.status === 'paid');
-
-  if (historyGroupMode) {
-    // จัดกลุ่มตามวัน
-    const grouped = {};
-    list.forEach(s => {
-      const day = new Date(s.date).toLocaleDateString('th-TH');
-      if (!grouped[day]) grouped[day] = [];
-      grouped[day].push(s);
-    });
-
-    container.innerHTML = Object.keys(grouped).map(day => {
-      const daySales = grouped[day];
-      const dayTotal = daySales.reduce((sum, s) => sum + s.total, 0);
-      return `
-        <div class="daily-group-card">
-          <div class="daily-group-header">
-            <span>📅 วันที่: ${day} (${daySales.length} บิล)</span>
-            <span>ยอดรวมทั้งสิ้น: <strong>${dayTotal.toFixed(2)} บาท</strong></span>
-          </div>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>เลขที่บิล</th>
-                <th>เวลา</th>
-                <th>ลูกค้า</th>
-                <th>ยอดรวม</th>
-                <th>ประเภท</th>
-                <th>สถานะ</th>
-                <th>จัดการ</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${daySales.map(s => renderSaleRow(s)).join('')}
-            </tbody>
-          </table>
-        </div>
-      `;
-    }).join('');
-  } else {
-    // แสดงแบบตารางธรรมดา
-    container.innerHTML = `
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>เลขที่บิล</th>
-            <th>วันที่/เวลา</th>
-            <th>ชื่อลูกค้า</th>
-            <th>ยอดรวม</th>
-            <th>ประเภทชำระ</th>
-            <th>สถานะ</th>
-            <th>จัดการ</th>
-          </tr>
-        </thead>
-        <tbody id="history-table-body">
-          ${list.map(s => renderSaleRow(s)).join('')}
-        </tbody>
-      </table>
-    `;
-  }
-}
-
-function renderSaleRow(s) {
-  return `
+function renderExpenses() {
+  const tbody = document.getElementById('expenseTableBody');
+  tbody.innerHTML = expenses.map(x => `
     <tr>
-      <td>${s.id}</td>
-      <td>${new Date(s.date).toLocaleString('th-TH')}</td>
-      <td>${s.customer}</td>
-      <td><strong>${s.total.toFixed(2)}</strong></td>
-      <td>${s.paymentMethod}</td>
-      <td><span class="${s.status === 'paid' ? 'text-success' : 'text-danger'}">${s.status === 'paid' ? 'ชำระแล้ว' : 'ค้างชำระ'}</span></td>
-      <td>
-        ${s.status === 'unpaid' ? `<button class="btn-sm btn-success" onclick="openBillPaymentModal('${s.id}')">ชำระเงิน</button>` : ''}
-        <button class="btn-sm btn-danger" onclick="cancelSale('${s.id}')">ยกเลิก</button>
-      </td>
-    </tr>
-  `;
-}
-
-function openBillPaymentModal(id) {
-  const sale = appState.sales.find(s => s.id === id);
-  if (!sale) return;
-  selectedUnpaidBillId = id;
-  document.getElementById('modal-pay-bill-id').innerText = sale.id;
-  document.getElementById('modal-pay-bill-amount').innerText = sale.total.toFixed(2);
-  document.getElementById('modal-pay-bill').style.display = 'flex';
-}
-
-function confirmBillPayment(method) {
-  const sale = appState.sales.find(s => s.id === selectedUnpaidBillId);
-  if (sale) {
-    sale.status = 'paid';
-    sale.paymentMethod = method;
-    saveData();
-    closeModal('modal-pay-bill');
-    if (method === 'เงินสด') alert('สั่งเปิดลิ้นชักเก็บเงินเรียบร้อย');
-    renderSalesHistory();
-  }
-}
-
-function cancelSale(id) {
-  if (confirm('คุณต้องการยกเลิกบิลนี้ใช่หรือไม่?')) {
-    appState.sales = appState.sales.filter(s => s.id !== id);
-    saveData();
-    renderSalesHistory();
-  }
-}
-
-function togglePurchaseItemMode() {
-  const mode = document.getElementById('pur-item-type').value;
-  document.getElementById('pur-existing-group').style.display = mode === 'existing' ? 'block' : 'none';
-  document.getElementById('pur-custom-group').style.display = mode === 'custom' ? 'block' : 'none';
-}
-
-function savePurchaseRecord() {
-  const supSelect = document.getElementById('pur-supplier-select');
-  const supName = supSelect.options[supSelect.selectedIndex]?.text || 'ไม่ระบุ';
-  const mode = document.getElementById('pur-item-type').value;
-  let itemName = mode === 'existing' ? document.getElementById('pur-product-select').value : document.getElementById('pur-custom-name').value;
-  const qty = parseFloat(document.getElementById('pur-qty').value) || 0;
-  const price = parseFloat(document.getElementById('pur-price').value) || 0;
-
-  if (!itemName || price <= 0) return alert('กรอกข้อมูลให้ครบถ้วน');
-
-  appState.purchases.unshift({ id: Date.now(), date: new Date().toISOString(), supplier: supName, itemName, qty, total: price, status: 'unpaid' });
-  saveData();
-  renderPurchaseHistory();
-
-  document.getElementById('pur-qty').value = '';
-  document.getElementById('pur-price').value = '';
-}
-
-function renderPurchaseHistory() {
-  const tbody = document.getElementById('purchase-table-body');
-  tbody.innerHTML = appState.purchases.map(p => `
-    <tr>
-      <td>${new Date(p.date).toLocaleDateString('th-TH')}</td>
-      <td>${p.supplier}</td>
-      <td>${p.itemName} (${p.qty})</td>
-      <td>${p.total.toFixed(2)}</td>
-      <td><span class="${p.status === 'paid' ? 'text-success' : 'text-danger'}">${p.status === 'paid' ? 'ชำระแล้ว' : 'ค้างชำระ'}</span></td>
-      <td>${p.status === 'unpaid' ? `<button class="btn-sm btn-success" onclick="markPurPaid(${p.id})">ชำระแล้ว</button>` : ''}</td>
+      <td>${new Date(x.dateTime).toLocaleDateString('th-TH')}</td>
+      <td>${x.title}</td>
+      <td style="color:#dc2626; font-weight:bold;">฿${x.amount.toFixed(2)}</td>
     </tr>
   `).join('');
 }
 
-function markPurPaid(id) {
-  const pur = appState.purchases.find(p => p.id === id);
-  if (pur) {
-    pur.status = 'paid';
-    saveData();
-    renderPurchaseHistory();
-  }
+// --- Account Summary ---
+function setSummaryFilter(type) {
+  summaryFilterState = type;
+  document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+  renderSummary();
 }
 
-function switchExpenseSubTab(sub) {
-  document.getElementById('subtab-general-view').style.display = sub === 'general' ? 'block' : 'none';
-  document.getElementById('subtab-wages-view').style.display = sub === 'wages' ? 'block' : 'none';
-  document.getElementById('subnav-general').className = sub === 'general' ? 'btn-sm btn-primary active' : 'btn-sm btn-outline';
-  document.getElementById('subnav-wages').className = sub === 'wages' ? 'btn-sm btn-primary active' : 'btn-sm btn-outline';
-}
-
-function saveGeneralExpense() {
-  const title = document.getElementById('exp-title').value;
-  const amount = parseFloat(document.getElementById('exp-amount').value) || 0;
-  if (!title || amount <= 0) return alert('กรอกข้อมูลให้ครบถ้วน');
-  appState.expenses.unshift({ id: Date.now(), date: new Date().toISOString(), title, amount });
-  saveData();
-  renderGeneralExpenses();
-
-  document.getElementById('exp-title').value = '';
-  document.getElementById('exp-amount').value = '';
-}
-
-function renderGeneralExpenses() {
-  const tbody = document.getElementById('expense-table-body');
-  tbody.innerHTML = appState.expenses.map(e => `
-    <tr>
-      <td>${new Date(e.date).toLocaleDateString('th-TH')}</td>
-      <td>${e.title}</td>
-      <td>${e.amount.toFixed(2)}</td>
-      <td><button class="btn-sm btn-danger" onclick="deleteExpense(${e.id})">ลบ</button></td>
-    </tr>
-  `).join('');
-}
-
-function deleteExpense(id) {
-  appState.expenses = appState.expenses.filter(e => e.id !== id);
-  saveData();
-  renderGeneralExpenses();
-}
-
-function saveWageTransaction() {
-  const empSelect = document.getElementById('wage-emp-select');
-  const empName = empSelect.options[empSelect.selectedIndex]?.text;
-  const type = document.getElementById('wage-type').value;
-  const amount = parseFloat(document.getElementById('wage-amount').value) || 0;
-  if (!empName || amount <= 0) return alert('กรอกข้อมูลให้ครบถ้วน');
-  appState.wages.unshift({ id: Date.now(), date: new Date().toISOString(), empName, type, amount });
-  saveData();
-  renderEmployeeLedger();
-
-  document.getElementById('wage-amount').value = '';
-}
-
-function renderEmployeeLedger() {
-  const tbody = document.getElementById('wage-table-body');
-  const filterEmp = document.getElementById('wage-filter-emp').value;
-  const labels = { pay: '🟢 จ่ายค่าจ้าง', advance: '🔴 เบิกเงินล่วงหน้า', deposit: '🔵 ฝากเงิน' };
-
-  let list = appState.wages;
-  if (filterEmp !== 'all') {
-    list = list.filter(w => w.empName === filterEmp);
-  }
-
-  tbody.innerHTML = list.map(w => `
-    <tr>
-      <td>${new Date(w.date).toLocaleDateString('th-TH')}</td>
-      <td>${w.empName}</td>
-      <td>${labels[w.type]}</td>
-      <td>${w.amount.toFixed(2)}</td>
-      <td><button class="btn-sm btn-danger" onclick="deleteWage(${w.id})">ลบ</button></td>
-    </tr>
-  `).join('');
-}
-
-function deleteWage(id) {
-  appState.wages = appState.wages.filter(w => w.id !== id);
-  saveData();
-  renderEmployeeLedger();
-}
-
-function setDashboardRange(type, event) {
-  if (event) {
-    const parent = event.currentTarget.parentElement;
-    parent.querySelectorAll('.btn-sm').forEach(b => b.classList.remove('active'));
-    event.currentTarget.classList.add('active');
-  }
-
-  const startInput = document.getElementById('dash-start-date');
-  const endInput = document.getElementById('dash-end-date');
+function renderSummary() {
   const now = new Date();
   
-  let start = new Date(now);
-  if (type === 'daily') {
-    start = new Date(now);
-  } else if (type === 'weekly') {
-    start.setDate(now.getDate() - 7);
-  } else if (type === 'monthly') {
-    start.setMonth(now.getMonth() - 1);
-  } else if (type === 'yearly') {
-    start.setFullYear(now.getFullYear() - 1);
-  }
+  const filterFn = (dateTimeStr) => {
+    const d = new Date(dateTimeStr);
+    if (summaryFilterState === 'daily') {
+      return d.toDateString() === now.toDateString();
+    }
+    if (summaryFilterState === 'weekly') {
+      const diffTime = Math.abs(now - d);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays <= 7;
+    }
+    if (summaryFilterState === 'monthly') {
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }
+    if (summaryFilterState === 'yearly') {
+      return d.getFullYear() === now.getFullYear();
+    }
+    return true;
+  };
 
-  startInput.value = start.toISOString().split('T')[0];
-  endInput.value = now.toISOString().split('T')[0];
-  calculateDashboard();
+  // รวมยอดขายเฉพาะบิลที่ไม่ถูกยกเลิก
+  const revenue = bills
+    .filter(b => b.status !== 'ยกเลิก' && filterFn(b.dateTime))
+    .reduce((s, b) => s + b.total, 0);
+
+  // ยอดซื้อเข้า
+  const purTotal = purchases
+    .filter(p => filterFn(p.dateTime))
+    .reduce((s, p) => s + p.total, 0);
+
+  // รายจ่ายทั่วไป + รายจ่ายค่าจ้างพนักงาน
+  const expTotal = expenses
+    .filter(x => filterFn(x.dateTime))
+    .reduce((s, x) => s + x.amount, 0);
+
+  const payrollTotal = empTransactions
+    .filter(t => t.type === 'จ่ายค่าจ้าง' && filterFn(t.dateTime))
+    .reduce((s, t) => s + t.amount, 0);
+
+  const totalExpense = expTotal + payrollTotal;
+  const netProfit = revenue - purTotal - totalExpense;
+
+  document.getElementById('summaryRevenue').textContent = `฿${revenue.toFixed(2)}`;
+  document.getElementById('summaryPurchases').textContent = `฿${purTotal.toFixed(2)}`;
+  document.getElementById('summaryExpenses').textContent = `฿${totalExpense.toFixed(2)}`;
+  document.getElementById('summaryProfit').textContent = `฿${netProfit.toFixed(2)}`;
 }
 
-function calculateDashboard() {
-  const startVal = document.getElementById('dash-start-date').value;
-  const endVal = document.getElementById('dash-end-date').value;
+// พิมพ์สลิปสรุปบัญชี
+function printSummaryReport() {
+  const printArea = document.getElementById('printContainer');
+  const revenue = document.getElementById('summaryRevenue').textContent;
+  const purTotal = document.getElementById('summaryPurchases').textContent;
+  const expTotal = document.getElementById('summaryExpenses').textContent;
+  const netProfit = document.getElementById('summaryProfit').textContent;
 
-  const startDate = startVal ? new Date(startVal + 'T00:00:00') : new Date(0);
-  const endDate = endVal ? new Date(endVal + 'T23:59:59') : new Date();
+  printArea.innerHTML = `
+    <div class="receipt-header">
+      <div class="receipt-title">สรุปบัญชี - ร้านปลาเม้า</div>
+      <div>ช่วงเวลา: ${summaryFilterState.toUpperCase()}</div>
+      <div>พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH')}</div>
+    </div>
+    <div class="receipt-divider"></div>
+    <table class="receipt-table">
+      <tr><td>ยอดขายรวม:</td><td class="num">${revenue}</td></tr>
+      <tr><td>ยอดซื้อเข้ารวม:</td><td class="num">${purTotal}</td></tr>
+      <tr><td>รายจ่ายรวม:</td><td class="num">${expTotal}</td></tr>
+    </table>
+    <div class="receipt-divider"></div>
+    <div style="display:flex; justify-style:space-between; font-size:14px; font-weight:bold;">
+      <span>กำไรสุทธิ:</span>
+      <span>${netProfit}</span>
+    </div>
+    <div class="receipt-divider"></div>
+  `;
 
-  let salesTotal = 0, salesCash = 0, salesTransfer = 0;
-  appState.sales.filter(s => s.status === 'paid').forEach(s => {
-    const d = new Date(s.date);
-    if (d >= startDate && d <= endDate) {
-      salesTotal += s.total;
-      if (s.paymentMethod === 'เงินสด') salesCash += s.total;
-      else salesTransfer += s.total;
-    }
-  });
-
-  let purTotal = 0, purPaid = 0, purUnpaid = 0;
-  appState.purchases.forEach(p => {
-    const d = new Date(p.date);
-    if (d >= startDate && d <= endDate) {
-      purTotal += p.total;
-      if (p.status === 'paid') purPaid += p.total;
-      else purUnpaid += p.total;
-    }
-  });
-
-  let expTotal = 0;
-  appState.expenses.forEach(e => {
-    const d = new Date(e.date);
-    if (d >= startDate && d <= endDate) expTotal += e.amount;
-  });
-
-  let wageTotal = 0;
-  appState.wages.filter(w => w.type === 'pay').forEach(w => {
-    const d = new Date(w.date);
-    if (d >= startDate && d <= endDate) wageTotal += w.amount;
-  });
-
-  document.getElementById('sum-sales').innerText = `${salesTotal.toFixed(2)} ฿`;
-  document.getElementById('sum-sales-cash').innerText = `${salesCash.toFixed(2)} ฿`;
-  document.getElementById('sum-sales-transfer').innerText = `${salesTransfer.toFixed(2)} ฿`;
-  document.getElementById('sum-purchases').innerText = `${purTotal.toFixed(2)} ฿`;
-  document.getElementById('sum-pur-paid').innerText = `${purPaid.toFixed(2)} ฿`;
-  document.getElementById('sum-pur-unpaid').innerText = `${purUnpaid.toFixed(2)} ฿`;
-  document.getElementById('sum-expenses').innerText = `${expTotal.toFixed(2)} ฿`;
-  document.getElementById('sum-wages').innerText = `${wageTotal.toFixed(2)} ฿`;
-
-  const profit = salesTotal - (purTotal + expTotal + wageTotal);
-  document.getElementById('sum-net-profit').innerText = `${profit.toFixed(2)} บาท`;
-}
-
-function printSummaryReceipt() {
-  const startVal = document.getElementById('dash-start-date').value;
-  const endVal = document.getElementById('dash-end-date').value;
-
-  document.getElementById('sum-print-range').innerText = `${startVal} ถึง ${endVal}`;
-  document.getElementById('sum-p-sales').innerText = document.getElementById('sum-sales').innerText;
-  document.getElementById('sum-p-cash').innerText = document.getElementById('sum-sales-cash').innerText;
-  document.getElementById('sum-p-transfer').innerText = document.getElementById('sum-sales-transfer').innerText;
-  document.getElementById('sum-p-purchases').innerText = document.getElementById('sum-purchases').innerText;
-  document.getElementById('sum-p-expenses').innerText = document.getElementById('sum-expenses').innerText;
-  document.getElementById('sum-p-wages').innerText = document.getElementById('sum-wages').innerText;
-  document.getElementById('sum-p-profit').innerText = document.getElementById('sum-net-profit').innerText;
-  document.getElementById('sum-print-time').innerText = new Date().toLocaleString('th-TH');
-
-  const template = document.getElementById('summary-print-template');
-  template.classList.add('print-target');
   window.print();
-  template.classList.remove('print-target');
 }
 
-function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-function openAddProductModal() { document.getElementById('modal-add-product').style.display = 'flex'; }
-function openAddEmployeeModal() { document.getElementById('modal-add-emp').style.display = 'flex'; }
-function openAddSupplierModal() { document.getElementById('modal-add-supplier').style.display = 'flex'; }
-function openResetModal() { document.getElementById('modal-reset').style.display = 'flex'; }
-
-function saveNewProduct() {
-  const name = document.getElementById('new-prod-name').value;
-  const type = document.getElementById('new-prod-type').value;
-  const price = parseFloat(document.getElementById('new-prod-price').value) || 0;
-  if (!name || price <= 0) return alert('กรอกข้อมูลให้ครบถ้วน');
-  appState.products.push({ id: Date.now(), name, price, type });
-  saveData();
-  renderProductGrid();
-  renderSuppliersDropdown();
-  closeModal('modal-add-product');
-  document.getElementById('new-prod-name').value = '';
-  document.getElementById('new-prod-price').value = '';
-}
-
-function saveNewEmployee() {
-  const name = document.getElementById('new-emp-name').value;
-  if (!name) return alert('กรอกชื่อพนักงาน');
-  appState.employees.push({ id: Date.now(), name });
-  saveData();
-  renderEmployeesDropdown();
-  closeModal('modal-add-emp');
-  document.getElementById('new-emp-name').value = '';
-}
-
-function saveNewSupplier() {
-  const name = document.getElementById('new-sup-name').value;
-  if (!name) return alert('กรอกชื่อผู้ขาย');
-  appState.suppliers.push({ id: Date.now(), name });
-  saveData();
-  renderSuppliersDropdown();
-  closeModal('modal-add-supplier');
-  document.getElementById('new-sup-name').value = '';
-}
-
-function renderSuppliersDropdown() {
-  const select = document.getElementById('pur-supplier-select');
-  select.innerHTML = appState.suppliers.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-  const prodSelect = document.getElementById('pur-product-select');
-  prodSelect.innerHTML = appState.products.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
-}
-
-function renderEmployeesDropdown() {
-  const select = document.getElementById('wage-emp-select');
-  const filterSelect = document.getElementById('wage-filter-emp');
-  select.innerHTML = appState.employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
-  filterSelect.innerHTML = `<option value="all">พนักงานทุกคน</option>` + appState.employees.map(e => `<option value="${e.name}">${e.name}</option>`).join('');
-}
-
-function executeReset() {
-  if (document.getElementById('reset-confirm-input').value === 'RESET') {
-    localStorage.clear();
-    alert('ล้างข้อมูลทั้งหมดเรียบร้อยแล้ว');
+// ลบประวัติทั้งหมด
+function confirmResetAllData() {
+  const pwd = prompt('คำเตือน! การลบประวัติจะลบข้อมูลบิล รายจ่าย และบันทึกทั้งหมด\nกรุณาพิมพ์ "DELETE" เพื่อยืนยัน:');
+  if (pwd === 'DELETE') {
+    bills = [];
+    purchases = [];
+    employees = [];
+    empTransactions = [];
+    expenses = [];
+    saveData();
     location.reload();
-  } else {
-    alert('พิมพ์ RESET ไม่ถูกต้อง');
   }
+}
+
+// Modal Helpers
+function openModal(id) {
+  document.getElementById(id).classList.add('active');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
 }
