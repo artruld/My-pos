@@ -1,579 +1,2552 @@
-// --- Initial Data & State ---
-const defaultProducts = [
-  { id: 1, name: 'ปลากะพง', type: 'weighted', defaultPrice: 180 },
-  { id: 2, name: 'ปลาทับทิม', type: 'weighted', defaultPrice: 100 },
-  { id: 3, name: 'ปลาหมึกสด', type: 'weighted', defaultPrice: 220 },
-  { id: 4, name: 'กุ้งขาว', type: 'weighted', defaultPrice: 250 },
-  { id: 5, name: 'เกลือ (ถุง)', type: 'fixed', defaultPrice: 20 },
-  { id: 6, name: 'น้ำนวดปลา', type: 'fixed', defaultPrice: 15 }
+/* =========================================================
+   STORE POS V2
+   ระบบ POS แบบ LocalStorage
+========================================================= */
+
+
+/* =========================================================
+   STORAGE
+========================================================= */
+
+const STORAGE = {
+
+  customers: "storePos_v2_customers",
+
+  products: "storePos_v2_products",
+
+  parked: "storePos_v2_parked",
+
+  history: "storePos_v2_history",
+
+  invoice: "storePos_v2_invoice"
+
+};
+
+
+/* =========================================================
+   DEFAULT DATA
+========================================================= */
+
+const DEFAULT_CUSTOMERS = [
+  "ร้านเจ๊พร",
+  "คุณสมชาย",
+  "ร้านก๋วยเตี๋ยวป้าป้อม"
 ];
 
-let products = [...defaultProducts];
+
+const DEFAULT_PRODUCTS = [
+
+  {
+    id: 1,
+    name: "หมูเนื้อแดง",
+    price: 150
+  },
+
+  {
+    id: 2,
+    name: "สามชั้น",
+    price: 180
+  },
+
+  {
+    id: 3,
+    name: "สันนอก",
+    price: 160
+  },
+
+  {
+    id: 4,
+    name: "ซี่โครงหมู",
+    price: 170
+  },
+
+  {
+    id: 5,
+    name: "หมูบด",
+    price: 140
+  }
+
+];
+
+
+/* =========================================================
+   STATE
+========================================================= */
+
+let customers =
+  load(STORAGE.customers, DEFAULT_CUSTOMERS);
+
+let products =
+  load(STORAGE.products, DEFAULT_PRODUCTS);
+
+let parkedBills =
+  load(STORAGE.parked, []);
+
+let billHistory =
+  load(STORAGE.history, []);
+
+
 let cart = [];
+
+let purchaseItems = [];
+
+let currentCustomer =
+  "ลูกค้าหน้าร้าน (ทั่วไป)";
+
+let currentBillNo = null;
+
 let selectedProduct = null;
 
-// Database State (Stored in localStorage)
-let bills = JSON.parse(localStorage.getItem('pos_bills')) || [];
-let purchases = JSON.parse(localStorage.getItem('pos_purchases')) || [];
-let employees = JSON.parse(localStorage.getItem('pos_employees')) || [];
-let empTransactions = JSON.parse(localStorage.getItem('pos_emp_tx')) || [];
-let expenses = JSON.parse(localStorage.getItem('pos_expenses')) || [];
+let activeNumpadField = "weight";
 
-let summaryFilterState = 'daily';
+let currentViewingBill = null;
 
-// --- Initialization ---
-document.addEventListener('DOMContentLoaded', () => {
-  renderProducts();
-  renderCart();
-  renderHistory();
-  renderPurchases();
-  renderEmployees();
-  renderExpenses();
-  renderSummary();
-});
 
-// Save State Helper
-function saveData() {
-  localStorage.setItem('pos_bills', JSON.stringify(bills));
-  localStorage.setItem('pos_purchases', JSON.stringify(purchases));
-  localStorage.setItem('pos_employees', JSON.stringify(employees));
-  localStorage.setItem('pos_emp_tx', JSON.stringify(empTransactions));
-  localStorage.setItem('pos_expenses', JSON.stringify(expenses));
-}
+/* =========================================================
+   INITIALIZE
+========================================================= */
 
-// Navigation Tabs
-function switchTab(tabId) {
-  document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-  
-  event.target.classList.add('active');
-  document.getElementById(`tab-${tabId}`).classList.add('active');
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
 
-  if (tabId === 'history') renderHistory();
-  if (tabId === 'purchases') renderPurchases();
-  if (tabId === 'payroll') { renderEmployees(); renderExpenses(); }
-  if (tabId === 'summary') renderSummary();
-}
+    lucide.createIcons();
 
-function switchPayrollSub(subId) {
-  document.querySelectorAll('.btn-sub').forEach(btn => btn.classList.remove('active'));
-  document.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
+    updateCustomerFilter();
 
-  event.target.classList.add('active');
-  document.getElementById(`sub-${subId}`).classList.add('active');
-}
+    updateParkedBadge();
 
-// --- Sales & Product Grid ---
-function renderProducts() {
-  const grid = document.getElementById('productGrid');
-  grid.innerHTML = products.map(p => `
-    <div class="product-card" onclick="handleProductClick(${p.id})">
-      <div class="p-name">${p.name}</div>
-      <div class="p-price">฿${p.defaultPrice} ${p.type === 'weighted' ? '/ กก.' : '/ ชิ้น'}</div>
-      <div class="p-badge">${p.type === 'weighted' ? 'ชั่งน้ำหนัก' : 'นับชิ้น/ถุง'}</div>
-    </div>
-  `).join('');
-}
+    navTo("screen-home");
 
-function handleProductClick(productId) {
-  selectedProduct = products.find(p => p.id === productId);
-  document.getElementById('modalProductName').textContent = selectedProduct.name;
-  
-  // ให้ช่องคีย์ราคาและน้ำหนักเป็นช่องว่างเปล่า (Empty) ตั้งแต่แรก
-  document.getElementById('inputQty').value = '';
-  document.getElementById('inputUnitPrice').value = selectedProduct.defaultPrice || '';
-  
-  openModal('modalWeightInput');
-}
+  }
+);
 
-function confirmAddToCart() {
-  const qty = parseFloat(document.getElementById('inputQty').value);
-  const unitPrice = parseFloat(document.getElementById('inputUnitPrice').value);
 
-  if (!qty || qty <= 0 || !unitPrice || unitPrice <= 0) {
-    alert('กรุณากรอกจำนวน/น้ำหนัก และราคาให้ถูกต้อง');
-    return;
+/* =========================================================
+   STORAGE
+========================================================= */
+
+function load(key, fallback) {
+
+  try {
+
+    const data =
+      localStorage.getItem(key);
+
+    return data
+      ? JSON.parse(data)
+      : fallback;
+
+  } catch (error) {
+
+    console.error(error);
+
+    return fallback;
+
   }
 
-  const itemTotal = qty * unitPrice;
-  cart.push({
-    id: Date.now(),
-    productId: selectedProduct.id,
-    name: selectedProduct.name,
-    qty: qty,
-    unitPrice: unitPrice,
-    total: itemTotal,
-    type: selectedProduct.type
-  });
-
-  closeModal('modalWeightInput');
-  renderCart();
 }
 
-function removeFromCart(index) {
-  cart.splice(index, 1);
-  renderCart();
+
+function save(key, data) {
+
+  localStorage.setItem(
+    key,
+    JSON.stringify(data)
+  );
+
 }
 
-function renderCart() {
-  const tbody = document.getElementById('cartTableBody');
-  tbody.innerHTML = cart.map((item, idx) => `
-    <tr>
-      <td>${item.name}</td>
-      <td>${item.qty} ${item.type === 'weighted' ? 'กก.' : 'ชิ้น'}</td>
-      <td>฿${item.unitPrice}</td>
-      <td>฿${item.total.toFixed(2)}</td>
-      <td><button class="btn-danger" style="padding: 2px 6px; font-size: 0.75rem;" onclick="removeFromCart(${idx})">X</button></td>
-    </tr>
-  `).join('');
 
-  const grandTotal = cart.reduce((sum, i) => sum + i.total, 0);
-  document.getElementById('cartTotalDisplay').textContent = `฿${grandTotal.toFixed(2)}`;
+/* =========================================================
+   HTML SAFETY
+========================================================= */
+
+function escapeHtml(value) {
+
+  return String(value)
+
+    .replaceAll("&", "&amp;")
+
+    .replaceAll("<", "&lt;")
+
+    .replaceAll(">", "&gt;")
+
+    .replaceAll('"', "&quot;")
+
+    .replaceAll("'", "&#039;");
+
 }
 
-// --- Payment & Checkout ---
-function openPaymentModal() {
-  if (cart.length === 0) {
-    alert('ไม่มีสินค้าในตะกร้า');
-    return;
-  }
-  openModal('modalPayment');
+
+/* =========================================================
+   INVOICE NUMBER
+========================================================= */
+
+function generateInvoiceNo(prefix = "INV") {
+
+  let sequence =
+    Number(
+      localStorage.getItem(
+        STORAGE.invoice
+      ) || 0
+    );
+
+  sequence++;
+
+  localStorage.setItem(
+    STORAGE.invoice,
+    sequence
+  );
+
+
+  const now = new Date();
+
+
+  const date =
+    now.getFullYear() +
+
+    String(
+      now.getMonth() + 1
+    ).padStart(2, "0") +
+
+    String(
+      now.getDate()
+    ).padStart(2, "0");
+
+
+  return `${prefix}-${date}-${String(sequence).padStart(4, "0")}`;
+
 }
 
-function processPayment(paymentMethod) {
-  const customerName = document.getElementById('customerName').value.trim() || 'ลูกค้าหน้าร้าน';
-  const grandTotal = cart.reduce((sum, i) => sum + i.total, 0);
 
-  const newBill = {
-    billNo: 'POS-' + Date.now().toString().slice(-6),
-    dateTime: new Date().toISOString(),
-    customerName: customerName,
-    items: [...cart],
-    total: grandTotal,
-    paymentMethod: paymentMethod, // 'เงินสด' หรือ 'เงินโอน'
-    status: 'ชำระแล้ว'
-  };
+/* =========================================================
+   NAVIGATION
+========================================================= */
 
-  bills.unshift(newBill);
-  saveData();
+function navTo(screenId) {
 
-  // พิมพ์ใบเสร็จสลิป
-  printReceipt(newBill);
+  document
+    .querySelectorAll("main > section")
+    .forEach(section => {
 
-  // รีเซ็ตหน้าขาย
-  cart = [];
-  renderCart();
-  closeModal('modalPayment');
+      section.classList.add("hidden");
 
-  if (paymentMethod === 'เงินสด') {
-    alert('ชำระเงินสดเรียบร้อย (ส่งสัญญาณเปิดลิ้นชักเก็บเงิน)');
-  } else {
-    alert('ชำระเงินโอนเรียบร้อย');
-  }
-}
+    });
 
-// --- Thermal Receipt Printing ---
-function printReceipt(bill) {
-  const printArea = document.getElementById('printContainer');
-  const dateObj = new Date(bill.dateTime);
-  const formattedDate = dateObj.toLocaleDateString('th-TH') + ' ' + dateObj.toLocaleTimeString('th-TH');
 
-  printArea.innerHTML = `
-    <div class="receipt-header">
-      <div class="receipt-title">ร้านปลาเม้า</div>
-      <div>551/145 ถนนมิตรภาพ (ซอย 10) ตำบลในเมือง</div>
-      <div>อำเภอเมืองนครราชสีมา จังหวัดนครราชสีมา 30000</div>
-      <div>เบอร์โทร 081-760-2807</div>
-    </div>
-    <div class="receipt-divider"></div>
-    <div>บิลเลขที่: ${bill.billNo}</div>
-    <div>วันที่: ${formattedDate}</div>
-    <div>ลูกค้า: ${bill.customerName}</div>
-    <div class="receipt-divider"></div>
-    <table class="receipt-table">
-      <thead>
-        <tr>
-          <th>รายการ</th>
-          <th class="num">จำนวน</th>
-          <th class="num">รวม</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${bill.items.map(i => `
-          <tr>
-            <td>${i.name}</td>
-            <td class="num">${i.qty} x${i.unitPrice}</td>
-            <td class="num">${i.total.toFixed(2)}</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-    <div class="receipt-divider"></div>
-    <div style="display:flex; justify-content:space-between; font-weight:bold;">
-      <span>รวมทั้งสิ้น:</span>
-      <span>฿${bill.total.toFixed(2)}</span>
-    </div>
-    <div>ชำระโดย: ${bill.paymentMethod}</div>
-    <div class="receipt-divider"></div>
-    <div style="text-align:center; margin-top:10px;">ขอบคุณที่อุดหนุนครับ</div>
-  `;
+  const screen =
+    document.getElementById(screenId);
 
-  window.print();
-}
+  if (!screen) return;
 
-// --- Bill History ---
-function renderHistory() {
-  const container = document.getElementById('historyListContainer');
-  const filterDate = document.getElementById('historyDateFilter').value;
 
-  let filteredBills = bills;
-  if (filterDate) {
-    filteredBills = bills.filter(b => b.dateTime.startsWith(filterDate));
+  screen.classList.remove("hidden");
+
+
+  const homeButton =
+    document.getElementById("btn-home");
+
+
+  homeButton.classList.toggle(
+    "hidden",
+    screenId === "screen-home"
+  );
+
+
+  if (
+    screenId ===
+    "screen-regular-customers"
+  ) {
+
+    renderCustomers();
+
   }
 
-  if (filteredBills.length === 0) {
-    container.innerHTML = '<p style="color:#64748b;">ไม่พบประวัติบิลขาย</p>';
-    return;
-  }
 
-  container.innerHTML = filteredBills.map(b => `
-    <div style="border:1px solid #cbd5e1; border-radius:8px; padding:12px; margin-bottom:12px; background:${b.status === 'ยกเลิก' ? '#fef2f2' : '#fff'};">
-      <div style="display:flex; justify-style:space-between; align-items:center; border-bottom:1px solid #f1f5f9; padding-bottom:6px; margin-bottom:8px;">
-        <div>
-          <strong>เลขที่: ${b.billNo}</strong> | ลูกค้า: ${b.customerName} | วันที่: ${new Date(b.dateTime).toLocaleString('th-TH')}
-        </div>
-        <div>
-          <span style="font-weight:bold; color:${b.status === 'ชำระแล้ว' ? '#16a34a' : '#dc2626'};">${b.status} (${b.paymentMethod})</span>
-          ${b.status !== 'ยกเลิก' ? `<button class="btn-danger" style="margin-left:10px; padding:4px 8px; font-size:0.8rem;" onclick="cancelBill('${b.billNo}')">ยกเลิกบิล</button>` : ''}
-        </div>
-      </div>
-      <table style="width:100%; font-size:0.85rem;">
-        ${b.items.map(i => `
-          <tr>
-            <td>- ${i.name} (${i.qty} x ฿${i.unitPrice})</td>
-            <td style="text-align:right;">฿${i.total.toFixed(2)}</td>
-          </tr>
-        `).join('')}
-      </table>
-      <div style="text-align:right; font-weight:bold; margin-top:6px; color:#0f172a;">
-        ยอดสุทธิ: ฿${b.total.toFixed(2)}
-      </div>
-    </div>
-  `).join('');
-}
+  if (
+    screenId === "screen-pos"
+  ) {
 
-function cancelBill(billNo) {
-  if (confirm(`คุณต้องการยกเลิกบิลเลขที่ ${billNo} ใช่หรือไม่?`)) {
-    const bill = bills.find(b => b.billNo === billNo);
-    if (bill) {
-      bill.status = 'ยกเลิก';
-      saveData();
-      renderHistory();
+    if (!currentBillNo) {
+
+      currentBillNo =
+        generateInvoiceNo();
+
     }
-  }
-}
 
-// --- Purchases (เจ้าหนี้) ---
-function openAddPurchaseModal() {
-  document.getElementById('purchaseVendor').value = '';
-  document.getElementById('purchaseItemName').value = '';
-  document.getElementById('purchaseTotal').value = '';
-  openModal('modalAddPurchase');
-}
+    renderPOS();
 
-function savePurchase() {
-  const vendor = document.getElementById('purchaseVendor').value.trim();
-  const itemName = document.getElementById('purchaseItemName').value.trim();
-  const total = parseFloat(document.getElementById('purchaseTotal').value);
-
-  if (!vendor || !itemName || !total) {
-    alert('กรุณากรอกข้อมูลให้ครบถ้วน');
-    return;
   }
 
-  purchases.unshift({
-    id: 'PUR-' + Date.now().toString().slice(-6),
-    dateTime: new Date().toISOString(),
-    vendor: vendor,
-    itemName: itemName,
-    total: total,
-    status: 'ค้างชำระ' // เริ่มต้นคงสถานะค้างชำระก่อน
-  });
 
-  saveData();
-  renderPurchases();
-  closeModal('modalAddPurchase');
-}
+  if (
+    screenId ===
+    "screen-bill-history"
+  ) {
 
-function togglePurchasePaid(id) {
-  const pur = purchases.find(p => p.id === id);
-  if (pur) {
-    pur.status = pur.status === 'ค้างชำระ' ? 'ชำระแล้ว' : 'ค้างชำระ';
-    saveData();
-    renderPurchases();
-  }
-}
+    updateCustomerFilter();
 
-function renderPurchases() {
-  const tbody = document.getElementById('purchasesTableBody');
-  tbody.innerHTML = purchases.map(p => `
-    <tr>
-      <td>${new Date(p.dateTime).toLocaleDateString('th-TH')}</td>
-      <td>${p.vendor}</td>
-      <td>${p.itemName}</td>
-      <td>฿${p.total.toFixed(2)}</td>
-      <td>
-        <span style="color: ${p.status === 'ชำระแล้ว' ? '#16a34a' : '#ea580c'}; font-weight:bold;">
-          ${p.status}
-        </span>
-      </td>
-      <td>
-        <button class="${p.status === 'ค้างชำระ' ? 'btn-success' : 'btn-secondary'}" onclick="togglePurchasePaid('${p.id}')">
-          ${p.status === 'ค้างชำระ' ? 'เปลี่ยนเป็นชำระแล้ว' : 'เปลี่ยนเป็นค้างชำระ'}
-        </button>
-      </td>
-    </tr>
-  `).join('');
-}
+    renderBillHistory();
 
-// --- Employee & Payroll ---
-function openAddEmployeeModal() {
-  document.getElementById('empName').value = '';
-  openModal('modalAddEmployee');
-}
-
-function saveEmployee() {
-  const name = document.getElementById('empName').value.trim();
-  const type = document.getElementById('empType').value;
-
-  if (!name) return;
-
-  employees.push({ id: Date.now(), name: name, type: type });
-  saveData();
-  renderEmployees();
-  closeModal('modalAddEmployee');
-}
-
-function openEmpTxModal(empId, empName) {
-  document.getElementById('empTxEmpId').value = empId;
-  document.getElementById('empTxTitle').textContent = `บันทึกรายการ: ${empName}`;
-  document.getElementById('empTxAmount').value = '';
-  document.getElementById('empTxNote').value = '';
-  openModal('modalEmpTx');
-}
-
-function saveEmpTx() {
-  const empId = parseInt(document.getElementById('empTxEmpId').value);
-  const type = document.getElementById('empTxType').value;
-  const amount = parseFloat(document.getElementById('empTxAmount').value);
-  const note = document.getElementById('empTxNote').value.trim();
-
-  if (!amount || amount <= 0) {
-    alert('กรุณากรอกจำนวนเงิน');
-    return;
   }
 
-  empTransactions.unshift({
-    id: Date.now(),
-    empId: empId,
-    dateTime: new Date().toISOString(),
-    type: type,
-    amount: amount,
-    note: note
-  });
 
-  saveData();
-  renderEmployees();
-  closeModal('modalEmpTx');
+  lucide.createIcons();
+
 }
 
-function viewEmpHistory(empId, empName) {
-  document.getElementById('empHistoryTitle').textContent = `ประวัติทางการเงิน: ${empName}`;
-  const tbody = document.getElementById('empHistoryTableBody');
-  const txs = empTransactions.filter(t => t.empId === empId);
 
-  tbody.innerHTML = txs.map(t => `
-    <tr>
-      <td>${new Date(t.dateTime).toLocaleDateString('th-TH')}</td>
-      <td>${t.type}</td>
-      <td style="color: ${t.type === 'จ่ายค่าจ้าง' ? '#dc2626' : '#0284c7'}; font-weight:bold;">฿${t.amount.toFixed(2)}</td>
-      <td>${t.note || '-'}</td>
-    </tr>
-  `).join('');
+/* =========================================================
+   CUSTOMER
+========================================================= */
 
-  openModal('modalEmpHistory');
-}
+function renderCustomers() {
 
-function renderEmployees() {
-  const grid = document.getElementById('employeeGrid');
-  grid.innerHTML = employees.map(e => {
-    const txs = empTransactions.filter(t => t.empId === e.id);
-    const paid = txs.filter(t => t.type === 'จ่ายค่าจ้าง').reduce((s, t) => s + t.amount, 0);
-    const advance = txs.filter(t => t.type === 'เบิกล่วงหน้า').reduce((s, t) => s + t.amount, 0);
-    const deposit = txs.filter(t => t.type === 'ฝากเงิน').reduce((s, t) => s + t.amount, 0);
+  const grid =
+    document.getElementById(
+      "regular-customer-grid"
+    );
 
-    return `
-      <div class="emp-card">
-        <h4>${e.name} (${e.type})</h4>
-        <p>จ่ายค่าจ้างรวม: <strong>฿${paid.toFixed(2)}</strong></p>
-        <p>เบิกล่วงหน้าคงค้าง: <strong style="color:#dc2626;">฿${advance.toFixed(2)}</strong></p>
-        <p>ยอดเงินฝาก: <strong style="color:#16a34a;">฿${deposit.toFixed(2)}</strong></p>
-        <div class="emp-card-actions">
-          <button class="btn-primary" onclick="openEmpTxModal(${e.id}, '${e.name}')">+ ทำรายการ</button>
-          <button class="btn-secondary" onclick="viewEmpHistory(${e.id}, '${e.name}')">ดูประวัติ</button>
-        </div>
+
+  if (!customers.length) {
+
+    grid.innerHTML = `
+      <div>
+        ยังไม่มีลูกค้าประจำ
       </div>
     `;
-  }).join('');
-}
 
-// --- Expenses ---
-function openAddExpenseModal() {
-  document.getElementById('expTitle').value = '';
-  document.getElementById('expAmount').value = '';
-  openModal('modalAddExpense');
-}
-
-function saveExpense() {
-  const title = document.getElementById('expTitle').value.trim();
-  const amount = parseFloat(document.getElementById('expAmount').value);
-
-  if (!title || !amount) {
-    alert('กรุณากรอกข้อมูลให้ครบถ้วน');
     return;
+
   }
 
-  expenses.unshift({
+
+  grid.innerHTML =
+    customers.map(
+      (name, index) => `
+
+      <div class="customer-item">
+
+        <strong>
+          ${escapeHtml(name)}
+        </strong>
+
+        <div class="customer-item-actions">
+
+          <button
+            style="background:#4f46e5;color:white"
+            onclick="selectCustomerByIndex(${index})"
+          >
+            เลือก
+          </button>
+
+          <button
+            style="background:#fee2e2;color:#dc2626"
+            onclick="deleteCustomer(${index})"
+          >
+            ลบ
+          </button>
+
+        </div>
+
+      </div>
+
+    `
+    ).join("");
+
+}
+
+
+function selectCustomerByIndex(index) {
+
+  selectCustomer(
+    customers[index]
+  );
+
+}
+
+
+function selectCustomer(name) {
+
+  currentCustomer = name;
+
+  currentBillNo =
+    currentBillNo ||
+    generateInvoiceNo();
+
+
+  navTo("screen-pos");
+
+}
+
+
+function showAddCustomerModal() {
+
+  document
+    .getElementById(
+      "modal-add-customer"
+    )
+    .classList.remove("hidden");
+
+
+  setTimeout(
+    () =>
+      document
+        .getElementById(
+          "new-customer-name"
+        )
+        .focus(),
+    100
+  );
+
+}
+
+
+function saveNewCustomer() {
+
+  const input =
+    document.getElementById(
+      "new-customer-name"
+    );
+
+
+  const name =
+    input.value.trim();
+
+
+  if (!name) {
+
+    alert(
+      "กรุณากรอกชื่อลูกค้า"
+    );
+
+    return;
+
+  }
+
+
+  if (customers.includes(name)) {
+
+    alert(
+      "มีชื่อลูกค้านี้แล้ว"
+    );
+
+    return;
+
+  }
+
+
+  customers.push(name);
+
+  save(
+    STORAGE.customers,
+    customers
+  );
+
+
+  input.value = "";
+
+  closeModal(
+    "modal-add-customer"
+  );
+
+
+  renderCustomers();
+
+  updateCustomerFilter();
+
+  showToast(
+    "เพิ่มลูกค้าเรียบร้อย"
+  );
+
+}
+
+
+function deleteCustomer(index) {
+
+  if (
+    !confirm(
+      "ต้องการลบลูกค้ารายนี้หรือไม่?"
+    )
+  ) {
+
+    return;
+
+  }
+
+
+  customers.splice(
+    index,
+    1
+  );
+
+
+  save(
+    STORAGE.customers,
+    customers
+  );
+
+
+  renderCustomers();
+
+  updateCustomerFilter();
+
+  showToast(
+    "ลบลูกค้าเรียบร้อย"
+  );
+
+}
+
+
+/* =========================================================
+   PRODUCTS
+========================================================= */
+
+function renderProducts() {
+
+  const grid =
+    document.getElementById(
+      "product-buttons-grid"
+    );
+
+
+  if (!products.length) {
+
+    grid.innerHTML = `
+      <div>
+        ยังไม่มีสินค้า
+      </div>
+    `;
+
+    return;
+
+  }
+
+
+  grid.innerHTML =
+    products.map(
+      (product, index) => `
+
+      <div class="product-card">
+
+        <button
+          class="product-delete"
+          onclick="deleteProduct(${index})"
+        >
+          ×
+        </button>
+
+
+        <button
+          style="
+            width:100%;
+            height:100%;
+            text-align:left;
+            background:none;
+          "
+          onclick="openNumpad(${product.id})"
+        >
+
+          <i data-lucide="package"></i>
+
+          <strong>
+            ${escapeHtml(product.name)}
+          </strong>
+
+          <small>
+            ฿${Number(product.price).toFixed(2)} / kg
+          </small>
+
+        </button>
+
+      </div>
+
+    `
+    ).join("");
+
+
+  lucide.createIcons();
+
+}
+
+
+function showAddProductModal() {
+
+  document
+    .getElementById(
+      "modal-add-product"
+    )
+    .classList.remove("hidden");
+
+
+  setTimeout(
+    () =>
+      document
+        .getElementById(
+          "new-product-name"
+        )
+        .focus(),
+    100
+  );
+
+}
+
+
+function saveNewProduct() {
+
+  const name =
+    document
+      .getElementById(
+        "new-product-name"
+      )
+      .value
+      .trim();
+
+
+  const price =
+    Number(
+      document
+        .getElementById(
+          "new-product-default-price"
+        )
+        .value
+    );
+
+
+  if (!name) {
+
+    alert(
+      "กรุณากรอกชื่อสินค้า"
+    );
+
+    return;
+
+  }
+
+
+  if (
+    !Number.isFinite(price) ||
+    price < 0
+  ) {
+
+    alert(
+      "กรุณากรอกราคาให้ถูกต้อง"
+    );
+
+    return;
+
+  }
+
+
+  products.push({
+
     id: Date.now(),
-    dateTime: new Date().toISOString(),
-    title: title,
-    amount: amount
+
+    name,
+
+    price
+
   });
 
-  saveData();
-  renderExpenses();
-  closeModal('modalAddExpense');
+
+  save(
+    STORAGE.products,
+    products
+  );
+
+
+  document.getElementById(
+    "new-product-name"
+  ).value = "";
+
+
+  document.getElementById(
+    "new-product-default-price"
+  ).value = "";
+
+
+  closeModal(
+    "modal-add-product"
+  );
+
+
+  renderProducts();
+
+
+  showToast(
+    "สร้างสินค้าเรียบร้อย"
+  );
+
 }
 
-function renderExpenses() {
-  const tbody = document.getElementById('expenseTableBody');
-  tbody.innerHTML = expenses.map(x => `
-    <tr>
-      <td>${new Date(x.dateTime).toLocaleDateString('th-TH')}</td>
-      <td>${x.title}</td>
-      <td style="color:#dc2626; font-weight:bold;">฿${x.amount.toFixed(2)}</td>
-    </tr>
-  `).join('');
+
+function deleteProduct(index) {
+
+  if (
+    !confirm(
+      "ต้องการลบสินค้านี้หรือไม่?"
+    )
+  ) return;
+
+
+  products.splice(
+    index,
+    1
+  );
+
+
+  save(
+    STORAGE.products,
+    products
+  );
+
+
+  renderProducts();
+
+
+  showToast(
+    "ลบสินค้าเรียบร้อย"
+  );
+
 }
 
-// --- Account Summary ---
-function setSummaryFilter(type) {
-  summaryFilterState = type;
-  document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-  event.target.classList.add('active');
-  renderSummary();
+
+/* =========================================================
+   POS
+========================================================= */
+
+function renderPOS() {
+
+  document.getElementById(
+    "pos-customer-name"
+  ).textContent =
+    currentCustomer;
+
+
+  document.getElementById(
+    "receipt-customer"
+  ).textContent =
+    currentCustomer;
+
+
+  document.getElementById(
+    "receipt-no"
+  ).textContent =
+    currentBillNo;
+
+
+  document.getElementById(
+    "receipt-time"
+  ).textContent =
+    new Date().toLocaleTimeString(
+      "th-TH",
+      {
+        hour: "2-digit",
+        minute: "2-digit"
+      }
+    );
+
+
+  renderProducts();
+
+  renderCart();
+
+  updateParkedBadge();
+
 }
 
-function renderSummary() {
-  const now = new Date();
-  
-  const filterFn = (dateTimeStr) => {
-    const d = new Date(dateTimeStr);
-    if (summaryFilterState === 'daily') {
-      return d.toDateString() === now.toDateString();
+
+/* =========================================================
+   NUMPAD
+========================================================= */
+
+function openNumpad(productId) {
+
+  selectedProduct =
+    products.find(
+      product =>
+        product.id === productId
+    );
+
+
+  if (!selectedProduct) return;
+
+
+  document.getElementById(
+    "numpad-product-title"
+  ).textContent =
+    selectedProduct.name;
+
+
+  document.getElementById(
+    "input-numpad-weight"
+  ).textContent = "1";
+
+
+  document.getElementById(
+    "input-numpad-price"
+  ).textContent =
+    Number(
+      selectedProduct.price
+    ).toString();
+
+
+  setActiveNumpadField(
+    "weight"
+  );
+
+
+  calculateNumpadTotal();
+
+
+  document
+    .getElementById(
+      "modal-numpad"
+    )
+    .classList.remove("hidden");
+
+}
+
+
+function setActiveNumpadField(field) {
+
+  activeNumpadField = field;
+
+
+  document
+    .getElementById(
+      "field-weight-container"
+    )
+    .classList.toggle(
+      "active",
+      field === "weight"
+    );
+
+
+  document
+    .getElementById(
+      "field-price-container"
+    )
+    .classList.toggle(
+      "active",
+      field === "price"
+    );
+
+}
+
+
+function getNumpadValue(field) {
+
+  return Number(
+    document
+      .getElementById(
+        field === "weight"
+          ? "input-numpad-weight"
+          : "input-numpad-price"
+      )
+      .textContent
+  ) || 0;
+
+}
+
+
+function setNumpadValue(
+  field,
+  value
+) {
+
+  document
+    .getElementById(
+      field === "weight"
+        ? "input-numpad-weight"
+        : "input-numpad-price"
+    )
+    .textContent =
+    value;
+
+}
+
+
+function pressNumpad(value) {
+
+  let current =
+    document
+      .getElementById(
+        activeNumpadField === "weight"
+          ? "input-numpad-weight"
+          : "input-numpad-price"
+      )
+      .textContent;
+
+
+  if (value === "CLEAR") {
+
+    current = "0";
+
+  }
+
+  else if (value === "DEL") {
+
+    current =
+      current.length > 1
+        ? current.slice(0, -1)
+        : "0";
+
+  }
+
+  else if (value === ".") {
+
+    if (!current.includes(".")) {
+
+      current += ".";
+
     }
-    if (summaryFilterState === 'weekly') {
-      const diffTime = Math.abs(now - d);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays <= 7;
+
+  }
+
+  else {
+
+    if (
+      current === "0"
+    ) {
+
+      current = value;
+
+    } else {
+
+      current += value;
+
     }
-    if (summaryFilterState === 'monthly') {
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    }
-    if (summaryFilterState === 'yearly') {
-      return d.getFullYear() === now.getFullYear();
-    }
-    return true;
+
+  }
+
+
+  setNumpadValue(
+    activeNumpadField,
+    current
+  );
+
+
+  calculateNumpadTotal();
+
+}
+
+
+function calculateNumpadTotal() {
+
+  const weight =
+    getNumpadValue("weight");
+
+
+  const price =
+    getNumpadValue("price");
+
+
+  const total =
+    weight * price;
+
+
+  document.getElementById(
+    "numpad-calculated-total"
+  ).textContent =
+    total.toFixed(2);
+
+}
+
+
+function confirmNumpadAdd() {
+
+  if (!selectedProduct) return;
+
+
+  const weight =
+    getNumpadValue("weight");
+
+
+  const price =
+    getNumpadValue("price");
+
+
+  if (
+    weight <= 0 ||
+    price < 0
+  ) {
+
+    alert(
+      "กรุณากรอกข้อมูลให้ถูกต้อง"
+    );
+
+    return;
+
+  }
+
+
+  cart.push({
+
+    id: Date.now(),
+
+    productId:
+      selectedProduct.id,
+
+    name:
+      selectedProduct.name,
+
+    weight,
+
+    pricePerKg:
+      price,
+
+    total:
+      weight * price
+
+  });
+
+
+  closeModal(
+    "modal-numpad"
+  );
+
+
+  renderCart();
+
+
+  showToast(
+    "เพิ่มสินค้าลงบิลแล้ว"
+  );
+
+}
+
+
+/* =========================================================
+   CART
+========================================================= */
+
+function renderCart() {
+
+  const container =
+    document.getElementById(
+      "receipt-items-list"
+    );
+
+
+  if (!cart.length) {
+
+    container.innerHTML = `
+      <div
+        style="
+          text-align:center;
+          color:#999;
+          padding:35px 0;
+        "
+      >
+        ยังไม่มีสินค้า
+      </div>
+    `;
+
+  }
+
+  else {
+
+    container.innerHTML =
+      cart.map(
+        (item, index) => `
+
+        <div class="receipt-item">
+
+          <div class="receipt-item-name">
+
+            <strong>
+              ${escapeHtml(item.name)}
+            </strong>
+
+            <div style="font-size:10px">
+              ${item.weight.toFixed(3)}
+              kg ×
+              ฿${item.pricePerKg.toFixed(2)}
+            </div>
+
+            <button
+              onclick="removeCartItem(${index})"
+              style="
+                color:#dc2626;
+                background:none;
+                font-size:10px;
+                padding:0;
+              "
+            >
+              ลบ
+            </button>
+
+          </div>
+
+          <strong>
+            ฿${item.total.toFixed(2)}
+          </strong>
+
+        </div>
+
+      `
+      ).join("");
+
+  }
+
+
+  const total =
+    cart.reduce(
+      (sum, item) =>
+        sum + item.total,
+      0
+    );
+
+
+  document.getElementById(
+    "receipt-total"
+  ).textContent =
+    total.toFixed(2);
+
+
+  document.getElementById(
+    "receipt-no"
+  ).textContent =
+    currentBillNo || "-";
+
+}
+
+
+function removeCartItem(index) {
+
+  cart.splice(
+    index,
+    1
+  );
+
+  renderCart();
+
+}
+
+
+function cancelCurrentBill() {
+
+  if (
+    !cart.length &&
+    !currentBillNo
+  ) return;
+
+
+  if (
+    !confirm(
+      "ต้องการยกเลิกบิลปัจจุบันหรือไม่?"
+    )
+  ) return;
+
+
+  cart = [];
+
+  currentBillNo =
+    generateInvoiceNo();
+
+
+  renderCart();
+
+  showToast(
+    "ยกเลิกบิลแล้ว"
+  );
+
+}
+
+
+/* =========================================================
+   PAYMENT
+========================================================= */
+
+function showPaymentModal() {
+
+  if (!cart.length) {
+
+    alert(
+      "ยังไม่มีสินค้าในบิล"
+    );
+
+    return;
+
+  }
+
+
+  const total =
+    cart.reduce(
+      (sum, item) =>
+        sum + item.total,
+      0
+    );
+
+
+  document.getElementById(
+    "payment-modal-total"
+  ).textContent =
+    `฿${total.toFixed(2)}`;
+
+
+  document
+    .getElementById(
+      "modal-payment"
+    )
+    .classList.remove("hidden");
+
+}
+
+
+function processPayment(status) {
+
+  if (!cart.length) return;
+
+
+  const total =
+    cart.reduce(
+      (sum, item) =>
+        sum + item.total,
+      0
+    );
+
+
+  const bill = {
+
+    id:
+      currentBillNo,
+
+    date:
+      new Date().toISOString(),
+
+    customer:
+      currentCustomer,
+
+    items:
+      structuredClone(cart),
+
+    total,
+
+    status
+
   };
 
-  // รวมยอดขายเฉพาะบิลที่ไม่ถูกยกเลิก
-  const revenue = bills
-    .filter(b => b.status !== 'ยกเลิก' && filterFn(b.dateTime))
-    .reduce((s, b) => s + b.total, 0);
 
-  // ยอดซื้อเข้า
-  const purTotal = purchases
-    .filter(p => filterFn(p.dateTime))
-    .reduce((s, p) => s + p.total, 0);
+  billHistory.unshift(
+    bill
+  );
 
-  // รายจ่ายทั่วไป + รายจ่ายค่าจ้างพนักงาน
-  const expTotal = expenses
-    .filter(x => filterFn(x.dateTime))
-    .reduce((s, x) => s + x.amount, 0);
 
-  const payrollTotal = empTransactions
-    .filter(t => t.type === 'จ่ายค่าจ้าง' && filterFn(t.dateTime))
-    .reduce((s, t) => s + t.amount, 0);
+  save(
+    STORAGE.history,
+    billHistory
+  );
 
-  const totalExpense = expTotal + payrollTotal;
-  const netProfit = revenue - purTotal - totalExpense;
 
-  document.getElementById('summaryRevenue').textContent = `฿${revenue.toFixed(2)}`;
-  document.getElementById('summaryPurchases').textContent = `฿${purTotal.toFixed(2)}`;
-  document.getElementById('summaryExpenses').textContent = `฿${totalExpense.toFixed(2)}`;
-  document.getElementById('summaryProfit').textContent = `฿${netProfit.toFixed(2)}`;
+  if (
+    status.includes("เงินสด")
+  ) {
+
+    openCashDrawerManual();
+
+  }
+
+
+  cart = [];
+
+  currentBillNo =
+    generateInvoiceNo();
+
+
+  closeModal(
+    "modal-payment"
+  );
+
+
+  renderPOS();
+
+
+  showToast(
+    "บันทึกการขายเรียบร้อย"
+  );
+
 }
 
-// พิมพ์สลิปสรุปบัญชี
-function printSummaryReport() {
-  const printArea = document.getElementById('printContainer');
-  const revenue = document.getElementById('summaryRevenue').textContent;
-  const purTotal = document.getElementById('summaryPurchases').textContent;
-  const expTotal = document.getElementById('summaryExpenses').textContent;
-  const netProfit = document.getElementById('summaryProfit').textContent;
 
-  printArea.innerHTML = `
-    <div class="receipt-header">
-      <div class="receipt-title">สรุปบัญชี - ร้านปลาเม้า</div>
-      <div>ช่วงเวลา: ${summaryFilterState.toUpperCase()}</div>
-      <div>พิมพ์เมื่อ: ${new Date().toLocaleString('th-TH')}</div>
+/* =========================================================
+   PARK BILL
+========================================================= */
+
+function parkBillManual() {
+
+  if (!cart.length) {
+
+    alert(
+      "ไม่มีรายการสินค้าให้พัก"
+    );
+
+    return;
+
+  }
+
+
+  parkedBills.push({
+
+    id:
+      currentBillNo,
+
+    date:
+      new Date().toISOString(),
+
+    customer:
+      currentCustomer,
+
+    items:
+      structuredClone(cart),
+
+    total:
+      cart.reduce(
+        (sum, item) =>
+          sum + item.total,
+        0
+      )
+
+  });
+
+
+  save(
+    STORAGE.parked,
+    parkedBills
+  );
+
+
+  cart = [];
+
+  currentBillNo =
+    generateInvoiceNo();
+
+
+  renderPOS();
+
+
+  showToast(
+    "พักบิลเรียบร้อย"
+  );
+
+}
+
+
+function showParkedBillsModal() {
+
+  renderParkedBills();
+
+
+  document
+    .getElementById(
+      "modal-parked-bills"
+    )
+    .classList.remove("hidden");
+
+}
+
+
+function renderParkedBills() {
+
+  const container =
+    document.getElementById(
+      "parked-bills-modal-list"
+    );
+
+
+  if (!parkedBills.length) {
+
+    container.innerHTML = `
+      <div
+        style="
+          text-align:center;
+          padding:30px;
+          color:#94a3b8;
+        "
+      >
+        ไม่มีบิลที่พักไว้
+      </div>
+    `;
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    parkedBills.map(
+      (bill, index) => `
+
+      <div class="parked-item">
+
+        <strong>
+          ${escapeHtml(bill.id)}
+        </strong>
+
+        <small>
+          ${escapeHtml(bill.customer)}
+          · ฿${bill.total.toFixed(2)}
+        </small>
+
+        <div class="parked-actions">
+
+          <button
+            style="
+              background:#4f46e5;
+              color:white;
+            "
+            onclick="resumeParkedBill(${index})"
+          >
+            เรียกบิล
+          </button>
+
+          <button
+            style="
+              background:#fee2e2;
+              color:#dc2626;
+            "
+            onclick="deleteParkedBill(${index})"
+          >
+            ลบ
+          </button>
+
+        </div>
+
+      </div>
+
+    `
+    ).join("");
+
+}
+
+
+function resumeParkedBill(index) {
+
+  const bill =
+    parkedBills[index];
+
+
+  if (!bill) return;
+
+
+  if (cart.length) {
+
+    if (
+      !confirm(
+        "มีรายการในบิลปัจจุบัน ต้องการทิ้งรายการเดิมหรือไม่?"
+      )
+    ) return;
+
+  }
+
+
+  cart =
+    structuredClone(
+      bill.items
+    );
+
+
+  currentBillNo =
+    bill.id;
+
+
+  currentCustomer =
+    bill.customer;
+
+
+  parkedBills.splice(
+    index,
+    1
+  );
+
+
+  save(
+    STORAGE.parked,
+    parkedBills
+  );
+
+
+  closeModal(
+    "modal-parked-bills"
+  );
+
+
+  renderPOS();
+
+
+  showToast(
+    "เรียกบิลกลับมาแล้ว"
+  );
+
+}
+
+
+function deleteParkedBill(index) {
+
+  if (
+    !confirm(
+      "ต้องการลบบิลที่พักหรือไม่?"
+    )
+  ) return;
+
+
+  parkedBills.splice(
+    index,
+    1
+  );
+
+
+  save(
+    STORAGE.parked,
+    parkedBills
+  );
+
+
+  renderParkedBills();
+
+  updateParkedBadge();
+
+}
+
+
+function updateParkedBadge() {
+
+  const badge =
+    document.getElementById(
+      "parked-badge"
+    );
+
+
+  if (badge) {
+
+    badge.textContent =
+      parkedBills.length;
+
+  }
+
+}
+
+
+/* =========================================================
+   BILL HISTORY
+========================================================= */
+
+function updateCustomerFilter() {
+
+  const select =
+    document.getElementById(
+      "filter-customer-group"
+    );
+
+
+  if (!select) return;
+
+
+  const names = [
+    "ลูกค้าทั้งหมด",
+    "ลูกค้าหน้าร้าน (ทั่วไป)",
+    ...customers
+  ];
+
+
+  select.innerHTML =
+    names.map(
+      name => `
+        <option value="${escapeHtml(name)}">
+          ${escapeHtml(name)}
+        </option>
+      `
+    ).join("");
+
+}
+
+
+function renderBillHistory() {
+
+  const body =
+    document.getElementById(
+      "bill-history-table-body"
+    );
+
+
+  if (!body) return;
+
+
+  const period =
+    document.getElementById(
+      "filter-period"
+    ).value;
+
+
+  const customer =
+    document.getElementById(
+      "filter-customer-group"
+    ).value;
+
+
+  const status =
+    document.getElementById(
+      "filter-status"
+    ).value;
+
+
+  const now =
+    new Date();
+
+
+  const filtered =
+    billHistory.filter(
+      bill => {
+
+        const date =
+          new Date(
+            bill.date
+          );
+
+
+        if (
+          period === "day" &&
+          date.toDateString() !==
+            now.toDateString()
+        ) {
+
+          return false;
+
+        }
+
+
+        if (
+          period === "week"
+        ) {
+
+          const days =
+            (
+              now - date
+            ) /
+            86400000;
+
+
+          if (
+            days < 0 ||
+            days > 7
+          ) {
+
+            return false;
+
+          }
+
+        }
+
+
+        if (
+          period === "month" &&
+          (
+            date.getMonth() !==
+              now.getMonth() ||
+
+            date.getFullYear() !==
+              now.getFullYear()
+          )
+        ) {
+
+          return false;
+
+        }
+
+
+        if (
+          customer !==
+            "ลูกค้าทั้งหมด" &&
+          bill.customer !==
+            customer
+        ) {
+
+          return false;
+
+        }
+
+
+        if (
+          status !== "all" &&
+          !bill.status.includes(status)
+        ) {
+
+          return false;
+
+        }
+
+
+        return true;
+
+      }
+    );
+
+
+  if (!filtered.length) {
+
+    body.innerHTML = `
+      <tr>
+        <td
+          colspan="7"
+          style="
+            text-align:center;
+            padding:35px;
+            color:#94a3b8;
+          "
+        >
+          ไม่พบรายการ
+        </td>
+      </tr>
+    `;
+
+    return;
+
+  }
+
+
+  body.innerHTML =
+    filtered.map(
+      bill => `
+
+      <tr>
+
+        <td>
+
+          ${
+            bill.status.includes(
+              "ค้างชำระ"
+            )
+
+            ? `
+              <input
+                type="checkbox"
+                class="bill-checkbox"
+                value="${escapeHtml(bill.id)}"
+              >
+            `
+
+            : ""
+          }
+
+        </td>
+
+
+        <td>
+          <strong>
+            ${escapeHtml(bill.id)}
+          </strong>
+        </td>
+
+
+        <td>
+          ${new Date(
+            bill.date
+          ).toLocaleString("th-TH")}
+        </td>
+
+
+        <td>
+          ${escapeHtml(
+            bill.customer
+          )}
+        </td>
+
+
+        <td class="text-right">
+          <strong>
+            ฿${bill.total.toFixed(2)}
+          </strong>
+        </td>
+
+
+        <td>
+
+          <span
+            style="
+              padding:4px 8px;
+              border-radius:20px;
+              background:${
+                bill.status.includes(
+                  "ค้างชำระ"
+                )
+                ? "#fef3c7"
+                : "#dcfce7"
+              };
+              color:${
+                bill.status.includes(
+                  "ค้างชำระ"
+                )
+                ? "#92400e"
+                : "#166534"
+              };
+              font-size:11px;
+              font-weight:800;
+            "
+          >
+            ${escapeHtml(
+              bill.status
+            )}
+          </span>
+
+        </td>
+
+
+        <td>
+
+          <button
+            class="btn btn-indigo"
+            style="min-height:34px;padding:5px 10px"
+            onclick="viewBill('${escapeHtml(bill.id)}')"
+          >
+            เปิดดู
+          </button>
+
+        </td>
+
+      </tr>
+
+    `
+    ).join("");
+
+}
+
+
+/* =========================================================
+   BILL DETAIL
+========================================================= */
+
+function viewBill(id) {
+
+  currentViewingBill =
+    billHistory.find(
+      bill => bill.id === id
+    );
+
+
+  if (!currentViewingBill) return;
+
+
+  const bill =
+    currentViewingBill;
+
+
+  const container =
+    document.getElementById(
+      "print-receipt-modal"
+    );
+
+
+  container.innerHTML = `
+
+    <div class="detail-receipt">
+
+      <div class="receipt-title">
+        STORE POS
+      </div>
+
+      <div class="receipt-center">
+        ใบเสร็จรับเงิน
+      </div>
+
+      <br>
+
+      <div>
+        เลขที่:
+        ${escapeHtml(bill.id)}
+      </div>
+
+      <div>
+        วันที่:
+        ${new Date(
+          bill.date
+        ).toLocaleString("th-TH")}
+      </div>
+
+      <div>
+        ลูกค้า:
+        ${escapeHtml(
+          bill.customer
+        )}
+      </div>
+
+      <br>
+
+      ${bill.items.map(
+        item => `
+
+          <div
+            style="
+              display:flex;
+              justify-content:space-between;
+              margin-bottom:8px;
+            "
+          >
+
+            <div>
+
+              <strong>
+                ${escapeHtml(
+                  item.name
+                )}
+              </strong>
+
+              <div style="font-size:10px">
+                ${item.weight.toFixed(3)}
+                kg ×
+                ฿${item.pricePerKg.toFixed(2)}
+              </div>
+
+            </div>
+
+            <strong>
+              ฿${item.total.toFixed(2)}
+            </strong>
+
+          </div>
+
+        `
+      ).join("")}
+
+
+      <div class="receipt-total">
+
+        <strong>
+          รวม
+        </strong>
+
+        <strong>
+          ฿${bill.total.toFixed(2)}
+        </strong>
+
+      </div>
+
+
+      <div class="receipt-thank">
+        ${escapeHtml(
+          bill.status
+        )}
+      </div>
+
     </div>
-    <div class="receipt-divider"></div>
-    <table class="receipt-table">
-      <tr><td>ยอดขายรวม:</td><td class="num">${revenue}</td></tr>
-      <tr><td>ยอดซื้อเข้ารวม:</td><td class="num">${purTotal}</td></tr>
-      <tr><td>รายจ่ายรวม:</td><td class="num">${expTotal}</td></tr>
-    </table>
-    <div class="receipt-divider"></div>
-    <div style="display:flex; justify-style:space-between; font-size:14px; font-weight:bold;">
-      <span>กำไรสุทธิ:</span>
-      <span>${netProfit}</span>
-    </div>
-    <div class="receipt-divider"></div>
+
   `;
 
-  window.print();
-}
 
-// ลบประวัติทั้งหมด
-function confirmResetAllData() {
-  const pwd = prompt('คำเตือน! การลบประวัติจะลบข้อมูลบิล รายจ่าย และบันทึกทั้งหมด\nกรุณาพิมพ์ "DELETE" เพื่อยืนยัน:');
-  if (pwd === 'DELETE') {
-    bills = [];
-    purchases = [];
-    employees = [];
-    empTransactions = [];
-    expenses = [];
-    saveData();
-    location.reload();
+  const statusContainer =
+    document.getElementById(
+      "toggle-status-container"
+    );
+
+
+  if (
+    bill.status.includes(
+      "ค้างชำระ"
+    )
+  ) {
+
+    statusContainer.innerHTML = `
+
+      <button
+        class="btn btn-green full-width"
+        onclick="markBillPaid('${escapeHtml(bill.id)}')"
+      >
+        ✓ เปลี่ยนเป็นชำระแล้ว
+      </button>
+
+    `;
+
+  } else {
+
+    statusContainer.innerHTML = "";
+
   }
+
+
+  document
+    .getElementById(
+      "modal-bill-detail"
+    )
+    .classList.remove("hidden");
+
 }
 
-// Modal Helpers
-function openModal(id) {
-  document.getElementById(id).classList.add('active');
+
+function markBillPaid(id) {
+
+  const bill =
+    billHistory.find(
+      item => item.id === id
+    );
+
+
+  if (!bill) return;
+
+
+  bill.status =
+    "ชำระแล้ว (เงินสด)";
+
+
+  save(
+    STORAGE.history,
+    billHistory
+  );
+
+
+  viewBill(id);
+
+  renderBillHistory();
+
+  showToast(
+    "เปลี่ยนสถานะเป็นชำระแล้ว"
+  );
+
 }
+
+
+/* =========================================================
+   MERGE BILLS
+========================================================= */
+
+function mergeSelectedBills() {
+
+  const checked =
+    Array.from(
+      document.querySelectorAll(
+        ".bill-checkbox:checked"
+      )
+    );
+
+
+  if (checked.length < 2) {
+
+    alert(
+      "กรุณาเลือกบิลค้างชำระอย่างน้อย 2 ใบ"
+    );
+
+    return;
+
+  }
+
+
+  const ids =
+    checked.map(
+      checkbox =>
+        checkbox.value
+    );
+
+
+  const bills =
+    billHistory.filter(
+      bill =>
+        ids.includes(
+          bill.id
+        )
+    );
+
+
+  const customers =
+    [
+      ...new Set(
+        bills.map(
+          bill =>
+            bill.customer
+        )
+      )
+    ];
+
+
+  if (customers.length > 1) {
+
+    alert(
+      "สามารถรวมบิลของลูกค้าคนเดียวกันเท่านั้น"
+    );
+
+    return;
+
+  }
+
+
+  const merged = {
+
+    id:
+      generateInvoiceNo(
+        "MERGE"
+      ),
+
+    date:
+      new Date().toISOString(),
+
+    customer:
+      customers[0] +
+      " (รวมบิล)",
+
+    items:
+      bills.flatMap(
+        bill =>
+          bill.items
+      ),
+
+    total:
+      bills.reduce(
+        (sum, bill) =>
+          sum + bill.total,
+        0
+      ),
+
+    status:
+      "ค้างชำระ"
+
+  };
+
+
+  billHistory =
+    billHistory.filter(
+      bill =>
+        !ids.includes(
+          bill.id
+        )
+    );
+
+
+  billHistory.unshift(
+    merged
+  );
+
+
+  save(
+    STORAGE.history,
+    billHistory
+  );
+
+
+  renderBillHistory();
+
+
+  showToast(
+    "รวมบิลเรียบร้อย"
+  );
+
+}
+
+
+/* =========================================================
+   PURCHASE
+========================================================= */
+
+function addPurchaseItem() {
+
+  const name =
+    document
+      .getElementById(
+        "p-name"
+      )
+      .value
+      .trim();
+
+
+  const qty =
+    document
+      .getElementById(
+        "p-qty"
+      )
+      .value
+      .trim();
+
+
+  const price =
+    Number(
+      document
+        .getElementById(
+          "p-price"
+        )
+        .value
+    ) || 0;
+
+
+  if (!name || !qty) {
+
+    alert(
+      "กรุณากรอกสินค้าและจำนวน"
+    );
+
+    return;
+
+  }
+
+
+  purchaseItems.push({
+
+    name,
+
+    qty,
+
+    price
+
+  });
+
+
+  document.getElementById(
+    "p-name"
+  ).value = "";
+
+
+  document.getElementById(
+    "p-qty"
+  ).value = "";
+
+
+  document.getElementById(
+    "p-price"
+  ).value = "";
+
+
+  renderPurchase();
+
+}
+
+
+function renderPurchase() {
+
+  const body =
+    document.getElementById(
+      "purchase-table-body"
+    );
+
+
+  body.innerHTML =
+    purchaseItems.map(
+      (item, index) => `
+
+      <tr>
+
+        <td>
+          ${escapeHtml(
+            item.name
+          )}
+        </td>
+
+        <td>
+          ${escapeHtml(
+            item.qty
+          )}
+        </td>
+
+        <td class="text-right">
+          ฿${item.price.toFixed(2)}
+        </td>
+
+        <td>
+
+          <button
+            onclick="removePurchase(${index})"
+            style="
+              color:#dc2626;
+              background:none;
+              font-size:20px;
+            "
+          >
+            ×
+          </button>
+
+        </td>
+
+      </tr>
+
+    `
+    ).join("");
+
+}
+
+
+function removePurchase(index) {
+
+  purchaseItems.splice(
+    index,
+    1
+  );
+
+  renderPurchase();
+
+}
+
+
+function savePurchaseOrder() {
+
+  if (!purchaseItems.length) {
+
+    alert(
+      "ยังไม่มีรายการซื้อเข้า"
+    );
+
+    return;
+
+  }
+
+
+  /*
+    ตอนนี้บันทึกเฉพาะในระบบจำลอง
+    สามารถต่อฐานข้อมูลภายหลังได้
+  */
+
+
+  purchaseItems = [];
+
+  renderPurchase();
+
+  showToast(
+    "บันทึกรายการซื้อเข้าแล้ว"
+  );
+
+}
+
+
+/* =========================================================
+   EXPENSE
+========================================================= */
+
+function addExpense(type) {
+
+  const amount =
+    prompt(
+      `กรอกจำนวนเงินสำหรับ ${type}`
+    );
+
+
+  if (
+    amount === null ||
+    amount.trim() === ""
+  ) return;
+
+
+  const value =
+    Number(amount);
+
+
+  if (
+    !Number.isFinite(value) ||
+    value < 0
+  ) {
+
+    alert(
+      "กรุณากรอกจำนวนเงินให้ถูกต้อง"
+    );
+
+    return;
+
+  }
+
+
+  showToast(
+    `${type} ฿${value.toFixed(2)} บันทึกแล้ว`
+  );
+
+}
+
+
+/* =========================================================
+   CASH DRAWER
+========================================================= */
+
+function openCashDrawerManual() {
+
+  /*
+    สำหรับเครื่อง POS จริง
+    สามารถต่อ Web Serial / ESC-POS
+    หรือระบบ Printer SDK ในภายหลังได้
+  */
+
+  showToast(
+    "คำสั่งเปิดลิ้นชักถูกเรียกแล้ว"
+  );
+
+}
+
+
+/* =========================================================
+   SHARE
+========================================================= */
+
+async function shareBill() {
+
+  if (!currentViewingBill)
+    return;
+
+
+  const bill =
+    currentViewingBill;
+
+
+  const text =
+
+`ใบเสร็จ STORE POS
+
+เลขที่: ${bill.id}
+
+ลูกค้า: ${bill.customer}
+
+ยอดรวม: ฿${bill.total.toFixed(2)}
+
+สถานะ: ${bill.status}`;
+
+
+  if (
+    navigator.share
+  ) {
+
+    try {
+
+      await navigator.share({
+
+        title:
+          "ใบเสร็จ STORE POS",
+
+        text
+
+      });
+
+    }
+
+    catch (error) {
+
+      if (
+        error.name !==
+        "AbortError"
+      ) {
+
+        showToast(
+          "ไม่สามารถแชร์ได้"
+        );
+
+      }
+
+    }
+
+  }
+
+  else if (
+    navigator.clipboard
+  ) {
+
+    await navigator.clipboard.writeText(
+      text
+    );
+
+    showToast(
+      "คัดลอกใบเสร็จแล้ว"
+    );
+
+  }
+
+  else {
+
+    alert(text);
+
+  }
+
+}
+
+
+/* =========================================================
+   PRINT
+========================================================= */
+
+function printBill() {
+
+  window.print();
+
+}
+
+
+/* =========================================================
+   MODAL
+========================================================= */
 
 function closeModal(id) {
-  document.getElementById(id).classList.remove('active');
+
+  const modal =
+    document.getElementById(id);
+
+
+  if (modal) {
+
+    modal.classList.add(
+      "hidden"
+    );
+
+  }
+
 }
+
+
+/* =========================================================
+   TOAST
+========================================================= */
+
+function showToast(message) {
+
+  const toast =
+    document.getElementById(
+      "toast"
+    );
+
+
+  document.getElementById(
+    "toast-msg"
+  ).textContent =
+    message;
+
+
+  toast.classList.remove(
+    "hidden"
+  );
+
+
+  clearTimeout(
+    showToast.timer
+  );
+
+
+  showToast.timer =
+    setTimeout(
+      () => {
+
+        toast.classList.add(
+          "hidden"
+        );
+
+      },
+      2500
+    );
+
+}
+
+
+/* =========================================================
+   ESC KEY
+========================================================= */
+
+document.addEventListener(
+  "keydown",
+  event => {
+
+    if (
+      event.key === "Escape"
+    ) {
+
+      document
+        .querySelectorAll(
+          ".modal"
+        )
+        .forEach(
+          modal =>
+            modal.classList.add(
+              "hidden"
+            )
+        );
+
+    }
+
+  }
+);
