@@ -1,563 +1,426 @@
-// สถานะของระบบและการเก็บข้อมูลใน LocalStorage
-let currentCustomer = "ลูกค้าหน้าร้าน (ทั่วไป)";
-let regularCustomers = JSON.parse(localStorage.getItem('regularCustomers')) || ['ร้านเจ๊พร', 'คุณสมชาย', 'ร้านก๋วยเตี๋ยวป้าป้อม'];
-let productButtons = JSON.parse(localStorage.getItem('productButtons')) || [
-  { id: 1, name: 'หมูเนื้อแดง', defaultPrice: 150 },
-  { id: 2, name: 'สามชั้น', defaultPrice: 180 },
-  { id: 3, name: 'สันนอก', defaultPrice: 160 },
-  { id: 4, name: 'ซี่โครงหมู', defaultPrice: 170 },
-  { id: 5, name: 'หมูบด', defaultPrice: 140 }
-];
+let appState = {
+  products: JSON.parse(localStorage.getItem('pos_products')) || [
+    { id: 1, name: 'หมูเนื้อแดง', price: 150, type: 'weight' },
+    { id: 2, name: 'หมูสามชั้น', price: 180, type: 'weight' },
+    { id: 3, name: 'เกลือ (ถุง)', price: 20, type: 'unit' }
+  ],
+  customers: JSON.parse(localStorage.getItem('pos_customers')) || [{ id: 'walkin', name: 'ลูกค้าหน้าร้าน' }],
+  suppliers: JSON.parse(localStorage.getItem('pos_suppliers')) || [{ id: 1, name: 'ฟาร์มหมูนครราชสีมา' }],
+  employees: JSON.parse(localStorage.getItem('pos_employees')) || [{ id: 1, name: 'สมชาย สายขยัน' }],
+  sales: JSON.parse(localStorage.getItem('pos_sales')) || [],
+  purchases: JSON.parse(localStorage.getItem('pos_purchases')) || [],
+  expenses: JSON.parse(localStorage.getItem('pos_expenses')) || [],
+  wages: JSON.parse(localStorage.getItem('pos_wages')) || []
+};
 
-let cart = [];
-let parkedBills = JSON.parse(localStorage.getItem('parkedBills')) || [];
-let billHistory = JSON.parse(localStorage.getItem('billHistory')) || [];
-let purchaseItems = [];
+let currentCart = [];
+let activeProduct = null;
+let activeInputTarget = 'param2';
 
-// ตัวแปรชั่วคราวสำหรับ Popups
-let selectedProduct = null;
-let activeNumpadField = 'weight';
-let currentViewingBill = null;
-
-// เริ่มต้นระบบ
 document.addEventListener('DOMContentLoaded', () => {
-  lucide.createIcons();
-  updateCustomerDropdownFilter();
+  renderProductGrid();
+  renderSuppliersDropdown();
+  renderEmployeesDropdown();
+  updateReceiptDate();
+  renderSalesHistory();
+  renderPurchaseHistory();
+  renderGeneralExpenses();
+  renderEmployeeLedger();
+  setDashboardRange('daily');
 });
 
-// การสลับหน้าจอ (Navigation)
-function navTo(screenId) {
-  document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
-  document.getElementById(screenId).classList.remove('hidden');
-
-  const btnHome = document.getElementById('btn-home');
-  if (screenId === 'screen-home') {
-    btnHome.classList.add('hidden');
-  } else {
-    btnHome.classList.remove('hidden');
-  }
-
-  if(screenId === 'screen-regular-customers') renderRegularCustomersGrid();
-  if(screenId === 'screen-pos') renderPOS();
-  if(screenId === 'screen-bill-history') {
-    updateCustomerDropdownFilter();
-    renderBillHistory();
-  }
+function saveData() {
+  localStorage.setItem('pos_products', JSON.stringify(appState.products));
+  localStorage.setItem('pos_customers', JSON.stringify(appState.customers));
+  localStorage.setItem('pos_suppliers', JSON.stringify(appState.suppliers));
+  localStorage.setItem('pos_employees', JSON.stringify(appState.employees));
+  localStorage.setItem('pos_sales', JSON.stringify(appState.sales));
+  localStorage.setItem('pos_purchases', JSON.stringify(appState.purchases));
+  localStorage.setItem('pos_expenses', JSON.stringify(appState.expenses));
+  localStorage.setItem('pos_wages', JSON.stringify(appState.wages));
 }
 
-// จัดการลูกค้าประจำ
-function renderRegularCustomersGrid() {
-  const container = document.getElementById('regular-customer-grid');
-  if (regularCustomers.length === 0) {
-    container.innerHTML = `<div class="col-span-full text-center py-8 text-slate-400">ยังไม่มีรายชื่อลูกค้าประจำ</div>`;
-    return;
-  }
-  container.innerHTML = regularCustomers.map((cust, idx) => `
-    <div class="bg-slate-50 border border-slate-200 hover:border-indigo-500 rounded-2xl p-4 flex flex-col justify-between space-y-3 transition-all">
-      <span class="font-bold text-slate-800 text-lg">${cust}</span>
-      <div class="flex gap-2">
-        <button onclick="selectCustomer('${cust}')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-xl text-xs shadow-sm">เลือก</button>
-        <button onclick="deleteCustomer(${idx})" class="text-rose-500 hover:bg-rose-100 p-2 rounded-xl"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-      </div>
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById(`tab-${tabName}`).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (tabName === 'dashboard') calculateDashboard();
+}
+
+function renderProductGrid() {
+  const grid = document.getElementById('product-grid');
+  grid.innerHTML = appState.products.map(p => `
+    <div class="product-btn" onclick="selectProduct(${p.id})">
+      <div style="font-weight:600">${p.name}</div>
+      <div style="font-size:0.75rem; color:#64748b">${p.price} ฿/${p.type === 'weight' ? 'กก.' : 'ชิ้น'}</div>
     </div>
   `).join('');
-  lucide.createIcons();
 }
 
-function selectCustomer(name) {
-  currentCustomer = name;
-  document.getElementById('pos-customer-name').innerText = name;
-  navTo('screen-pos');
-}
-
-function showAddCustomerModal() {
-  document.getElementById('modal-add-customer').classList.remove('hidden');
-}
-
-function saveNewCustomer() {
-  const nameInput = document.getElementById('new-customer-name');
-  if (nameInput.value.trim()) {
-    regularCustomers.push(nameInput.value.trim());
-    localStorage.setItem('regularCustomers', JSON.stringify(regularCustomers));
-    nameInput.value = '';
-    closeModal('modal-add-customer');
-    renderRegularCustomersGrid();
-    showToast('เพิ่มลูกค้าประจำเรียบร้อย');
-  }
-}
-
-function deleteCustomer(idx) {
-  if (confirm('ยืนยันลบรายชื่อลูกค้านี้?')) {
-    regularCustomers.splice(idx, 1);
-    localStorage.setItem('regularCustomers', JSON.stringify(regularCustomers));
-    renderRegularCustomersGrid();
-    showToast('ลบรายชื่อเรียบร้อย');
-  }
-}
-
-// จัดการปุ่มสินค้า (พร้อมปุ่มลบสินค้า)
-function renderProductButtons() {
-  const grid = document.getElementById('product-buttons-grid');
-  grid.innerHTML = productButtons.map((p, idx) => `
-    <div class="bg-indigo-50/80 hover:bg-indigo-100 border-2 border-indigo-200 p-4 rounded-2xl flex flex-col justify-between space-y-2 relative group transition-all">
-      <button onclick="deleteProductButton(${idx})" class="absolute top-2 right-2 text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-white transition-all">
-        <i data-lucide="trash-2" class="w-4 h-4"></i>
-      </button>
-      <div onclick="openNumpadModal(${p.id})" class="cursor-pointer space-y-1">
-        <i data-lucide="package" class="w-6 h-6 text-indigo-600"></i>
-        <div class="font-extrabold text-slate-800 text-lg leading-tight">${p.name}</div>
-        <div class="text-xs font-bold text-indigo-600">฿${p.defaultPrice} / kg</div>
-      </div>
-    </div>
-  `).join('');
-  lucide.createIcons();
-}
-
-function showAddProductModal() {
-  document.getElementById('modal-add-product').classList.remove('hidden');
-}
-
-function saveNewProductButton() {
-  const name = document.getElementById('new-product-name').value.trim();
-  const price = parseFloat(document.getElementById('new-product-default-price').value) || 0;
-  if (name) {
-    productButtons.push({ id: Date.now(), name, defaultPrice: price });
-    localStorage.setItem('productButtons', JSON.stringify(productButtons));
-    document.getElementById('new-product-name').value = '';
-    document.getElementById('new-product-default-price').value = '';
-    closeModal('modal-add-product');
-    renderProductButtons();
-    showToast('สร้างปุ่มสินค้าใหม่เรียบร้อย');
-  }
-}
-
-function deleteProductButton(idx) {
-  if(confirm('คุณต้องการลบปุ่มสินค้านี้ใช่หรือไม่?')) {
-    productButtons.splice(idx, 1);
-    localStorage.setItem('productButtons', JSON.stringify(productButtons));
-    renderProductButtons();
-    showToast('ลบปุ่มสินค้าเรียบร้อย');
-  }
-}
-
-// Numpad และ คำนวณน้ำหนัก * ราคาต่อ 1 กก.
-function openNumpadModal(productId) {
-  selectedProduct = productButtons.find(p => p.id === productId);
-  if(!selectedProduct) return;
-
-  document.getElementById('numpad-product-title').innerText = selectedProduct.name;
-  document.getElementById('input-numpad-weight').value = '1';
-  document.getElementById('input-numpad-price').value = selectedProduct.defaultPrice || 0;
+function selectProduct(id) {
+  activeProduct = appState.products.find(p => p.id === id);
+  document.getElementById('active-item-title').innerText = `รายการ: ${activeProduct.name}`;
+  document.getElementById('input-param1').value = activeProduct.price;
   
-  setActiveNumpadField('weight');
-  calculateNumpadTotal();
-  document.getElementById('modal-numpad').classList.remove('hidden');
-}
-
-function setActiveNumpadField(field) {
-  activeNumpadField = field;
-  const wBox = document.getElementById('field-weight-container');
-  const pBox = document.getElementById('field-price-container');
-
-  if (field === 'weight') {
-    wBox.className = "p-3 border-2 border-indigo-500 bg-indigo-50/50 rounded-2xl cursor-pointer";
-    pBox.className = "p-3 border-2 border-slate-200 rounded-2xl cursor-pointer";
+  const p2 = document.getElementById('input-param2');
+  if (activeProduct.type === 'unit') {
+    document.getElementById('input-param1-label').innerText = 'ราคา/ชิ้น';
+    document.getElementById('input-param2-label').innerText = 'จำนวน (ชิ้น)';
+    p2.value = '1';
   } else {
-    pBox.className = "p-3 border-2 border-indigo-500 bg-indigo-50/50 rounded-2xl cursor-pointer";
-    wBox.className = "p-3 border-2 border-slate-200 rounded-2xl cursor-pointer";
+    document.getElementById('input-param1-label').innerText = 'ราคา/กก.';
+    document.getElementById('input-param2-label').innerText = 'น้ำหนัก (กก.)';
+    p2.value = ''; // ว่างไว้ให้คีย์เอง
   }
+  activeInputTarget = 'param2';
+  p2.focus();
+  calculateActiveTotal();
 }
+
+function setActiveInput(target) { activeInputTarget = target; }
 
 function pressNumpad(val) {
-  const input = activeNumpadField === 'weight' 
-    ? document.getElementById('input-numpad-weight') 
-    : document.getElementById('input-numpad-price');
-
-  let cur = input.value;
-
-  if (val === 'CLEAR') {
-    input.value = '0';
-  } else if (val === 'DEL') {
-    input.value = cur.length > 1 ? cur.slice(0, -1) : '0';
-  } else if (cur === '0' && val !== '.') {
-    input.value = val;
-  } else {
-    input.value += val;
-  }
-
-  calculateNumpadTotal();
+  const input = document.getElementById(`input-${activeInputTarget}`);
+  if (val === 'C') input.value = '';
+  else input.value += val;
+  calculateActiveTotal();
 }
 
-function calculateNumpadTotal() {
-  const weight = parseFloat(document.getElementById('input-numpad-weight').value) || 0;
-  const pricePerKg = parseFloat(document.getElementById('input-numpad-price').value) || 0;
-  const total = weight * pricePerKg;
-  document.getElementById('numpad-calculated-total').innerText = total.toFixed(2);
+function calculateActiveTotal() {
+  const p1 = parseFloat(document.getElementById('input-param1').value) || 0;
+  const p2 = parseFloat(document.getElementById('input-param2').value) || 0;
+  document.getElementById('input-total').value = (p1 * p2).toFixed(2);
 }
 
-function confirmNumpadAdd() {
-  const weight = parseFloat(document.getElementById('input-numpad-weight').value) || 0;
-  const pricePerKg = parseFloat(document.getElementById('input-numpad-price').value) || 0;
-  const total = weight * pricePerKg;
+function addItemToCart() {
+  if (!activeProduct) return alert('เลือกสินค้าก่อนครับ');
+  const qty = parseFloat(document.getElementById('input-param2').value);
+  const price = parseFloat(document.getElementById('input-param1').value);
+  const total = parseFloat(document.getElementById('input-total').value);
 
-  if (selectedProduct && weight > 0) {
-    cart.push({
-      id: Date.now(),
-      name: selectedProduct.name,
-      weight: weight,
-      pricePerKg: pricePerKg,
-      total: total
-    });
-    closeModal('modal-numpad');
-    renderPOS();
-  }
+  if (!qty || qty <= 0) return alert('กรอกจำนวนหรือน้ำหนัก');
+
+  currentCart.push({ name: activeProduct.name, type: activeProduct.type, price, qty, total });
+  renderReceiptCart();
+  document.getElementById('input-param2').value = '';
+  document.getElementById('input-total').value = '';
 }
 
-// POS & Cart Operations
-function removeItemFromCart(id) {
-  cart = cart.filter(item => item.id !== id);
-  renderPOS();
-}
-
-function cancelCurrentBill() {
-  if(cart.length === 0) return;
-  if(confirm('ยกเลิกบิลนี้และล้างรายการสินค้าทั้งหมด?')) {
-    cart = [];
-    renderPOS();
-    showToast('ยกเลิกบิลเรียบร้อย');
-  }
-}
-
-function renderPOS() {
-  renderProductButtons();
-
-  const receiptList = document.getElementById('receipt-items-list');
-  const totalSum = cart.reduce((s, i) => s + i.total, 0);
-
-  document.getElementById('receipt-total').innerText = totalSum.toFixed(2);
-  document.getElementById('receipt-customer').innerText = currentCustomer;
-  document.getElementById('parked-badge').innerText = parkedBills.length;
-  document.getElementById('receipt-no').innerText = 'INV-' + Math.floor(1000 + Math.random() * 9000);
-  
-  const now = new Date();
-  document.getElementById('receipt-time').innerText = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-
-  if(cart.length === 0) {
-    receiptList.innerHTML = `<div class="text-center text-slate-400 py-6 text-sm font-semibold">- ยังไม่มีรายการสินค้า -</div>`;
-  } else {
-    receiptList.innerHTML = cart.map(item => `
-      <div class="flex justify-between items-start text-black font-semibold">
-        <div class="max-w-[200px]">
-          <div class="font-extrabold text-base">${item.name} /${item.weight} kg</div>
-          <div class="text-[11px] text-slate-600">(@฿${item.pricePerKg.toFixed(2)}/kg)</div>
-        </div>
-        <div class="flex items-center gap-1">
-          <span class="font-extrabold text-base">฿${item.total.toFixed(2)}</span>
-          <button onclick="removeItemFromCart(${item.id})" class="text-rose-500 hover:bg-rose-100 p-0.5 rounded no-print">
-            <i data-lucide="x" class="w-4 h-4"></i>
-          </button>
-        </div>
+function renderReceiptCart() {
+  const container = document.getElementById('rec-items-list');
+  let grandTotal = 0;
+  container.innerHTML = currentCart.map((item, idx) => {
+    grandTotal += item.total;
+    return `
+      <div class="r-item">
+        <span>${item.name} (${item.qty} ${item.type === 'weight' ? 'กก.' : 'ชิ้น'})</span>
+        <span>${item.total.toFixed(2)} <button class="btn-sm text-danger" onclick="removeItemFromCart(${idx})">x</button></span>
       </div>
-    `).join('');
-  }
-  lucide.createIcons();
-}
-
-function openCashDrawerManual() {
-  showToast('🔊 เปิดลิ้นชักเก็บเงินแล้ว!');
-}
-
-// พักบิล
-function parkBillManual() {
-  if(cart.length === 0) return alert('ไม่มีรายการในบิลให้พัก');
-  parkedBills.push({
-    id: Date.now(),
-    customer: currentCustomer,
-    items: [...cart],
-    time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
-  });
-  localStorage.setItem('parkedBills', JSON.stringify(parkedBills));
-  cart = [];
-  showToast('พักบิลเรียบร้อยแล้ว');
-  renderPOS();
-}
-
-function showParkedBillsModal() {
-  const container = document.getElementById('parked-bills-modal-list');
-  if(parkedBills.length === 0) {
-    container.innerHTML = `<p class="text-sm text-slate-400 py-8 text-center font-bold">ไม่มีบิลที่พักไว้</p>`;
-  } else {
-    container.innerHTML = parkedBills.map(b => {
-      const total = b.items.reduce((s, i) => s + i.total, 0);
-      return `
-        <div class="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex justify-between items-center">
-          <div>
-            <div class="font-extrabold text-slate-800">${b.customer} <span class="text-xs bg-amber-200 px-2 py-0.5 rounded-full">${b.time}</span></div>
-            <div class="text-xs text-slate-600 mt-1">${b.items.length} รายการ - รวม: <strong>฿${total.toFixed(2)}</strong></div>
-          </div>
-          <button onclick="restoreParkedBill(${b.id})" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3 py-2 rounded-xl">ดึงบิลทำต่อ</button>
-        </div>
-      `;
-    }).join('');
-  }
-  document.getElementById('modal-parked-bills').classList.remove('hidden');
-}
-
-function restoreParkedBill(id) {
-  const bill = parkedBills.find(b => b.id === id);
-  if(bill) {
-    cart = [...bill.items];
-    currentCustomer = bill.customer;
-    parkedBills = parkedBills.filter(b => b.id !== id);
-    localStorage.setItem('parkedBills', JSON.stringify(parkedBills));
-    closeModal('modal-parked-bills');
-    renderPOS();
-    showToast('ดึงบิลกลับมาทำต่อเรียบร้อย');
-  }
-}
-
-// ชำระเงิน
-function showPaymentModal() {
-  if(cart.length === 0) return alert('กรุณาเพิ่มสินค้าก่อนชำระเงิน');
-  const totalSum = cart.reduce((sum, item) => sum + item.total, 0);
-  document.getElementById('payment-modal-total').innerText = `฿${totalSum.toFixed(2)}`;
-  document.getElementById('modal-payment').classList.remove('hidden');
-}
-
-function processPayment(status) {
-  const totalSum = cart.reduce((sum, item) => sum + item.total, 0);
-  const newBill = {
-    id: 'INV-' + Math.floor(100000 + Math.random() * 900000),
-    date: new Date().toISOString(),
-    customer: currentCustomer,
-    items: [...cart],
-    total: totalSum,
-    status: status
-  };
-
-  billHistory.unshift(newBill);
-  localStorage.setItem('billHistory', JSON.stringify(billHistory));
-
-  cart = [];
-  closeModal('modal-payment');
-  renderPOS();
-  showToast('บันทึกการขายเรียบร้อย!');
-}
-
-// ประวัติบิลและการกรอง
-function updateCustomerDropdownFilter() {
-  const select = document.getElementById('filter-customer-group');
-  const uniqueCustomers = ['ลูกค้าทั้งหมด', 'ลูกค้าหน้าร้าน (ทั่วไป)', ...regularCustomers];
-  select.innerHTML = uniqueCustomers.map(c => `<option value="${c}">${c}</option>`).join('');
-}
-
-function renderBillHistory() {
-  const period = document.getElementById('filter-period').value;
-  const customerGroup = document.getElementById('filter-customer-group').value;
-  const statusFilter = document.getElementById('filter-status').value;
-
-  const now = new Date();
-  let filtered = billHistory.filter(b => {
-    const bDate = new Date(b.date);
-    
-    if(period === 'day' && bDate.toDateString() !== now.toDateString()) return false;
-    if(period === 'week') {
-      const diffDays = (now - bDate) / (1000 * 3600 * 24);
-      if(diffDays > 7) return false;
-    }
-    if(period === 'month' && (bDate.getMonth() !== now.getMonth() || bDate.getFullYear() !== now.getFullYear())) return false;
-
-    if(customerGroup !== 'ลูกค้าทั้งหมด' && b.customer !== customerGroup) return false;
-    if(statusFilter !== 'all' && !b.status.includes(statusFilter)) return false;
-
-    return true;
-  });
-
-  const body = document.getElementById('bill-history-table-body');
-  if(filtered.length === 0) {
-    body.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-400 font-bold">ไม่พบประวัติบิลตามเงื่อนไขที่เลือก</td></tr>`;
-  } else {
-    body.innerHTML = filtered.map(b => `
-      <tr class="hover:bg-slate-50 border-b border-slate-100">
-        <td class="p-3 text-center">
-          <input type="checkbox" class="bill-checkbox w-4 h-4 text-indigo-600 rounded" value="${b.id}" ${b.status.includes('ค้างชำระ') ? '' : 'disabled'}>
-        </td>
-        <td class="p-3 font-extrabold text-slate-800">${b.id}</td>
-        <td class="p-3 text-xs text-slate-500">${new Date(b.date).toLocaleString('th-TH')}</td>
-        <td class="p-3 font-bold text-slate-700">${b.customer}</td>
-        <td class="p-3 text-right font-black text-indigo-700">฿${b.total.toFixed(2)}</td>
-        <td class="p-3 text-center">
-          <span class="px-3 py-1 rounded-full text-xs font-bold ${             b.status.includes('ชำระแล้ว') ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'           }">${b.status}</span>
-        </td>
-        <td class="p-3 text-center">
-          <button onclick="viewBillDetails('${b.id}')" class="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-1.5 rounded-xl font-bold text-xs">เปิดดู</button>
-        </td>
-      </tr>
-    `).join('');
-  }
-}
-
-// ดูรายละเอียด พิมพ์ แชร์ เปลี่ยนสถานะ
-function viewBillDetails(billId) {
-  currentViewingBill = billHistory.find(b => b.id === billId);
-  if(!currentViewingBill) return;
-
-  const container = document.getElementById('print-receipt-modal');
-  container.innerHTML = `
-    <div class="receipt-80mm shadow-none border p-4 font-mono text-slate-900">
-      <div class="text-center font-black text-2xl tracking-tight text-black">STORE POS</div>
-      <div class="text-xs text-center text-black font-semibold">สาขาหลัก เมือง พิษณุโลก 65000</div>
-      <div class="text-xs text-center text-black font-semibold">โทร: 081-234-5678</div>
-      <div class="font-extrabold text-center border-y-2 border-black my-2 py-1 text-base">ใบเสร็จรับเงิน</div>
-      
-      <div class="text-xs text-black mb-2 space-y-0.5">
-        <div>เลขที่: ${currentViewingBill.id}</div>
-        <div>เวลา: ${new Date(currentViewingBill.date).toLocaleString('th-TH')}</div>
-        <div>ลูกค้า: <strong>${currentViewingBill.customer}</strong></div>
-        <div>สถานะ: <strong>${currentViewingBill.status}</strong></div>
-      </div>
-
-      <div class="border-t-2 border-black pt-2 mb-2 space-y-2">
-        ${currentViewingBill.items.map(i => `
-          <div class="flex justify-between items-start text-black">
-            <div>
-              <div class="font-extrabold text-base">${i.name} / ${i.weight} kg</div>
-              <div class="text-[11px] text-slate-600">(@฿${i.pricePerKg.toFixed(2)}/kg)</div>
-            </div>
-            <span class="font-extrabold text-base">฿${i.total.toFixed(2)}</span>
-          </div>
-        `).join('')}
-      </div>
-
-      <div class="border-t-2 border-black pt-2 my-2 flex justify-between items-center font-black text-xl text-black">
-        <span>ทั้งสิ้น</span>
-        <span>฿${currentViewingBill.total.toFixed(2)}</span>
-      </div>
-
-      <div class="text-center mt-4 pt-2 border-t border-dashed border-gray-400 text-xs text-black">
-        <p>" THANK YOU "</p>
-      </div>
-    </div>
-  `;
-
-  const toggleContainer = document.getElementById('toggle-status-container');
-  if(currentViewingBill.status.includes('ค้างชำระ')) {
-    toggleContainer.innerHTML = `
-      <button onclick="markBillAsPaid('${currentViewingBill.id}')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-2xl mb-2 flex items-center justify-center gap-2">
-        <i data-lucide="check-circle" class="w-5 h-5"></i> เปลี่ยนสถานะเป็น "ชำระแล้ว"
-      </button>
     `;
-  } else {
-    toggleContainer.innerHTML = ``;
-  }
-
-  lucide.createIcons();
-  document.getElementById('modal-bill-detail').classList.remove('hidden');
+  }).join('');
+  document.getElementById('rec-grand-total').innerText = `${grandTotal.toFixed(2)} บาท`;
 }
 
-function markBillAsPaid(billId) {
-  const bill = billHistory.find(b => b.id === billId);
-  if(bill) {
-    bill.status = 'ชำระแล้ว (เงินสด)';
-    localStorage.setItem('billHistory', JSON.stringify(billHistory));
-    viewBillDetails(billId);
-    renderBillHistory();
-    showToast('อัปเดตสถานะเป็นชำระแล้ว');
-  }
+function removeItemFromCart(idx) {
+  currentCart.splice(idx, 1);
+  renderReceiptCart();
 }
 
-function printCurrentBillModal() {
-  window.print();
+function clearCart() {
+  currentCart = [];
+  renderReceiptCart();
 }
 
-function shareBillModal() {
-  if(!currentViewingBill) return;
-  const text = `ใบเสร็จเลขที่: ${currentViewingBill.id}\nลูกค้า: ${currentViewingBill.customer}\nยอดรวม: ฿${currentViewingBill.total.toFixed(2)}\nสถานะ: ${currentViewingBill.status}`;
-  if (navigator.share) {
-    navigator.share({ title: 'ใบเสร็จรับเงิน', text: text });
-  } else {
-    navigator.clipboard.writeText(text);
-    showToast('คัดลอกรายละเอียดบิลลง Clipboard แล้ว');
-  }
+function updateReceiptDate() {
+  document.getElementById('rec-date').innerText = new Date().toLocaleString('th-TH');
 }
 
-// รวมบิล
-function mergeSelectedBills() {
-  const selectedBoxes = document.querySelectorAll('.bill-checkbox:checked');
-  if(selectedBoxes.length < 2) return alert('กรุณาเลือกบิลค้างชำระอย่างน้อย 2 บิลขึ้นไปเพื่อรวมบิล');
+function handleCustomerSelect() {
+  const name = document.getElementById('sales-cust-name').value;
+  document.getElementById('rec-cust-name').innerText = name || 'ลูกค้าหน้าร้าน';
+}
 
-  const selectedIds = Array.from(selectedBoxes).map(cb => cb.value);
-  const billsToMerge = billHistory.filter(b => selectedIds.includes(b.id));
+function openPaymentModal() {
+  if (currentCart.length === 0) return alert('ไม่มีรายการในสลิป');
+  const grandTotal = currentCart.reduce((s, i) => s + i.total, 0);
+  document.getElementById('modal-pay-amount').innerText = grandTotal.toFixed(2);
+  document.getElementById('modal-payment').style.display = 'flex';
+}
 
-  const customerNames = [...new Set(billsToMerge.map(b => b.customer))];
-  if(customerNames.length > 1) return alert('สามารถรวมบิลได้เฉพาะลูกค้ารายเดียวกันเท่านั้น');
-
-  let combinedItems = [];
-  let combinedTotal = 0;
-
-  billsToMerge.forEach(b => {
-    combinedItems = [...combinedItems, ...b.items];
-    combinedTotal += b.total;
-  });
-
-  const mergedBill = {
-    id: 'MERGE-' + Math.floor(1000 + Math.random() * 9000),
+function confirmPayment(method) {
+  const grandTotal = currentCart.reduce((s, i) => s + i.total, 0);
+  appState.sales.unshift({
+    id: 'POS-' + Date.now().toString().slice(-6),
     date: new Date().toISOString(),
-    customer: customerNames[0] + ' (รวมบิล)',
-    items: combinedItems,
-    total: combinedTotal,
-    status: 'ค้างชำระ'
-  };
-
-  billHistory = billHistory.filter(b => !selectedIds.includes(b.id));
-  billHistory.unshift(mergedBill);
-  localStorage.setItem('billHistory', JSON.stringify(billHistory));
-
-  renderBillHistory();
-  showToast('รวมบิลค้างชำระเรียบร้อยแล้ว');
+    customer: document.getElementById('sales-cust-name').value || 'ลูกค้าหน้าร้าน',
+    items: [...currentCart],
+    total: grandTotal,
+    paymentMethod: method === 'cash' ? 'เงินสด' : 'เงินโอน',
+    status: 'paid'
+  });
+  saveData();
+  closeModal('modal-payment');
+  if (method === 'cash') alert('สั่งเปิดลิ้นชักเก็บเงินเรียบร้อย');
+  window.print();
+  clearCart();
+  renderSalesHistory();
 }
 
-// ซื้อเข้า
-function addPurchaseItem() {
-  const name = document.getElementById('p-name').value.trim();
-  const qty = document.getElementById('p-qty').value.trim();
-  const price = parseFloat(document.getElementById('p-price').value) || 0;
-
-  if(name && qty) {
-    purchaseItems.push({ name, qty, price });
-    document.getElementById('p-name').value = '';
-    document.getElementById('p-qty').value = '';
-    document.getElementById('p-price').value = '';
-    renderPurchaseTable();
-  }
+function saveCartAsUnpaid() {
+  if (currentCart.length === 0) return alert('ไม่มีรายการในสลิป');
+  const grandTotal = currentCart.reduce((s, i) => s + i.total, 0);
+  appState.sales.unshift({
+    id: 'POS-' + Date.now().toString().slice(-6),
+    date: new Date().toISOString(),
+    customer: document.getElementById('sales-cust-name').value || 'ลูกค้าหน้าร้าน',
+    items: [...currentCart],
+    total: grandTotal,
+    paymentMethod: 'ค้างชำระ',
+    status: 'unpaid'
+  });
+  saveData();
+  alert('บันทึกพักบิลค้างชำระเรียบร้อย');
+  clearCart();
+  renderSalesHistory();
 }
 
-function renderPurchaseTable() {
-  const body = document.getElementById('purchase-table-body');
-  body.innerHTML = purchaseItems.map(i => `
+function renderSalesHistory(filter = 'all') {
+  const tbody = document.getElementById('history-table-body');
+  let list = appState.sales;
+  if (filter === 'unpaid') list = list.filter(s => s.status === 'unpaid');
+  if (filter === 'paid') list = list.filter(s => s.status === 'paid');
+
+  tbody.innerHTML = list.map(s => `
     <tr>
-      <td class="p-3 font-bold text-slate-800">${i.name}</td>
-      <td class="p-3 text-slate-600">${i.qty}</td>
-      <td class="p-3 text-right font-black text-slate-800">฿${i.price.toFixed(2)}</td>
+      <td>${s.id}</td>
+      <td>${new Date(s.date).toLocaleString('th-TH')}</td>
+      <td>${s.customer}</td>
+      <td><strong>${s.total.toFixed(2)}</strong></td>
+      <td>${s.paymentMethod}</td>
+      <td><span class="${s.status === 'paid' ? 'text-success' : 'text-danger'}">${s.status === 'paid' ? 'ชำระแล้ว' : 'ค้างชำระ'}</span></td>
+      <td>
+        ${s.status === 'unpaid' ? `<button class="btn-sm btn-success" onclick="markSalePaid('${s.id}')">ชำระเงิน</button>` : ''}
+        <button class="btn-sm btn-danger" onclick="cancelSale('${s.id}')">ยกเลิก</button>
+      </td>
     </tr>
   `).join('');
 }
 
-function savePurchaseOrder() {
-  if(purchaseItems.length === 0) return alert('ไม่มีรายการซื้อเข้า');
-  showToast('บันทึกรายการซื้อเข้าเรียบร้อย');
-  purchaseItems = [];
-  renderPurchaseTable();
+function markSalePaid(id) {
+  const sale = appState.sales.find(s => s.id === id);
+  if (sale) {
+    sale.status = 'paid';
+    sale.paymentMethod = confirm('ชำระด้วยเงินสด?') ? 'เงินสด' : 'เงินโอน';
+    saveData();
+    renderSalesHistory();
+  }
 }
 
-// ฟังก์ชันเปิด/ปิด Modal และแจ้งเตือน Toast
-function closeModal(id) {
-  document.getElementById(id).classList.add('hidden');
+function cancelSale(id) {
+  if (confirm('ยืนยันยกเลิกบิลนี้?')) {
+    appState.sales = appState.sales.filter(s => s.id !== id);
+    saveData();
+    renderSalesHistory();
+  }
 }
 
-function showToast(msg) {
-  const toast = document.getElementById('toast');
-  document.getElementById('toast-msg').innerText = msg;
-  toast.classList.remove('hidden');
-  setTimeout(() => toast.classList.add('hidden'), 3000);
+function togglePurchaseItemMode() {
+  const mode = document.getElementById('pur-item-type').value;
+  document.getElementById('pur-existing-group').style.display = mode === 'existing' ? 'block' : 'none';
+  document.getElementById('pur-custom-group').style.display = mode === 'custom' ? 'block' : 'none';
+}
+
+function savePurchaseRecord() {
+  const supSelect = document.getElementById('pur-supplier-select');
+  const supName = supSelect.options[supSelect.selectedIndex]?.text || 'ไม่ระบุ';
+  const mode = document.getElementById('pur-item-type').value;
+  let itemName = mode === 'existing' ? document.getElementById('pur-product-select').value : document.getElementById('pur-custom-name').value;
+  const qty = parseFloat(document.getElementById('pur-qty').value) || 0;
+  const price = parseFloat(document.getElementById('pur-price').value) || 0;
+
+  if (!itemName || price <= 0) return alert('กรอกข้อมูลให้ครบ');
+
+  appState.purchases.unshift({ id: Date.now(), date: new Date().toISOString(), supplier: supName, itemName, qty, total: price, status: 'unpaid' });
+  saveData();
+  renderPurchaseHistory();
+}
+
+function renderPurchaseHistory() {
+  const tbody = document.getElementById('purchase-table-body');
+  tbody.innerHTML = appState.purchases.map(p => `
+    <tr>
+      <td>${new Date(p.date).toLocaleDateString('th-TH')}</td>
+      <td>${p.supplier}</td>
+      <td>${p.itemName} (${p.qty})</td>
+      <td>${p.total.toFixed(2)}</td>
+      <td><span class="${p.status === 'paid' ? 'text-success' : 'text-danger'}">${p.status === 'paid' ? 'ชำระแล้ว' : 'ค้างชำระ'}</span></td>
+      <td>${p.status === 'unpaid' ? `<button class="btn-sm btn-success" onclick="markPurPaid(${p.id})">ชำระ</button>` : ''}</td>
+    </tr>
+  `).join('');
+}
+
+function markPurPaid(id) {
+  const pur = appState.purchases.find(p => p.id === id);
+  if (pur) { pur.status = 'paid'; saveData(); renderPurchaseHistory(); }
+}
+
+function switchExpenseSubTab(sub) {
+  document.getElementById('subtab-general-view').style.display = sub === 'general' ? 'block' : 'none';
+  document.getElementById('subtab-wages-view').style.display = sub === 'wages' ? 'block' : 'none';
+}
+
+function saveGeneralExpense() {
+  const title = document.getElementById('exp-title').value;
+  const amount = parseFloat(document.getElementById('exp-amount').value) || 0;
+  if (!title || amount <= 0) return alert('กรอกข้อมูลให้ครบ');
+  appState.expenses.unshift({ id: Date.now(), date: new Date().toISOString(), title, amount });
+  saveData();
+  renderGeneralExpenses();
+}
+
+function renderGeneralExpenses() {
+  const tbody = document.getElementById('expense-table-body');
+  tbody.innerHTML = appState.expenses.map(e => `
+    <tr>
+      <td>${new Date(e.date).toLocaleDateString('th-TH')}</td>
+      <td>${e.title}</td>
+      <td>${e.amount.toFixed(2)}</td>
+      <td><button class="btn-sm btn-danger" onclick="deleteExpense(${e.id})">ลบ</button></td>
+    </tr>
+  `).join('');
+}
+
+function deleteExpense(id) {
+  appState.expenses = appState.expenses.filter(e => e.id !== id);
+  saveData();
+  renderGeneralExpenses();
+}
+
+function saveWageTransaction() {
+  const empSelect = document.getElementById('wage-emp-select');
+  const empName = empSelect.options[empSelect.selectedIndex]?.text;
+  const type = document.getElementById('wage-type').value;
+  const amount = parseFloat(document.getElementById('wage-amount').value) || 0;
+  if (!empName || amount <= 0) return alert('กรอกข้อมูลให้ครบ');
+  appState.wages.unshift({ id: Date.now(), date: new Date().toISOString(), empName, type, amount });
+  saveData();
+  renderEmployeeLedger();
+}
+
+function renderEmployeeLedger() {
+  const tbody = document.getElementById('wage-table-body');
+  const labels = { pay: '🟢 จ่ายค่าจ้าง', advance: '🔴 เบิกเงิน', deposit: '🔵 ฝากเงิน' };
+  tbody.innerHTML = appState.wages.map(w => `
+    <tr>
+      <td>${new Date(w.date).toLocaleDateString('th-TH')}</td>
+      <td>${w.empName}</td>
+      <td>${labels[w.type]}</td>
+      <td>${w.amount.toFixed(2)}</td>
+      <td><button class="btn-sm btn-danger" onclick="deleteWage(${w.id})">ลบ</button></td>
+    </tr>
+  `).join('');
+}
+
+function deleteWage(id) {
+  appState.wages = appState.wages.filter(w => w.id !== id);
+  saveData();
+  renderEmployeeLedger();
+}
+
+function setDashboardRange(type) {
+  const startInput = document.getElementById('dash-start-date');
+  const endInput = document.getElementById('dash-end-date');
+  const now = new Date();
+  startInput.value = now.toISOString().split('T')[0];
+  endInput.value = now.toISOString().split('T')[0];
+  calculateDashboard();
+}
+
+function calculateDashboard() {
+  let salesTotal = 0, salesCash = 0, salesTransfer = 0;
+  appState.sales.filter(s => s.status === 'paid').forEach(s => {
+    salesTotal += s.total;
+    if (s.paymentMethod === 'เงินสด') salesCash += s.total;
+    else salesTransfer += s.total;
+  });
+
+  let purTotal = 0, purPaid = 0, purUnpaid = 0;
+  appState.purchases.forEach(p => {
+    purTotal += p.total;
+    if (p.status === 'paid') purPaid += p.total;
+    else purUnpaid += p.total;
+  });
+
+  let expTotal = appState.expenses.reduce((s, e) => s + e.amount, 0);
+  let wageTotal = appState.wages.filter(w => w.type === 'pay').reduce((s, w) => s + w.amount, 0);
+
+  document.getElementById('sum-sales').innerText = `${salesTotal.toFixed(2)} ฿`;
+  document.getElementById('sum-sales-cash').innerText = `${salesCash.toFixed(2)} ฿`;
+  document.getElementById('sum-sales-transfer').innerText = `${salesTransfer.toFixed(2)} ฿`;
+  document.getElementById('sum-purchases').innerText = `${purTotal.toFixed(2)} ฿`;
+  document.getElementById('sum-pur-paid').innerText = `${purPaid.toFixed(2)} ฿`;
+  document.getElementById('sum-pur-unpaid').innerText = `${purUnpaid.toFixed(2)} ฿`;
+  document.getElementById('sum-expenses').innerText = `${expTotal.toFixed(2)} ฿`;
+  document.getElementById('sum-wages').innerText = `${wageTotal.toFixed(2)} ฿`;
+
+  const profit = salesTotal - (purTotal + expTotal + wageTotal);
+  document.getElementById('sum-net-profit').innerText = `${profit.toFixed(2)} บาท`;
+}
+
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function openAddProductModal() { document.getElementById('modal-add-product').style.display = 'flex'; }
+function openAddEmployeeModal() { document.getElementById('modal-add-emp').style.display = 'flex'; }
+function openAddSupplierModal() { document.getElementById('modal-add-supplier').style.display = 'flex'; }
+function openResetModal() { document.getElementById('modal-reset').style.display = 'flex'; }
+
+function saveNewProduct() {
+  const name = document.getElementById('new-prod-name').value;
+  const type = document.getElementById('new-prod-type').value;
+  const price = parseFloat(document.getElementById('new-prod-price').value) || 0;
+  if (!name || price <= 0) return alert('กรอกข้อมูลให้ครบ');
+  appState.products.push({ id: Date.now(), name, price, type });
+  saveData();
+  renderProductGrid();
+  closeModal('modal-add-product');
+}
+
+function saveNewEmployee() {
+  const name = document.getElementById('new-emp-name').value;
+  if (!name) return alert('กรอกชื่อพนักงาน');
+  appState.employees.push({ id: Date.now(), name });
+  saveData();
+  renderEmployeesDropdown();
+  closeModal('modal-add-emp');
+}
+
+function saveNewSupplier() {
+  const name = document.getElementById('new-sup-name').value;
+  if (!name) return alert('กรอกชื่อผู้ขาย');
+  appState.suppliers.push({ id: Date.now(), name });
+  saveData();
+  renderSuppliersDropdown();
+  closeModal('modal-add-supplier');
+}
+
+function renderSuppliersDropdown() {
+  const select = document.getElementById('pur-supplier-select');
+  select.innerHTML = appState.suppliers.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  const prodSelect = document.getElementById('pur-product-select');
+  prodSelect.innerHTML = appState.products.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+}
+
+function renderEmployeesDropdown() {
+  const select = document.getElementById('wage-emp-select');
+  select.innerHTML = appState.employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+}
+
+function executeReset() {
+  if (document.getElementById('reset-confirm-input').value === 'RESET') {
+    localStorage.clear();
+    alert('ล้างข้อมูลเรียบร้อย');
+    location.reload();
+  } else {
+    alert('พิมพ์ RESET ไม่ถูกต้อง');
+  }
 }
