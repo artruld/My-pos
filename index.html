@@ -1,1 +1,328 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POS ร้านปลาเม้า</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Header / Navigation Bar -->
+  <header class="app-header">
+    <div class="brand-title">🐟 ร้านปลาเม้า POS</div>
+    <nav class="nav-tabs">
+      <button class="nav-btn active" onclick="switchTab('sales')">🛒 หน้าขาย</button>
+      <button class="nav-btn" onclick="switchTab('history')">📜 ประวัติบิล</button>
+      <button class="nav-btn" onclick="switchTab('purchases')">📦 ซื้อเข้า (เจ้าหนี้)</button>
+      <button class="nav-btn" onclick="switchTab('payroll')">💸 รายจ่าย / พนักงาน</button>
+      <button class="nav-btn" onclick="switchTab('summary')">📊 สรุปบัญชี</button>
+    </nav>
+  </header>
 
+  <main class="main-content">
+    <!-- TAB 1: หน้าขาย -->
+    <section id="tab-sales" class="tab-content active">
+      <div class="sales-layout">
+        <div class="product-panel">
+          <h3>รายการสินค้า</h3>
+          <div class="product-grid" id="productGrid"></div>
+        </div>
+
+        <div class="cart-panel">
+          <div class="customer-input-box">
+            <label>ชื่อลูกค้า (แก้ไขได้):</label>
+            <input type="text" id="customerName" value="ลูกค้าหน้าร้าน">
+          </div>
+
+          <div class="cart-table-wrapper">
+            <table class="cart-table">
+              <thead>
+                <tr>
+                  <th>สินค้า</th>
+                  <th>น้ำหนัก/จำนวน</th>
+                  <th>ราคา/หน่วย</th>
+                  <th>รวม</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="cartTableBody"></tbody>
+            </table>
+          </div>
+
+          <div class="cart-footer">
+            <div class="cart-total-row">
+              <span>ยอดรวมสุทธิ:</span>
+              <span id="cartTotalDisplay">฿0.00</span>
+            </div>
+            <button class="btn-checkout" onclick="openPaymentModal()">💳 ชำระเงิน</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: ประวัติบิล -->
+    <section id="tab-history" class="tab-content">
+      <div class="section-container">
+        <h2>ประวัติบิลขาย</h2>
+        <div class="table-actions">
+          <label>กรองตามวันที่: <input type="date" id="historyDateFilter" onchange="renderHistory()"></label>
+          <button class="btn-secondary" onclick="document.getElementById('historyDateFilter').value=''; renderHistory();">ดูทั้งหมด</button>
+        </div>
+        <div id="historyListContainer"></div>
+      </div>
+    </section>
+
+    <!-- TAB 3: ซื้อเข้า -->
+    <section id="tab-purchases" class="tab-content">
+      <div class="section-container">
+        <div class="section-header">
+          <h2>บันทึกรายการซื้อเข้า (ค้างชำระ / เจ้าหนี้)</h2>
+          <button class="btn-primary" onclick="openAddPurchaseModal()">+ เพิ่มรายการซื้อเข้า</button>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>วันที่</th>
+              <th>ซื้อจาก (ซัพพลายเออร์)</th>
+              <th>รายการ</th>
+              <th>ยอดรวม</th>
+              <th>สถานะ</th>
+              <th>จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="purchasesTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 4: รายจ่าย & ค่าจ้างพนักงาน -->
+    <section id="tab-payroll" class="tab-content">
+      <div class="section-container">
+        <h2>จัดการค่าจ้างพนักงาน & รายจ่ายทั่วไป</h2>
+        <div class="sub-tab-buttons">
+          <button class="btn-sub active" onclick="switchPayrollSub('emp')">👷 พนักงาน / ค่าจ้าง</button>
+          <button class="btn-sub" onclick="switchPayrollSub('exp')">📝 รายจ่ายทั่วไป</button>
+        </div>
+
+        <!-- Sub Tab: พนักงาน -->
+        <div id="sub-emp" class="sub-tab-content active">
+          <div class="section-header">
+            <h3>รายชื่อพนักงานและประวัติการจ่าย</h3>
+            <button class="btn-primary" onclick="openAddEmployeeModal()">+ สร้างรายชื่อพนักงาน</button>
+          </div>
+          <div class="employee-grid" id="employeeGrid"></div>
+        </div>
+
+        <!-- Sub Tab: รายจ่ายทั่วไป -->
+        <div id="sub-exp" class="sub-tab-content">
+          <div class="section-header">
+            <h3>บันทึกรายจ่ายทั่วไป</h3>
+            <button class="btn-primary" onclick="openAddExpenseModal()">+ เพิ่มรายการรายจ่าย</button>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>วันที่</th>
+                <th>หมวดหมู่ / รายละเอียด</th>
+                <th>จำนวนเงิน</th>
+              </tr>
+            </thead>
+            <tbody id="expenseTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: สรุปบัญชี -->
+    <section id="tab-summary" class="tab-content">
+      <div class="section-container">
+        <h2>สรุปบัญชีและรายงานทางการเงิน</h2>
+        <div class="filter-bar">
+          <button class="filter-btn active" onclick="setSummaryFilter('daily')">รายวัน</button>
+          <button class="filter-btn" onclick="setSummaryFilter('weekly')">รายสัปดาห์</button>
+          <button class="filter-btn" onclick="setSummaryFilter('monthly')">รายเดือน</button>
+          <button class="filter-btn" onclick="setSummaryFilter('yearly')">รายปี</button>
+          <div class="action-buttons-right">
+            <button class="btn-print" onclick="printSummaryReport()">🖨️ พิมพ์สลิปสรุปบัญชี</button>
+            <button class="btn-danger" onclick="confirmResetAllData()">⚠️ ลบประวัติทั้งหมด</button>
+          </div>
+        </div>
+
+        <div class="summary-cards">
+          <div class="card card-green">
+            <h4>ยอดขายรวม</h4>
+            <div class="card-value" id="summaryRevenue">฿0.00</div>
+          </div>
+          <div class="card card-orange">
+            <h4>ยอดซื้อเข้ารวม</h4>
+            <div class="card-value" id="summaryPurchases">฿0.00</div>
+          </div>
+          <div class="card card-red">
+            <h4>รายจ่ายรวม (ทั่วไป+พนักงาน)</h4>
+            <div class="card-value" id="summaryExpenses">฿0.00</div>
+          </div>
+          <div class="card card-blue">
+            <h4>กำไรสุทธิคงเหลือ</h4>
+            <div class="card-value" id="summaryProfit">฿0.00</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODALS -->
+  <!-- 1. Modal ชั่งน้ำหนัก/ใส่ราคา (เปิดมาว่างเปล่า) -->
+  <div class="modal" id="modalWeightInput">
+    <div class="modal-content">
+      <h3 id="modalProductName">ใส่รายละเอียดสินค้า</h3>
+      <div class="form-group">
+        <label>น้ำหนัก / จำนวน:</label>
+        <input type="number" id="inputQty" step="0.01" placeholder="กรอกน้ำหนักหรือจำนวน" autofocus>
+      </div>
+      <div class="form-group">
+        <label>ราคาต่อหน่วย (บาท):</label>
+        <input type="number" id="inputUnitPrice" step="0.01" placeholder="กรอกราคาต่อหน่วย">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('modalWeightInput')">ยกเลิก</button>
+        <button class="btn-primary" onclick="confirmAddToCart()">ตกลงเพิ่มใส่ตะกร้า</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Modal เลือกการชำระเงิน -->
+  <div class="modal" id="modalPayment">
+    <div class="modal-content">
+      <h3>เลือกประเภทการชำระเงิน</h3>
+      <div class="payment-options">
+        <button class="btn-pay cash" onclick="processPayment('เงินสด')">💵 เงินสด (เปิดลิ้นชัก)</button>
+        <button class="btn-pay transfer" onclick="processPayment('เงินโอน')">📲 เงินโอน</button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('modalPayment')">ยกเลิก</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Modal เพิ่มรายการซื้อเข้า -->
+  <div class="modal" id="modalAddPurchase">
+    <div class="modal-content">
+      <h3>บันทึกรายการซื้อเข้า</h3>
+      <div class="form-group">
+        <label>ชื่อผู้ขาย / ซัพพลายเออร์:</label>
+        <input type="text" id="purchaseVendor" placeholder="เช่น สวนปลาสมชาย">
+      </div>
+      <div class="form-group">
+        <label>รายละเอียดสินค้าที่ซื้อเข้า:</label>
+        <input type="text" id="purchaseItemName" placeholder="เช่น ปลากะพงสด 20 กก.">
+      </div>
+      <div class="form-group">
+        <label>ราคารวม (บาท):</label>
+        <input type="number" id="purchaseTotal" placeholder="0.00">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('modalAddPurchase')">ยกเลิก</button>
+        <button class="btn-primary" onclick="savePurchase()">บันทึกรายการ (ค้างชำระ)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Modal เพิ่มพนักงาน -->
+  <div class="modal" id="modalAddEmployee">
+    <div class="modal-content">
+      <h3>สร้างรายชื่อพนักงาน</h3>
+      <div class="form-group">
+        <label>ชื่อ-นามสกุล พนักงาน:</label>
+        <input type="text" id="empName" placeholder="ชื่อพนักงาน">
+      </div>
+      <div class="form-group">
+        <label>ประเภทสัญญาหลัก:</label>
+        <select id="empType">
+          <option value="รายวัน">รายวัน</option>
+          <option value="รายเดือน">รายเดือน</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('modalAddEmployee')">ยกเลิก</button>
+        <button class="btn-primary" onclick="saveEmployee()">บันทึก</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Modal บันทึกธุรกรรมพนักงาน -->
+  <div class="modal" id="modalEmpTx">
+    <div class="modal-content">
+      <h3 id="empTxTitle">บันทึกรายการพนักงาน</h3>
+      <input type="hidden" id="empTxEmpId">
+      <div class="form-group">
+        <label>ประเภทรายการ:</label>
+        <select id="empTxType">
+          <option value="จ่ายค่าจ้าง">จ่ายค่าจ้าง</option>
+          <option value="เบิกล่วงหน้า">เบิกล่วงหน้า</option>
+          <option value="ฝากเงิน">ฝากเงิน</option>
+          <option value="หักหนี้/ถอนเงิน">หักหนี้ / ถอนเงินฝาก</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>จำนวนเงิน (บาท):</label>
+        <input type="number" id="empTxAmount" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label>หมายเหตุ:</label>
+        <input type="text" id="empTxNote" placeholder="ระบุเพิ่มเติม (ถ้ามี)">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('modalEmpTx')">ยกเลิก</button>
+        <button class="btn-primary" onclick="saveEmpTx()">บันทึกรายการ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Modal ประวัติพนักงานรายบุคคล -->
+  <div class="modal" id="modalEmpHistory">
+    <div class="modal-content large">
+      <h3 id="empHistoryTitle">ประวัติพนักงาน</h3>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>วันที่</th>
+              <th>ประเภท</th>
+              <th>จำนวนเงิน</th>
+              <th>หมายเหตุ</th>
+            </tr>
+          </thead>
+          <tbody id="empHistoryTableBody"></tbody>
+        </table>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('modalEmpHistory')">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. Modal รายจ่ายทั่วไป -->
+  <div class="modal" id="modalAddExpense">
+    <div class="modal-content">
+      <h3>บันทึกรายจ่ายทั่วไป</h3>
+      <div class="form-group">
+        <label>รายการ / หมวดหมู่:</label>
+        <input type="text" id="expTitle" placeholder="เช่น ค่าไฟฟ้า, ค่าน้ำแข็ง">
+      </div>
+      <div class="form-group">
+        <label>จำนวนเงิน (บาท):</label>
+        <input type="number" id="expAmount" placeholder="0.00">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('modalAddExpense')">ยกเลิก</button>
+        <button class="btn-primary" onclick="saveExpense()">บันทึกรายจ่าย</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ใบเสร็จ/สรุป สำหรับพิมพ์ (ซ่อนไว้ หน้าจอแสดงผลปกติ) -->
+  <div id="printContainer" class="print-container"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
