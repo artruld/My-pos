@@ -17,11 +17,11 @@
       <div class="brand-sub">ระบบจัดการขายแนวนอน (สลิป 80mm)</div>
     </div>
     <nav class="nav-menu">
-      <button class="nav-btn active" onclick="switchTab('sales')">🛒 การขาย</button>
-      <button class="nav-btn" onclick="switchTab('history')">📜 ประวัติบิล</button>
-      <button class="nav-btn" onclick="switchTab('purchases')">📥 ซื้อเข้า</button>
-      <button class="nav-btn" onclick="switchTab('expenses')">💸 รายจ่าย/ค่าจ้าง</button>
-      <button class="nav-btn" onclick="switchTab('dashboard')">📊 สรุปบัญชี</button>
+      <button class="nav-btn active" onclick="switchTab('sales', event)">🛒 การขาย</button>
+      <button class="nav-btn" onclick="switchTab('history', event)">📜 ประวัติบิล</button>
+      <button class="nav-btn" onclick="switchTab('purchases', event)">📥 ซื้อเข้า</button>
+      <button class="nav-btn" onclick="switchTab('expenses', event)">💸 รายจ่าย/ค่าจ้าง</button>
+      <button class="nav-btn" onclick="switchTab('dashboard', event)">📊 สรุปบัญชี</button>
     </nav>
   </header>
 
@@ -36,7 +36,7 @@
             <select id="sales-cust-select" onchange="handleCustomerSelect()">
               <option value="walkin">ลูกค้าหน้าร้าน</option>
             </select>
-            <input type="text" id="sales-cust-name" value="ลูกค้าหน้าร้าน" placeholder="แก้ไขชื่อลูกค้าสำหรับพิมพ์สลิป">
+            <input type="text" id="sales-cust-name" value="ลูกค้าหน้าร้าน" placeholder="แก้ไขชื่อลูกค้าสำหรับพิมพ์สลิป" oninput="updateReceiptCustomerName()">
           </div>
 
           <div class="card product-section">
@@ -52,11 +52,11 @@
             <div class="inputs-row">
               <div class="input-group">
                 <label id="input-param1-label">ราคา/หน่วย</label>
-                <input type="number" id="input-param1" placeholder="ว่าง" onfocus="setActiveInput('param1')" oninput="calculateActiveTotal()">
+                <input type="number" id="input-param1" placeholder="" onfocus="setActiveInput('param1')" oninput="calculateActiveTotal()">
               </div>
               <div class="input-group">
                 <label id="input-param2-label">น้ำหนัก/จำนวน</label>
-                <input type="number" id="input-param2" placeholder="ว่าง" onfocus="setActiveInput('param2')" oninput="calculateActiveTotal()">
+                <input type="number" id="input-param2" placeholder="" onfocus="setActiveInput('param2')" oninput="calculateActiveTotal()">
               </div>
               <div class="input-group">
                 <label>ราคารวม</label>
@@ -88,8 +88,8 @@
               <div class="receipt-header">
                 <h3>ร้านปลาเม้า</h3>
                 <p>551/145 ถนนมิตรภาพ (ซอย 10)</p>
-                <p>ต.ในเมือง อ.เมืองนครราชสีมา จ.นครราชสีมา 30000</p>
-                <p>โทร. 081-760-2807</p>
+                <p>ตำบลในเมือง อำเภอเมืองนครราชสีมา จังหวัดนครราชสีมา 30000</p>
+                <p>เบอร์โทร 081-760-2807</p>
                 <div class="divider">--------------------------------</div>
                 <p><strong>ผู้ซื้อ:</strong> <span id="rec-cust-name">ลูกค้าหน้าร้าน</span></p>
                 <p><strong>วันที่:</strong> <span id="rec-date"></span></p>
@@ -121,25 +121,28 @@
         <div class="section-header">
           <h2>📜 ประวัติบิลขาย</h2>
           <div class="filters">
-            <button class="btn-sm btn-outline active" onclick="renderSalesHistory('all')">ทั้งหมด</button>
-            <button class="btn-sm btn-outline" onclick="renderSalesHistory('unpaid')">ค้างชำระ</button>
-            <button class="btn-sm btn-outline" onclick="renderSalesHistory('paid')">ชำระแล้ว</button>
+            <button class="btn-sm btn-outline active" onclick="setHistoryFilter('all', event)">ทั้งหมด</button>
+            <button class="btn-sm btn-outline" onclick="setHistoryFilter('unpaid', event)">ค้างชำระ</button>
+            <button class="btn-sm btn-outline" onclick="setHistoryFilter('paid', event)">ชำระแล้ว</button>
+            <button class="btn-sm btn-primary ml-2" onclick="toggleHistoryGrouping(event)">สลับการดู: รายบิล / สรุปรายวัน</button>
           </div>
         </div>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>เลขที่บิล</th>
-              <th>วันที่/เวลา</th>
-              <th>ชื่อลูกค้า</th>
-              <th>ยอดรวม</th>
-              <th>ประเภทชำระ</th>
-              <th>สถานะ</th>
-              <th>จัดการ</th>
-            </tr>
-          </thead>
-          <tbody id="history-table-body"></tbody>
-        </table>
+        <div id="history-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>เลขที่บิล</th>
+                <th>วันที่/เวลา</th>
+                <th>ชื่อลูกค้า</th>
+                <th>ยอดรวม</th>
+                <th>ประเภทชำระ</th>
+                <th>สถานะ</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="history-table-body"></tbody>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -255,9 +258,9 @@
               <select id="wage-emp-select"></select>
             </div>
             <div class="form-group">
-              <label>ประเภท:</label>
+              <label>ประเภทรายการ:</label>
               <select id="wage-type">
-                <option value="pay">🟢 จ่ายค่าจ้าง</option>
+                <option value="pay">🟢 จ่ายค่าจ้าง (รายวัน/รายเดือน)</option>
                 <option value="advance">🔴 เบิกเงินล่วงหน้า</option>
                 <option value="deposit">🔵 ฝากเงิน</option>
               </select>
@@ -270,7 +273,15 @@
           <button class="btn btn-primary mt-2" onclick="saveWageTransaction()">💾 บันทึกรายการพนักงาน</button>
         </div>
         <div class="card mt-2">
-          <h3>ประวัติพนักงาน</h3>
+          <div class="section-header">
+            <h3>ประวัติพนักงาน</h3>
+            <div>
+              <label>กรองดูรายบุคคล: </label>
+              <select id="wage-filter-emp" onchange="renderEmployeeLedger()">
+                <option value="all">พนักงานทุกคน</option>
+              </select>
+            </div>
+          </div>
           <table class="data-table">
             <thead>
               <tr>
@@ -293,10 +304,10 @@
         <div class="section-header">
           <h2>📊 สรุปบัญชีและรายงาน</h2>
           <div class="filters">
-            <button class="btn-sm btn-outline active" onclick="setDashboardRange('daily')">รายวัน</button>
-            <button class="btn-sm btn-outline" onclick="setDashboardRange('weekly')">รายสัปดาห์</button>
-            <button class="btn-sm btn-outline" onclick="setDashboardRange('monthly')">รายเดือน</button>
-            <button class="btn-sm btn-outline" onclick="setDashboardRange('yearly')">รายปี</button>
+            <button class="btn-sm btn-outline active" onclick="setDashboardRange('daily', event)">รายวัน</button>
+            <button class="btn-sm btn-outline" onclick="setDashboardRange('weekly', event)">รายสัปดาห์</button>
+            <button class="btn-sm btn-outline" onclick="setDashboardRange('monthly', event)">รายเดือน</button>
+            <button class="btn-sm btn-outline" onclick="setDashboardRange('yearly', event)">รายปี</button>
           </div>
         </div>
 
@@ -315,12 +326,12 @@
           <div class="sum-card bg-emerald">
             <h4>ยอดขายรวม</h4>
             <h2 id="sum-sales">0.00 ฿</h2>
-            <p>เงินสด: <span id="sum-sales-cash">0</span> | โอน: <span id="sum-sales-transfer">0</span></p>
+            <p>เงินสด: <span id="sum-sales-cash">0.00 ฿</span> | โอน: <span id="sum-sales-transfer">0.00 ฿</span></p>
           </div>
           <div class="sum-card bg-rose">
             <h4>ยอดซื้อเข้ารวม</h4>
             <h2 id="sum-purchases">0.00 ฿</h2>
-            <p>ชำระแล้ว: <span id="sum-pur-paid">0</span> | ค้างชำระ: <span id="sum-pur-unpaid">0</span></p>
+            <p>ชำระแล้ว: <span id="sum-pur-paid">0.00 ฿</span> | ค้างชำระ: <span id="sum-pur-unpaid">0.00 ฿</span></p>
           </div>
           <div class="sum-card bg-amber">
             <h4>รายจ่ายทั่วไป</h4>
@@ -338,7 +349,7 @@
         </div>
 
         <div class="action-buttons-row mt-2">
-          <button class="btn btn-success" onclick="window.print()">🖨️ พิมพ์สลิปสรุปบัญชี (80mm)</button>
+          <button class="btn btn-success" onclick="printSummaryReceipt()">🖨️ พิมพ์สลิปสรุปบัญชี (80mm)</button>
           <button class="btn btn-danger" onclick="openResetModal()">🗑️ ลบประวัติทั้งหมด (Reset)</button>
         </div>
       </div>
@@ -354,6 +365,17 @@
       <button class="btn btn-primary btn-block mt-2" onclick="confirmPayment('cash')">💵 เงินสด (สั่งเปิดลิ้นชัก)</button>
       <button class="btn btn-success btn-block mt-1" onclick="confirmPayment('transfer')">📲 เงินโอน</button>
       <button class="btn btn-outline btn-block mt-2" onclick="closeModal('modal-payment')">ยกเลิก</button>
+    </div>
+  </div>
+
+  <div id="modal-pay-bill" class="modal">
+    <div class="modal-content">
+      <h3>ชำระเงินบิลค้างชำระ</h3>
+      <p>เลขที่บิล: <strong id="modal-pay-bill-id">-</strong></p>
+      <p>ยอดชำระ: <strong id="modal-pay-bill-amount">0.00</strong> บาท</p>
+      <button class="btn btn-primary btn-block mt-2" onclick="confirmBillPayment('เงินสด')">💵 เงินสด (สั่งเปิดลิ้นชัก)</button>
+      <button class="btn btn-success btn-block mt-1" onclick="confirmBillPayment('เงินโอน')">📲 เงินโอน</button>
+      <button class="btn btn-outline btn-block mt-2" onclick="closeModal('modal-pay-bill')">ยกเลิก</button>
     </div>
   </div>
 
@@ -412,6 +434,36 @@
       <button class="btn btn-danger btn-block mt-2" onclick="executeReset()">ยืนยันลบข้อมูล</button>
       <button class="btn btn-outline btn-block mt-1" onclick="closeModal('modal-reset')">ยกเลิก</button>
     </div>
+  </div>
+
+  <!-- Print Template for Summary Slip -->
+  <div class="receipt-80mm print-only" id="summary-print-template" style="display:none;">
+    <div class="receipt-header">
+      <h3>ร้านปลาเม้า</h3>
+      <p>551/145 ถนนมิตรภาพ (ซอย 10)</p>
+      <p>ตำบลในเมือง อำเภอเมืองนครราชสีมา จังหวัดนครราชสีมา 30000</p>
+      <p>เบอร์โทร 081-760-2807</p>
+      <div class="divider">--------------------------------</div>
+      <h4>ใบสรุปบัญชีและรายงาน</h4>
+      <p><strong>ช่วงเวลา:</strong> <span id="sum-print-range"></span></p>
+      <div class="divider">--------------------------------</div>
+    </div>
+    <div class="receipt-items">
+      <div class="r-item"><span>ยอดขายรวม:</span><span id="sum-p-sales">0.00</span></div>
+      <div class="r-item"><span>- เงินสด:</span><span id="sum-p-cash">0.00</span></div>
+      <div class="r-item"><span>- เงินโอน:</span><span id="sum-p-transfer">0.00</span></div>
+      <div class="divider">--------------------------------</div>
+      <div class="r-item"><span>ยอดซื้อเข้ารวม:</span><span id="sum-p-purchases">0.00</span></div>
+      <div class="r-item"><span>รายจ่ายทั่วไป:</span><span id="sum-p-expenses">0.00</span></div>
+      <div class="r-item"><span>ค่าจ้างพนักงาน:</span><span id="sum-p-wages">0.00</span></div>
+      <div class="divider">--------------------------------</div>
+      <div class="receipt-total">
+        <span>กำไร/ขาดทุนสุทธิ:</span>
+        <strong id="sum-p-profit">0.00</strong>
+      </div>
+    </div>
+    <div class="divider">--------------------------------</div>
+    <div class="receipt-footer"><p>พิมพ์เมื่อ: <span id="sum-print-time"></span></p></div>
   </div>
 
   <script src="script.js"></script>
