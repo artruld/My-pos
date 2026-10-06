@@ -69,6 +69,13 @@ body {
   margin-bottom: 12px;
 }
 
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
 .sales-layout {
   display: flex;
   gap: 12px;
@@ -121,11 +128,19 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
+  word-break: break-word;
 }
 
 .product-btn.active, .product-btn:hover {
   border-color: #6366f1;
   background: #eef2ff;
+}
+
+.active-item-title {
+  font-weight: 600;
+  color: #4f46e5;
+  margin-bottom: 6px;
 }
 
 .inputs-row {
@@ -179,7 +194,7 @@ body {
 .receipt-80mm {
   width: 100%;
   background: #ffffff;
-  padding: 10px;
+  padding: 12px;
   border: 1px dashed #cbd5e1;
   font-size: 0.8rem;
 }
@@ -226,7 +241,7 @@ body {
 .btn-warning { background: #f59e0b; color: white; }
 .btn-danger { background: #ef4444; color: white; }
 .btn-outline { background: transparent; border: 1px solid #cbd5e1; color: #334155; }
-.btn-sm { padding: 4px 8px; font-size: 0.8rem; border-radius: 4px; }
+.btn-sm { padding: 4px 8px; font-size: 0.8rem; border-radius: 4px; border: none; cursor: pointer; }
 
 .action-buttons-group {
   display: flex;
@@ -245,6 +260,7 @@ body {
   padding: 8px;
   border-bottom: 1px solid #e2e8f0;
   font-size: 0.85rem;
+  text-align: left;
 }
 
 .summary-cards-grid {
@@ -315,15 +331,40 @@ body {
 .mt-1 { margin-top: 4px; }
 .mt-2 { margin-top: 8px; }
 .mb-2 { margin-bottom: 8px; }
+.ml-2 { margin-left: 8px; }
 .text-danger { color: #ef4444; }
 .text-success { color: #10b981; }
 
+.daily-group-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: #f8fafc;
+}
+
+.daily-group-header {
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #cbd5e1;
+  padding-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.action-buttons-row {
+  display: flex;
+  gap: 10px;
+}
+
 @media print {
   body * { visibility: hidden; }
-  .receipt-80mm, .receipt-80mm * { visibility: visible; }
-  .receipt-80mm {
+  .print-target, .print-target * { visibility: visible; }
+  .print-target {
     position: absolute;
     left: 0; top: 0;
     width: 80mm !important;
+    display: block !important;
   }
 }
