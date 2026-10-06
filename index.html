@@ -2,360 +2,344 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>ระบบบริหารจัดการร้านค้า (Modern POS 80mm)</title>
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Google Font: Prompt -->
-  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- ไฟล์สไตล์ภายนอก -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ร้านปลาเม้า POS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
+<body>
 
-  <!-- TOP BAR / HEADER -->
-  <header class="bg-indigo-900 text-white px-6 py-4 shadow-md flex justify-between items-center sticky top-0 z-40 no-print">
-    <div class="flex items-center gap-3">
-      <div class="bg-indigo-600 p-2.5 rounded-xl">
-        <i data-lucide="store" class="w-6 h-6"></i>
-      </div>
-      <div>
-        <h1 class="text-xl font-extrabold tracking-wide">STORE POS</h1>
-        <p class="text-xs text-indigo-200">ระบบจัดการขายหน้าร้าน (รองรับสลิป 80mm)</p>
-      </div>
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-title">ร้านปลาเม้า POS</div>
+      <div class="brand-sub">ระบบจัดการขายแนวนอน (สลิป 80mm)</div>
     </div>
-    
-    <button id="btn-home" onclick="navTo('screen-home')" class="hidden bg-slate-700 hover:bg-slate-600 active:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-sm">
-      <i data-lucide="home" class="w-5 h-5"></i>
-      <span>หน้าหลัก</span>
-    </button>
+    <nav class="nav-menu">
+      <button class="nav-btn active" onclick="switchTab('sales')">🛒 การขาย</button>
+      <button class="nav-btn" onclick="switchTab('history')">📜 ประวัติบิล</button>
+      <button class="nav-btn" onclick="switchTab('purchases')">📥 ซื้อเข้า</button>
+      <button class="nav-btn" onclick="switchTab('expenses')">💸 รายจ่าย/ค่าจ้าง</button>
+      <button class="nav-btn" onclick="switchTab('dashboard')">📊 สรุปบัญชี</button>
+    </nav>
   </header>
 
-  <!-- MAIN CONTAINER -->
-  <main class="flex-1 p-3 md:p-6 max-w-7xl w-full mx-auto no-print">
+  <main class="main-container">
 
-    <!-- Notification Toast -->
-    <div id="toast" class="hidden fixed bottom-6 right-6 bg-slate-900 text-white px-6 py-3.5 rounded-2xl shadow-2xl z-50 flex items-center gap-3 transition-all border border-slate-700">
-      <i data-lucide="check-circle-2" class="w-6 h-6 text-emerald-400"></i>
-      <span id="toast-msg" class="font-bold text-sm">การทำงานสำเร็จ</span>
-    </div>
+    <!-- TAB 1: การขาย -->
+    <section id="tab-sales" class="tab-content active">
+      <div class="sales-layout">
+        <div class="sales-left">
+          <div class="card customer-bar">
+            <label><strong>ลูกค้า:</strong></label>
+            <select id="sales-cust-select" onchange="handleCustomerSelect()">
+              <option value="walkin">ลูกค้าหน้าร้าน</option>
+            </select>
+            <input type="text" id="sales-cust-name" value="ลูกค้าหน้าร้าน" placeholder="แก้ไขชื่อลูกค้าสำหรับพิมพ์สลิป">
+          </div>
 
-    <!-- 1. หน้าแรก (HOME) -->
-    <section id="screen-home" class="space-y-6">
-      <div class="text-center py-2">
-        <h2 class="text-3xl font-black text-slate-800">เมนูหลัก</h2>
-        <p class="text-slate-500 text-sm">เลือกระบบงานที่ต้องการรายการ</p>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-        <button onclick="navTo('screen-sales-customer')" class="col-span-1 md:col-span-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white p-8 rounded-3xl shadow-xl transition-all flex flex-col md:flex-row items-center justify-between gap-4 group active:scale-98">
-          <div class="flex items-center gap-6">
-            <div class="bg-white/20 p-5 rounded-2xl group-hover:scale-110 transition-transform">
-              <i data-lucide="shopping-bag" class="w-14 h-14"></i>
+          <div class="card product-section">
+            <div class="section-header">
+              <span>รายการสินค้า</span>
+              <button class="btn-sm btn-outline" onclick="openAddProductModal()">+ เพิ่มสินค้า</button>
             </div>
-            <div class="text-left">
-              <span class="text-xs font-bold bg-white/20 px-3 py-1 rounded-full uppercase tracking-wider">เข้าสู่เมนูหลัก</span>
-              <h3 class="text-3xl font-black mt-1">เข้าสู่เมนูการขาย</h3>
-              <p class="text-indigo-100 text-sm mt-1">ออกบิล คิดเงิน ชั่งน้ำหนัก พักบิล และจัดการลูกค้า</p>
-            </div>
-          </div>
-          <i data-lucide="chevron-right" class="w-10 h-10 text-indigo-200 group-hover:translate-x-2 transition-transform"></i>
-        </button>
-
-        <button onclick="navTo('screen-bill-history')" class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 hover:border-indigo-500 hover:shadow-md transition-all flex flex-col items-center text-center gap-3 group active:scale-95">
-          <div class="bg-indigo-100 text-indigo-600 p-4 rounded-2xl group-hover:scale-110 transition-transform">
-            <i data-lucide="receipt" class="w-8 h-8"></i>
-          </div>
-          <div>
-            <h4 class="font-extrabold text-xl text-slate-800">ประวัติบิล</h4>
-            <p class="text-xs text-slate-500 mt-1">ติดตามยอดค้าง ชำระเงิน พิมพ์/แชร์บิล</p>
-          </div>
-        </button>
-
-        <button onclick="navTo('screen-purchase')" class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 hover:border-emerald-500 hover:shadow-md transition-all flex flex-col items-center text-center gap-3 group active:scale-95">
-          <div class="bg-emerald-100 text-emerald-600 p-4 rounded-2xl group-hover:scale-110 transition-transform">
-            <i data-lucide="package-plus" class="w-8 h-8"></i>
-          </div>
-          <div>
-            <h4 class="font-extrabold text-xl text-slate-800">ซื้อเข้า</h4>
-            <p class="text-xs text-slate-500 mt-1">บันทึกรายการสินค้าเข้าคลัง</p>
-          </div>
-        </button>
-
-        <button onclick="navTo('screen-expenses')" class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 hover:border-amber-500 hover:shadow-md transition-all flex flex-col items-center text-center gap-3 group active:scale-95">
-          <div class="bg-amber-100 text-amber-600 p-4 rounded-2xl group-hover:scale-110 transition-transform">
-            <i data-lucide="wallet" class="w-8 h-8"></i>
-          </div>
-          <div>
-            <h4 class="font-extrabold text-xl text-slate-800">รายจ่าย / ค่าแรง</h4>
-            <p class="text-xs text-slate-500 mt-1">บันทึกค่าใช้จ่ายร้านและค่าจ้าง</p>
-          </div>
-        </button>
-      </div>
-    </section>
-
-    <!-- 2. เลือกลูกค้า -->
-    <section id="screen-sales-customer" class="hidden space-y-6 max-w-4xl mx-auto">
-      <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
-        <h2 class="text-3xl font-black text-slate-800 mb-2 text-center">เลือกประเภทลูกค้า</h2>
-        <p class="text-slate-500 text-sm mb-8 text-center">โปรดเลือกประเภทลูกค้ก่อนเข้าสู่หน้าขาย</p>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <button onclick="selectCustomer('ลูกค้าหน้าร้าน (ทั่วไป)')" class="bg-slate-800 hover:bg-slate-900 text-white p-10 rounded-3xl flex flex-col items-center justify-center gap-4 transition-all shadow-lg active:scale-95">
-            <div class="bg-white/10 p-5 rounded-2xl">
-              <i data-lucide="user" class="w-14 h-14 text-white"></i>
-            </div>
-            <span class="text-2xl font-extrabold">ลูกค้าหน้าร้าน (ทั่วไป)</span>
-            <span class="text-xs bg-white/20 px-4 py-1 rounded-full">เปิดบิลขายด่วน</span>
-          </button>
-
-          <button onclick="navTo('screen-regular-customers')" class="bg-indigo-600 hover:bg-indigo-700 text-white p-10 rounded-3xl flex flex-col items-center justify-center gap-4 transition-all shadow-lg active:scale-95">
-            <div class="bg-white/10 p-5 rounded-2xl">
-              <i data-lucide="users" class="w-14 h-14 text-white"></i>
-            </div>
-            <span class="text-2xl font-extrabold">ลูกค้าประจำ</span>
-            <span class="text-xs bg-white/20 px-4 py-1 rounded-full">เลือกจากรายชื่อที่บันทึกไว้</span>
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- 2.1 รายชื่อลูกค้าประจำ -->
-    <section id="screen-regular-customers" class="hidden space-y-6 max-w-4xl mx-auto">
-      <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 space-y-6">
-        <div class="flex justify-between items-center border-b pb-4">
-          <div>
-            <h2 class="text-2xl font-black text-slate-800">รายชื่อลูกค้าประจำ</h2>
-            <p class="text-slate-500 text-xs mt-1">กดเลือกลูกค้าเพื่อเปิดบิลขาย</p>
-          </div>
-          <button onclick="showAddCustomerModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 shadow-sm">
-            <i data-lucide="user-plus" class="w-5 h-5"></i> + เพิ่มรายชื่อลูกค้า
-          </button>
-        </div>
-
-        <div id="regular-customer-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
-      </div>
-    </section>
-
-    <!-- 3. หน้าขายสินค้า & POS -->
-    <section id="screen-pos" class="hidden space-y-4">
-      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
-        <div class="flex items-center gap-3">
-          <span class="text-sm font-bold text-slate-500">ลูกค้าปัจจุบัน:</span>
-          <span id="pos-customer-name" class="bg-indigo-100 text-indigo-900 font-extrabold px-4 py-1.5 rounded-xl text-base">ทั่วไป</span>
-          <button onclick="navTo('screen-sales-customer')" class="text-xs text-indigo-600 hover:underline font-bold">เปลี่ยนลูกค้า</button>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <button onclick="openCashDrawerManual()" class="bg-slate-100 hover:bg-slate-200 text-slate-800 px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-all">
-            <i data-lucide="archive" class="w-4 h-4 text-slate-600"></i>
-            <span>เปิดลิ้นชัก</span>
-          </button>
-
-          <button onclick="showParkedBillsModal()" class="bg-amber-100 hover:bg-amber-200 text-amber-900 px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-all relative">
-            <i data-lucide="clock" class="w-4 h-4 text-amber-600"></i>
-            <span>ดูบิลที่พัก</span>
-            <span id="parked-badge" class="bg-amber-600 text-white text-xs px-2 py-0.5 rounded-full font-bold ml-1">0</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <!-- ปุ่มเลือกสินค้า -->
-        <div class="lg:col-span-7 bg-white p-5 rounded-3xl shadow-sm border border-slate-200 flex flex-col h-[calc(100vh-220px)]">
-          <div class="flex justify-between items-center mb-4 pb-2 border-b">
-            <h3 class="font-extrabold text-xl text-slate-800 flex items-center gap-2">
-              <i data-lucide="layout-grid" class="w-6 h-6 text-indigo-600"></i>
-              เลือกรายการสินค้า
-            </h3>
-            <button onclick="showAddProductModal()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all">
-              <i data-lucide="plus-circle" class="w-4 h-4"></i> + สร้างปุ่มสินค้าใหม่
-            </button>
+            <div class="product-grid" id="product-grid"></div>
           </div>
 
-          <div id="product-buttons-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 overflow-y-auto pr-1 flex-1"></div>
-        </div>
-
-        <!-- ตัวอย่างใบเสร็จ 80mm -->
-        <div class="lg:col-span-5 bg-white p-5 rounded-3xl shadow-sm border border-slate-200 flex flex-col justify-between h-[calc(100vh-220px)]">
-          <div class="flex-1 flex flex-col overflow-hidden">
-            <div class="flex justify-between items-center mb-2">
-              <h3 class="font-extrabold text-base text-slate-800 flex items-center gap-2">
-                <i data-lucide="printer" class="w-5 h-5 text-indigo-600"></i>
-                ตัวอย่างสลิปใบเสร็จ (80mm)
-              </h3>
-              <button onclick="cancelCurrentBill()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1 transition-all">
-                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> ยกเลิกบิล
-              </button>
-            </div>
-
-            <div class="bg-slate-50 p-4 rounded-2xl border-2 border-dashed border-slate-300 receipt-80mm flex-1 overflow-y-auto shadow-inner">
-              <div class="text-center font-black text-2xl tracking-tight text-black">STORE POS</div>
-              <div class="text-xs text-center text-black font-semibold">สาขาหลัก เมือง พิษณุโลก 65000</div>
-              <div class="text-xs text-center text-black font-semibold">โทร: 081-234-5678</div>
-              <div class="font-extrabold text-center border-y-2 border-black my-2 py-1 text-base">ใบเสร็จรับเงิน</div>
-              
-              <div class="text-xs text-black space-y-0.5 mb-2 font-semibold">
-                <div class="flex justify-between"><span>เลขที่: <span id="receipt-no">--</span></span><span>เวลา: <span id="receipt-time">--</span></span></div>
-                <div>ลูกค้า: <span id="receipt-customer" class="font-bold">ทั่วไป</span></div>
+          <div class="card numpad-section">
+            <div class="active-item-title" id="active-item-title">กรุณาเลือกรายการสินค้า</div>
+            <div class="inputs-row">
+              <div class="input-group">
+                <label id="input-param1-label">ราคา/หน่วย</label>
+                <input type="number" id="input-param1" placeholder="ว่าง" onfocus="setActiveInput('param1')" oninput="calculateActiveTotal()">
               </div>
-
-              <div class="border-t-2 border-black pt-2 mb-2">
-                <div id="receipt-items-list" class="space-y-2 min-h-[120px]"></div>
+              <div class="input-group">
+                <label id="input-param2-label">น้ำหนัก/จำนวน</label>
+                <input type="number" id="input-param2" placeholder="ว่าง" onfocus="setActiveInput('param2')" oninput="calculateActiveTotal()">
               </div>
-
-              <div class="border-t-2 border-black pt-2 my-2 space-y-1">
-                <div class="flex justify-between items-center font-black text-xl text-black">
-                  <span>ราคารวมทั้งสิ้น</span>
-                  <span>฿<span id="receipt-total">0.00</span></span>
-                </div>
-              </div>
-
-              <div class="text-center mt-4 pt-2 border-t border-dashed border-gray-400 text-xs text-black font-semibold">
-                <p>Line: @yourstore</p>
-                <p class="font-bold text-sm mt-1">" THANK YOU "</p>
+              <div class="input-group">
+                <label>ราคารวม</label>
+                <input type="number" id="input-total" readonly placeholder="0.00">
               </div>
             </div>
+
+            <div class="numpad-grid">
+              <button class="numpad-btn" onclick="pressNumpad('7')">7</button>
+              <button class="numpad-btn" onclick="pressNumpad('8')">8</button>
+              <button class="numpad-btn" onclick="pressNumpad('9')">9</button>
+              <button class="numpad-btn" onclick="pressNumpad('4')">4</button>
+              <button class="numpad-btn" onclick="pressNumpad('5')">5</button>
+              <button class="numpad-btn" onclick="pressNumpad('6')">6</button>
+              <button class="numpad-btn" onclick="pressNumpad('1')">1</button>
+              <button class="numpad-btn" onclick="pressNumpad('2')">2</button>
+              <button class="numpad-btn" onclick="pressNumpad('3')">3</button>
+              <button class="numpad-btn" onclick="pressNumpad('0')">0</button>
+              <button class="numpad-btn" onclick="pressNumpad('.')">.</button>
+              <button class="numpad-btn btn-danger" onclick="pressNumpad('C')">C</button>
+            </div>
+            <button class="btn btn-primary btn-block mt-2" onclick="addItemToCart()">+ เพิ่มลงในสลิป</button>
           </div>
+        </div>
 
-          <div class="grid grid-cols-2 gap-3 pt-3">
-            <button onclick="parkBillManual()" class="col-span-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all">
-              <i data-lucide="pause-circle" class="w-5 h-5"></i>
-              <span>พักบิล</span>
-            </button>
+        <div class="sales-right">
+          <div class="card receipt-wrapper">
+            <div class="receipt-80mm" id="receipt-preview">
+              <div class="receipt-header">
+                <h3>ร้านปลาเม้า</h3>
+                <p>551/145 ถนนมิตรภาพ (ซอย 10)</p>
+                <p>ต.ในเมือง อ.เมืองนครราชสีมา จ.นครราชสีมา 30000</p>
+                <p>โทร. 081-760-2807</p>
+                <div class="divider">--------------------------------</div>
+                <p><strong>ผู้ซื้อ:</strong> <span id="rec-cust-name">ลูกค้าหน้าร้าน</span></p>
+                <p><strong>วันที่:</strong> <span id="rec-date"></span></p>
+                <div class="divider">--------------------------------</div>
+              </div>
+              <div class="receipt-items" id="rec-items-list"></div>
+              <div class="divider">--------------------------------</div>
+              <div class="receipt-total">
+                <span>ยอดรวมทั้งสิ้น:</span>
+                <strong id="rec-grand-total">0.00 บาท</strong>
+              </div>
+              <div class="divider">--------------------------------</div>
+              <div class="receipt-footer"><p>ขอบคุณที่อุดหนุนครับ</p></div>
+            </div>
 
-            <button onclick="showPaymentModal()" class="col-span-1 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-extrabold py-3.5 rounded-2xl text-xl flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95">
-              <span>ชำระเงิน</span>
-            </button>
+            <div class="action-buttons-group">
+              <button class="btn btn-success btn-block" onclick="openPaymentModal()">💵 ชำระเงิน / พิมพ์สลิป</button>
+              <button class="btn btn-warning btn-block" onclick="saveCartAsUnpaid()">⏳ ค้างชำระ / พักบิล</button>
+              <button class="btn btn-danger btn-block" onclick="clearCart()">🗑️ ล้างรายการ</button>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- 4. ซื้อเข้า -->
-    <section id="screen-purchase" class="hidden space-y-6 max-w-4xl mx-auto">
-      <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 space-y-4">
-        <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
-          <i data-lucide="package-plus" class="w-7 h-7 text-emerald-600"></i>
-          บันทึกรายการซื้อสินค้าเข้า
-        </h2>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-          <input type="text" id="p-name" placeholder="ชื่อสินค้าซื้อเข้า" class="p-3 border rounded-xl font-medium">
-          <input type="text" id="p-qty" placeholder="จำนวน/น้ำหนัก" class="p-3 border rounded-xl font-medium">
-          <input type="number" id="p-price" placeholder="ราคาทั้งหมด (บาท)" class="p-3 border rounded-xl font-medium">
-          <button onclick="addPurchaseItem()" class="md:col-span-3 bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700">
-            + เพิ่มรายการซื้อเข้า
-          </button>
+    <!-- TAB 2: ประวัติบิล -->
+    <section id="tab-history" class="tab-content">
+      <div class="card">
+        <div class="section-header">
+          <h2>📜 ประวัติบิลขาย</h2>
+          <div class="filters">
+            <button class="btn-sm btn-outline active" onclick="renderSalesHistory('all')">ทั้งหมด</button>
+            <button class="btn-sm btn-outline" onclick="renderSalesHistory('unpaid')">ค้างชำระ</button>
+            <button class="btn-sm btn-outline" onclick="renderSalesHistory('paid')">ชำระแล้ว</button>
+          </div>
         </div>
-
-        <table class="w-full text-left text-sm mt-4">
-          <thead class="bg-slate-100 text-slate-700 font-bold">
+        <table class="data-table">
+          <thead>
             <tr>
-              <th class="p-3">สินค้า</th>
-              <th class="p-3">จำนวน</th>
-              <th class="p-3 text-right">ยอดรวม</th>
+              <th>เลขที่บิล</th>
+              <th>วันที่/เวลา</th>
+              <th>ชื่อลูกค้า</th>
+              <th>ยอดรวม</th>
+              <th>ประเภทชำระ</th>
+              <th>สถานะ</th>
+              <th>จัดการ</th>
             </tr>
           </thead>
-          <tbody id="purchase-table-body" class="divide-y divide-slate-100"></tbody>
+          <tbody id="history-table-body"></tbody>
         </table>
+      </div>
+    </section>
 
-        <div class="pt-4 border-t flex justify-end">
-          <button onclick="savePurchaseOrder()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-3 rounded-xl shadow-md">
-            บันทึกรายการซื้อเข้า
-          </button>
+    <!-- TAB 3: ซื้อเข้า -->
+    <section id="tab-purchases" class="tab-content">
+      <div class="sales-layout">
+        <div class="sales-left">
+          <div class="card">
+            <h2>📥 บันทึกรายการซื้อเข้า</h2>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>ผู้ขาย (Supplier):</label>
+                <div class="flex-row">
+                  <select id="pur-supplier-select"></select>
+                  <button class="btn-sm btn-outline" onclick="openAddSupplierModal()">+ เพิ่มผู้ขาย</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>ประเภทรายการ:</label>
+                <select id="pur-item-type" onchange="togglePurchaseItemMode()">
+                  <option value="existing">เลือกจากสินค้าในร้าน</option>
+                  <option value="custom">พิมพ์ชื่อรายการเอง</option>
+                </select>
+              </div>
+              <div class="form-group" id="pur-existing-group">
+                <label>เลือกสินค้า:</label>
+                <select id="pur-product-select"></select>
+              </div>
+              <div class="form-group" id="pur-custom-group" style="display:none;">
+                <label>ชื่อรายการ:</label>
+                <input type="text" id="pur-custom-name" placeholder="ชื่อสินค้าที่ซื้อเข้า">
+              </div>
+              <div class="form-group">
+                <label>จำนวน / น้ำหนัก:</label>
+                <input type="number" id="pur-qty" placeholder="0">
+              </div>
+              <div class="form-group">
+                <label>ราคารวม (บาท):</label>
+                <input type="number" id="pur-price" placeholder="0.00">
+              </div>
+            </div>
+            <button class="btn btn-primary mt-2" onclick="savePurchaseRecord()">💾 บันทึกซื้อเข้า (ตั้งค้างชำระไว้ก่อน)</button>
+          </div>
+        </div>
+        <div class="sales-right">
+          <div class="card">
+            <h3>ประวัติซื้อเข้า</h3>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>วันที่</th>
+                  <th>ผู้ขาย</th>
+                  <th>รายการ</th>
+                  <th>ยอดรวม</th>
+                  <th>สถานะ</th>
+                  <th>จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="purchase-table-body"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- 5. รายจ่าย / ค่าแรง -->
-    <section id="screen-expenses" class="hidden space-y-6 max-w-4xl mx-auto">
-      <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 space-y-6">
-        <h2 class="text-2xl font-bold text-slate-800">เลือกประเภทรายการจ่าย</h2>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <button onclick="alert('บันทึกค่าแรงเรียบร้อย')" class="p-8 border-2 border-slate-200 hover:border-amber-500 rounded-3xl text-left flex items-center gap-4 hover:bg-amber-50/50 transition-all">
-            <div class="bg-amber-100 text-amber-600 p-4 rounded-2xl">
-              <i data-lucide="users" class="w-8 h-8"></i>
-            </div>
-            <div>
-              <h3 class="font-extrabold text-xl text-slate-800">ค่าแรงพนักงาน</h3>
-              <p class="text-slate-500 text-xs">บันทึกจ่ายเงินจ้างและเบิกค่าแรง</p>
-            </div>
-          </button>
-
-          <button onclick="alert('บันทึกรายจ่ายทั่วไปเรียบร้อย')" class="p-8 border-2 border-slate-200 hover:border-rose-500 rounded-3xl text-left flex items-center gap-4 hover:bg-rose-50/50 transition-all">
-            <div class="bg-rose-100 text-rose-600 p-4 rounded-2xl">
-              <i data-lucide="file-text" class="w-8 h-8"></i>
-            </div>
-            <div>
-              <h3 class="font-extrabold text-xl text-slate-800">รายจ่ายทั่วไป</h3>
-              <p class="text-slate-500 text-xs">ค่าน้ำ ค่าไฟ ค่าขนส่ง และอื่นๆ</p>
-            </div>
-          </button>
-        </div>
+    <!-- TAB 4: รายจ่าย/ค่าจ้าง -->
+    <section id="tab-expenses" class="tab-content">
+      <div class="tab-sub-nav mb-2">
+        <button class="btn-sm btn-primary active" id="subnav-general" onclick="switchExpenseSubTab('general')">💸 รายจ่ายทั่วไป</button>
+        <button class="btn-sm btn-outline" id="subnav-wages" onclick="switchExpenseSubTab('wages')">👨‍🍳 ค่าจ้างพนักงาน</button>
       </div>
-    </section>
 
-    <!-- 6. ประวัติบิล -->
-    <section id="screen-bill-history" class="hidden space-y-6">
-      <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 space-y-4">
-        <div class="flex flex-wrap justify-between items-center gap-4 border-b pb-4">
-          <div>
-            <h2 class="text-2xl font-black text-slate-800">ประวัติบิล / ติดตามยอดค้างชำระ</h2>
-            <p class="text-slate-500 text-xs mt-1">สามารถรวมบิล เปลี่ยนสถานะ และพิมพ์/แชร์สลิปย้อนหลังได้</p>
+      <div id="subtab-general-view">
+        <div class="card">
+          <h3>บันทึกรายจ่ายทั่วไป</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>รายการ:</label>
+              <input type="text" id="exp-title" placeholder="ค่าไฟ, ค่าถุง, ค่าขนส่ง">
+            </div>
+            <div class="form-group">
+              <label>จำนวนเงิน (บาท):</label>
+              <input type="number" id="exp-amount" placeholder="0.00">
+            </div>
           </div>
-
-          <button onclick="mergeSelectedBills()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl text-sm shadow-md flex items-center gap-2">
-            <i data-lucide="layers" class="w-4 h-4"></i> รวมบิลที่เลือก
-          </button>
+          <button class="btn btn-primary mt-2" onclick="saveGeneralExpense()">💾 บันทึกรายจ่าย</button>
         </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 bg-slate-50 p-3 rounded-2xl">
-          <div>
-            <label class="text-xs font-bold text-slate-500 block mb-1">ช่วงเวลา (ย้อนหลัง)</label>
-            <select id="filter-period" onchange="renderBillHistory()" class="w-full p-2.5 border rounded-xl font-bold text-sm bg-white">
-              <option value="all">ทั้งหมด</option>
-              <option value="day">วันนี้ (รายวัน)</option>
-              <option value="week">สัปดาห์นี้ (รายสัปดาห์)</option>
-              <option value="month">เดือนนี้ (รายเดือน)</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="text-xs font-bold text-slate-500 block mb-1">กลุ่มรายชื่อลูกค้า</label>
-            <select id="filter-customer-group" onchange="renderBillHistory()" class="w-full p-2.5 border rounded-xl font-bold text-sm bg-white">
-              <option value="all">ลูกค้าทั้งหมด</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="text-xs font-bold text-slate-500 block mb-1">สถานะชำระเงิน</label>
-            <select id="filter-status" onchange="renderBillHistory()" class="w-full p-2.5 border rounded-xl font-bold text-sm bg-white">
-              <option value="all">ทุกสถานะ</option>
-              <option value="ค้างชำระ">ค้างชำระ</option>
-              <option value="ชำระแล้ว">ชำระแล้ว</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-sm">
-            <thead class="bg-slate-100 text-slate-700 font-bold">
+        <div class="card mt-2">
+          <h3>ประวัติรายจ่ายทั่วไป</h3>
+          <table class="data-table">
+            <thead>
               <tr>
-                <th class="p-3 text-center">เลือก</th>
-                <th class="p-3">เลขที่บิล</th>
-                <th class="p-3">วันที่ / เวลา</th>
-                <th class="p-3">ลูกค้า</th>
-                <th class="p-3 text-right">ยอดรวม</th>
-                <th class="p-3 text-center">สถานะ</th>
-                <th class="p-3 text-center">จัดการ</th>
+                <th>วันที่</th>
+                <th>รายการ</th>
+                <th>จำนวนเงิน</th>
+                <th>จัดการ</th>
               </tr>
             </thead>
-            <tbody id="bill-history-table-body" class="divide-y divide-slate-100 font-medium"></tbody>
+            <tbody id="expense-table-body"></tbody>
           </table>
+        </div>
+      </div>
+
+      <div id="subtab-wages-view" style="display:none;">
+        <div class="card">
+          <div class="section-header">
+            <h3>จัดการค่าจ้าง / เบิก / ฝากพนักงาน</h3>
+            <button class="btn-sm btn-outline" onclick="openAddEmployeeModal()">+ เพิ่มพนักงาน</button>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>พนักงาน:</label>
+              <select id="wage-emp-select"></select>
+            </div>
+            <div class="form-group">
+              <label>ประเภท:</label>
+              <select id="wage-type">
+                <option value="pay">🟢 จ่ายค่าจ้าง</option>
+                <option value="advance">🔴 เบิกเงินล่วงหน้า</option>
+                <option value="deposit">🔵 ฝากเงิน</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>จำนวนเงิน (บาท):</label>
+              <input type="number" id="wage-amount" placeholder="0.00">
+            </div>
+          </div>
+          <button class="btn btn-primary mt-2" onclick="saveWageTransaction()">💾 บันทึกรายการพนักงาน</button>
+        </div>
+        <div class="card mt-2">
+          <h3>ประวัติพนักงาน</h3>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>วันที่</th>
+                <th>ชื่อพนักงาน</th>
+                <th>ประเภท</th>
+                <th>จำนวนเงิน</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="wage-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: สรุปบัญชี -->
+    <section id="tab-dashboard" class="tab-content">
+      <div class="card">
+        <div class="section-header">
+          <h2>📊 สรุปบัญชีและรายงาน</h2>
+          <div class="filters">
+            <button class="btn-sm btn-outline active" onclick="setDashboardRange('daily')">รายวัน</button>
+            <button class="btn-sm btn-outline" onclick="setDashboardRange('weekly')">รายสัปดาห์</button>
+            <button class="btn-sm btn-outline" onclick="setDashboardRange('monthly')">รายเดือน</button>
+            <button class="btn-sm btn-outline" onclick="setDashboardRange('yearly')">รายปี</button>
+          </div>
+        </div>
+
+        <div class="form-grid mt-2">
+          <div class="form-group">
+            <label>เริ่มต้น:</label>
+            <input type="date" id="dash-start-date" onchange="calculateDashboard()">
+          </div>
+          <div class="form-group">
+            <label>สิ้นสุด:</label>
+            <input type="date" id="dash-end-date" onchange="calculateDashboard()">
+          </div>
+        </div>
+
+        <div class="summary-cards-grid mt-2">
+          <div class="sum-card bg-emerald">
+            <h4>ยอดขายรวม</h4>
+            <h2 id="sum-sales">0.00 ฿</h2>
+            <p>เงินสด: <span id="sum-sales-cash">0</span> | โอน: <span id="sum-sales-transfer">0</span></p>
+          </div>
+          <div class="sum-card bg-rose">
+            <h4>ยอดซื้อเข้ารวม</h4>
+            <h2 id="sum-purchases">0.00 ฿</h2>
+            <p>ชำระแล้ว: <span id="sum-pur-paid">0</span> | ค้างชำระ: <span id="sum-pur-unpaid">0</span></p>
+          </div>
+          <div class="sum-card bg-amber">
+            <h4>รายจ่ายทั่วไป</h4>
+            <h2 id="sum-expenses">0.00 ฿</h2>
+          </div>
+          <div class="sum-card bg-indigo">
+            <h4>ค่าจ้างพนักงาน</h4>
+            <h2 id="sum-wages">0.00 ฿</h2>
+          </div>
+        </div>
+
+        <div class="profit-box mt-2">
+          <h3>สรุปกำไร / ขาดทุนสุทธิ</h3>
+          <h1 id="sum-net-profit">0.00 บาท</h1>
+        </div>
+
+        <div class="action-buttons-row mt-2">
+          <button class="btn btn-success" onclick="window.print()">🖨️ พิมพ์สลิปสรุปบัญชี (80mm)</button>
+          <button class="btn btn-danger" onclick="openResetModal()">🗑️ ลบประวัติทั้งหมด (Reset)</button>
         </div>
       </div>
     </section>
@@ -363,151 +347,73 @@
   </main>
 
   <!-- MODALS -->
-  <!-- Numpad Modal -->
-  <div id="modal-numpad" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 no-print">
-    <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-      <div class="flex justify-between items-center border-b pb-3">
-        <div>
-          <h3 id="numpad-product-title" class="text-2xl font-black text-indigo-900">ชื่อสินค้า</h3>
-          <p class="text-xs text-slate-500">กรอกน้ำหนักและราคาเพื่อคำนวณราคารวม</p>
-        </div>
-        <button onclick="closeModal('modal-numpad')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-6 h-6"></i></button>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3">
-        <div id="field-weight-container" onclick="setActiveNumpadField('weight')" class="p-3 border-2 border-indigo-500 bg-indigo-50/50 rounded-2xl cursor-pointer">
-          <span class="text-xs text-indigo-700 font-bold block">1. น้ำหนัก (kg)</span>
-          <input type="text" id="input-numpad-weight" readonly class="w-full bg-transparent text-2xl font-black text-slate-800 outline-none" value="1">
-        </div>
-
-        <div id="field-price-container" onclick="setActiveNumpadField('price')" class="p-3 border-2 border-slate-200 rounded-2xl cursor-pointer">
-          <span class="text-xs text-slate-500 font-bold block">2. ราคาต่อ 1 kg (บาท)</span>
-          <input type="text" id="input-numpad-price" readonly class="w-full bg-transparent text-2xl font-black text-slate-800 outline-none" value="0">
-        </div>
-      </div>
-
-      <div class="bg-slate-100 p-3 rounded-2xl text-right">
-        <span class="text-xs text-slate-500 font-bold">ราคารวมบรรทัดนี้:</span>
-        <div class="text-3xl font-black text-indigo-700">฿<span id="numpad-calculated-total">0.00</span></div>
-      </div>
-
-      <div class="grid grid-cols-3 gap-2 pt-1">
-        <button onclick="pressNumpad('1')" class="numpad-btn">1</button>
-        <button onclick="pressNumpad('2')" class="numpad-btn">2</button>
-        <button onclick="pressNumpad('3')" class="numpad-btn">3</button>
-        <button onclick="pressNumpad('4')" class="numpad-btn">4</button>
-        <button onclick="pressNumpad('5')" class="numpad-btn">5</button>
-        <button onclick="pressNumpad('6')" class="numpad-btn">6</button>
-        <button onclick="pressNumpad('7')" class="numpad-btn">7</button>
-        <button onclick="pressNumpad('8')" class="numpad-btn">8</button>
-        <button onclick="pressNumpad('9')" class="numpad-btn">9</button>
-        <button onclick="pressNumpad('.')" class="numpad-btn">.</button>
-        <button onclick="pressNumpad('0')" class="numpad-btn">0</button>
-        <button onclick="pressNumpad('DEL')" class="numpad-btn text-rose-600">⌫</button>
-      </div>
-
-      <div class="flex gap-2 pt-2">
-        <button onclick="pressNumpad('CLEAR')" class="w-1/3 bg-slate-100 text-slate-600 py-3 rounded-2xl font-bold">ล้าง</button>
-        <button onclick="confirmNumpadAdd()" class="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-2xl font-bold text-xl shadow-lg">เพิ่มลงบิล</button>
-      </div>
+  <div id="modal-payment" class="modal">
+    <div class="modal-content">
+      <h3>เลือกประเภทการชำระเงิน</h3>
+      <p>ยอดชำระ: <strong id="modal-pay-amount">0.00</strong> บาท</p>
+      <button class="btn btn-primary btn-block mt-2" onclick="confirmPayment('cash')">💵 เงินสด (สั่งเปิดลิ้นชัก)</button>
+      <button class="btn btn-success btn-block mt-1" onclick="confirmPayment('transfer')">📲 เงินโอน</button>
+      <button class="btn btn-outline btn-block mt-2" onclick="closeModal('modal-payment')">ยกเลิก</button>
     </div>
   </div>
 
-  <!-- Bill Details Modal -->
-  <div id="modal-bill-detail" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 max-h-[90vh] flex flex-col justify-between">
-      <div class="flex justify-between items-center border-b pb-3 no-print">
-        <h3 class="text-xl font-bold text-slate-800">รายละเอียดใบเสร็จ</h3>
-        <button onclick="closeModal('modal-bill-detail')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+  <div id="modal-add-product" class="modal">
+    <div class="modal-content">
+      <h3>เพิ่มสินค้าใหม่</h3>
+      <div class="form-group mt-1">
+        <label>ชื่อสินค้า:</label>
+        <input type="text" id="new-prod-name" placeholder="ชื่อสินค้า">
       </div>
-
-      <div id="print-receipt-modal" class="overflow-y-auto flex-1"></div>
-
-      <div class="space-y-2 pt-2 border-t no-print">
-        <div id="toggle-status-container"></div>
-        <div class="grid grid-cols-2 gap-2">
-          <button onclick="shareBillModal()" class="bg-sky-100 text-sky-800 hover:bg-sky-200 py-3 rounded-2xl font-bold flex items-center justify-center gap-2">
-            <i data-lucide="share-2" class="w-4 h-4"></i> แชร์บิล
-          </button>
-          <button onclick="printCurrentBillModal()" class="bg-indigo-600 text-white hover:bg-indigo-700 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-md">
-            <i data-lucide="printer" class="w-4 h-4"></i> พิมพ์บิล (80mm)
-          </button>
-        </div>
+      <div class="form-group mt-1">
+        <label>ประเภท:</label>
+        <select id="new-prod-type">
+          <option value="weight">ชั่งน้ำหนัก (กก.)</option>
+          <option value="unit">นับชิ้น / ราคาฟิกซ์</option>
+        </select>
       </div>
+      <div class="form-group mt-1">
+        <label>ราคาต่อหน่วย (บาท):</label>
+        <input type="number" id="new-prod-price" placeholder="0.00">
+      </div>
+      <button class="btn btn-primary btn-block mt-2" onclick="saveNewProduct()">บันทึก</button>
+      <button class="btn btn-outline btn-block mt-1" onclick="closeModal('modal-add-product')">ยกเลิก</button>
     </div>
   </div>
 
-  <!-- Parked Bills Modal -->
-  <div id="modal-parked-bills" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 no-print">
-    <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-      <div class="flex justify-between items-center border-b pb-3">
-        <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
-          <i data-lucide="clock" class="w-5 h-5 text-amber-500"></i> รายการบิลที่พักไว้
-        </h3>
-        <button onclick="closeModal('modal-parked-bills')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-6 h-6"></i></button>
+  <div id="modal-add-emp" class="modal">
+    <div class="modal-content">
+      <h3>เพิ่มพนักงาน</h3>
+      <div class="form-group">
+        <label>ชื่อพนักงาน:</label>
+        <input type="text" id="new-emp-name" placeholder="ชื่อ-นามสกุล">
       </div>
-
-      <div id="parked-bills-modal-list" class="space-y-3 max-h-96 overflow-y-auto pr-1"></div>
+      <button class="btn btn-primary btn-block mt-2" onclick="saveNewEmployee()">บันทึก</button>
+      <button class="btn btn-outline btn-block mt-1" onclick="closeModal('modal-add-emp')">ยกเลิก</button>
     </div>
   </div>
 
-  <!-- Payment Modal -->
-  <div id="modal-payment" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 no-print">
-    <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-6">
-      <div class="text-center">
-        <h3 class="text-2xl font-bold text-slate-800">ยืนยันการชำระเงิน</h3>
-        <p class="text-slate-500 text-sm mt-1">ยอดเงินรวมทั้งสิ้น</p>
-        <div id="payment-modal-total" class="text-5xl font-black text-emerald-600 mt-2">฿0.00</div>
+  <div id="modal-add-supplier" class="modal">
+    <div class="modal-content">
+      <h3>เพิ่มผู้ขาย (Supplier)</h3>
+      <div class="form-group">
+        <label>ชื่อผู้ขาย/ฟาร์ม:</label>
+        <input type="text" id="new-sup-name" placeholder="ชื่อผู้ขาย">
       </div>
-
-      <div class="space-y-3">
-        <button onclick="processPayment('ชำระแล้ว (เงินสด)')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-2xl font-bold flex items-center justify-between shadow-md">
-          <span class="flex items-center gap-3 text-lg"><i data-lucide="banknote" class="w-6 h-6"></i> เงินสด</span>
-          <span class="text-xs bg-emerald-800/40 px-3 py-1 rounded-full">เปิดลิ้นชัก</span>
-        </button>
-
-        <button onclick="processPayment('ชำระแล้ว (เงินโอน)')" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-2xl font-bold flex items-center justify-between shadow-md">
-          <span class="flex items-center gap-3 text-lg"><i data-lucide="qr-code" class="w-6 h-6"></i> โอนจ่าย</span>
-          <span class="text-xs bg-blue-800/40 px-3 py-1 rounded-full">เงินโอน/QR</span>
-        </button>
-
-        <button onclick="processPayment('ค้างชำระ')" class="w-full bg-amber-500 hover:bg-amber-600 text-white p-4 rounded-2xl font-bold flex items-center justify-between shadow-md">
-          <span class="flex items-center gap-3 text-lg"><i data-lucide="clock" class="w-6 h-6"></i> ค้างชำระ</span>
-          <span class="text-xs bg-amber-700/40 px-3 py-1 rounded-full">บันทึกยอดค้าง</span>
-        </button>
-      </div>
-
-      <button onclick="closeModal('modal-payment')" class="w-full bg-slate-100 text-slate-600 py-3 rounded-2xl font-medium">ยกเลิก</button>
+      <button class="btn btn-primary btn-block mt-2" onclick="saveNewSupplier()">บันทึก</button>
+      <button class="btn btn-outline btn-block mt-1" onclick="closeModal('modal-add-supplier')">ยกเลิก</button>
     </div>
   </div>
 
-  <!-- Add Customer Modal -->
-  <div id="modal-add-customer" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 no-print">
-    <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
-      <h3 class="text-xl font-bold text-slate-800">เพิ่มลูกค้าประจำ</h3>
-      <input type="text" id="new-customer-name" placeholder="ชื่อ-นามสกุล หรือชื่อร้าน" class="w-full p-3.5 border rounded-2xl font-medium">
-      <div class="flex gap-2">
-        <button onclick="closeModal('modal-add-customer')" class="w-1/2 bg-slate-100 text-slate-600 py-3 rounded-2xl font-medium">ยกเลิก</button>
-        <button onclick="saveNewCustomer()" class="w-1/2 bg-emerald-600 text-white py-3 rounded-2xl font-bold">บันทึก</button>
-      </div>
+  <div id="modal-reset" class="modal">
+    <div class="modal-content">
+      <h3 class="text-danger">⚠ ลบประวัติทั้งหมด</h3>
+      <p>พิมพ์คำว่า <strong>RESET</strong> เพื่อยืนยันการลบข้อมูลทั้งหมด:</p>
+      <input type="text" id="reset-confirm-input" class="mt-1" placeholder="RESET">
+      <button class="btn btn-danger btn-block mt-2" onclick="executeReset()">ยืนยันลบข้อมูล</button>
+      <button class="btn btn-outline btn-block mt-1" onclick="closeModal('modal-reset')">ยกเลิก</button>
     </div>
   </div>
 
-  <!-- Add Product Modal -->
-  <div id="modal-add-product" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 no-print">
-    <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
-      <h3 class="text-xl font-bold text-slate-800">สร้างปุ่มสินค้าใหม่</h3>
-      <input type="text" id="new-product-name" placeholder="ชื่อสินค้า (เช่น สามชั้น, หมูเนื้อแดง)" class="w-full p-3.5 border rounded-2xl font-medium">
-      <input type="number" id="new-product-default-price" placeholder="ราคามาตรฐานต่อ kg (บาท)" class="w-full p-3.5 border rounded-2xl font-medium">
-      <div class="flex gap-2">
-        <button onclick="closeModal('modal-add-product')" class="w-1/2 bg-slate-100 text-slate-600 py-3 rounded-2xl font-medium">ยกเลิก</button>
-        <button onclick="saveNewProductButton()" class="w-1/2 bg-indigo-600 text-white py-3 rounded-2xl font-bold">สร้างปุ่ม</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- เรียกใช้งานสคริปต์การทำงาน -->
-<script src="script.js"></script>
-
+  <script src="script.js"></script>
 </body>
 </html>
