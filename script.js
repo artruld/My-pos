@@ -35,22 +35,37 @@ let F = { p: 'all', s: 'all', c: 'all' }, ST = { tab: 'list', id: null, p: 'all'
 let S = { p: 'day', from: ymd(new Date()), to: ymd(new Date()) };
 
 // ===== Modal / Toast / ฟอร์ม =====
-function modal(h) { $('#mbox').innerHTML = h; $('#mbox').oninput = null; $('#modal').classList.remove('hidden'); }
+function modal(h) { $('#mbox').style.maxWidth = ''; $('#mbox').innerHTML = h; $('#mbox').oninput = null; $('#modal').classList.remove('hidden'); }
 function closeM() { $('#modal').classList.add('hidden'); }
 function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.add('hidden'), 2500); }
+let npA = null;
+function setNp(i) { npA = i; document.querySelectorAll('#mbox .np').forEach(x => x.classList.toggle('act', x === i)); }
+function np(k) {
+  if (!npA) return; let v = npA.value;
+  if (k === '⌫') v = v.slice(0, -1); else if (k === 'C') v = '';
+  else if (k === '.') { if (v.includes('.')) return; v = (v || '0') + '.'; }
+  else v = v === '0' ? k : v + k;
+  npA.value = v; const m = $('#mbox'); if (m.oninput) m.oninput();
+}
 function form(title, fields, ok, extra = '') {
-  modal(`<h3 class="text-xl font-bold mb-2">${esc(title)}</h3>` + fields.map(f => `<label class="block text-xs font-bold text-slate-500 mt-2">${f.l}</label>` +
+  const hasNum = fields.some(f => f.t === 'number');
+  const fh = fields.map(f => `<label class="block text-sm font-bold text-slate-500 mt-2">${f.l}</label>` +
     (f.o ? `<select id="f_${f.k}" class="inp">${f.o.map(o => `<option value="${o[0]}">${o[1]}</option>`).join('')}</select>`
-      : `<input id="f_${f.k}" class="inp" type="${f.t || 'text'}" ${f.t === 'number' ? 'inputmode="decimal" step="any"' : ''} value="${esc(f.v ?? '')}">`)).join('') +
-    extra + `<div class="flex gap-2 mt-4"><button class="btn flex-1" onclick="closeM()">ยกเลิก</button><button class="btn p flex-1" id="fok">ตกลง</button></div>`);
+      : f.t === 'number' ? `<input id="f_${f.k}" class="inp np" readonly inputmode="none" value="${esc(f.v ?? '')}">`
+        : `<input id="f_${f.k}" class="inp" type="${f.t || 'text'}" value="${esc(f.v ?? '')}">`)).join('');
+  const pad = hasNum ? `<div class="w-64"><div class="grid grid-cols-3 gap-2 mt-2">${['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'].map(k => `<button type="button" class="numpad-btn" onclick="np('${k}')">${k}</button>`).join('')}</div><button type="button" class="btn w-full mt-2" onclick="np('C')">ล้างช่องนี้</button></div>` : '';
+  modal(`<h3 class="text-2xl font-bold mb-2">${esc(title)}</h3><div class="flex gap-4"><div class="flex-1">${fh}${extra}</div>${pad}</div><div class="flex gap-2 mt-4"><button class="btn flex-1" onclick="closeM()">ยกเลิก</button><button class="btn p flex-1" id="fok">ตกลง</button></div>`);
+  $('#mbox').style.maxWidth = hasNum ? '48rem' : '';
+  document.querySelectorAll('#mbox .np').forEach(i => i.onclick = () => setNp(i));
+  const f1 = document.querySelector('#mbox .np'); if (f1) setNp(f1);
   $('#fok').onclick = () => { const v = {}; fields.forEach(f => v[f.k] = $('#f_' + f.k).value.trim()); ok(v); };
-  const i = $('#mbox input'); if (i) i.focus();
+  const i = $('#mbox input:not(.np)'); if (i) i.focus();
 }
 function pr(html) { $('#print-area').innerHTML = html; window.print(); }
 
 // ===== ใบเสร็จ =====
 const HEAD = `<div class="text-center font-black text-2xl">ร้านปลาเม้า</div><div class="text-center text-xs font-semibold">551/145 ถนนมิตรภาพ (ซอย 10) ตำบลในเมือง อำเภอเมืองนครราชสีมา จังหวัดนครราชสีมา 30000</div><div class="text-center text-xs font-semibold">โทร: 081-760-2807</div>`;
-const line = i => `<div class="flex justify-between items-start"><div><b>${esc(i.name)} / ${i.qty}${i.unit === 'kg' ? ' kg' : ' ชิ้น'}</b><div class="text-[11px]">(@฿${fm(i.price)}${i.unit === 'kg' ? '/kg' : '/หน่วย'})</div></div><b>฿${fm(i.total)}</b></div>`;
+const line = i => `<div class="flex justify-between items-start"><div><b>${esc(i.name)} / ${i.qty}${i.unit === 'kg' ? ' kg' : ' ชิ้น'}${i.cnt ? ' (' + i.cnt + ' ตัว)' : ''}</b><div class="text-[11px]">(@฿${fm(i.price)}${i.unit === 'kg' ? '/kg' : '/หน่วย'})</div></div><b>฿${fm(i.total)}</b></div>`;
 const cartLines = (a, fn) => a.length ? a.map(i => `<div class="flex gap-1"><div class="flex-1">${line(i)}</div><button class="text-rose-600 no-print" onclick="${fn}('${i.id}')">✕</button></div>`).join('') : '<div class="text-center text-slate-400 py-6">- ยังไม่มีรายการ -</div>';
 function body(b) {
   if (!b.merged) return b.items.map(line).join('');
@@ -71,7 +86,7 @@ const V = {
 
   cust: () => `<div class="max-w-4xl mx-auto grid gap-3"><button class="btn p text-2xl py-8" onclick="selCust(WALK)">👤 ${WALK}</button>${nameBox('customers', 'ลูกค้าประจำ', 'selReg')}</div>`,
 
-  pos: () => `<div class="flex gap-3" style="height:calc(100vh - 70px)"><div class="card flex-1 overflow-y-auto"><div class="flex flex-wrap gap-2 items-center mb-3"><b>ลูกค้า:</b><span class="bg-indigo-100 text-indigo-900 font-bold px-3 py-1 rounded-lg">${esc(cust)}</span><button class="btn" onclick="editCust()">✏️ แก้ชื่อ</button><button class="btn" onclick="go('cust')">เปลี่ยนลูกค้า</button><button class="btn a" onclick="parkedList()">🕐 บิลที่พัก (${db.parked.length})</button><button class="btn p ml-auto" onclick="addProd()">+ สร้างปุ่มสินค้า</button></div>${pgrid('c')}</div><div class="w-[380px] flex flex-col gap-2"><div class="card flex-1 overflow-y-auto">${receipt({ date: nowS(), customer: cust, total: sum(cart) }, cartLines(cart, 'delCart'))}</div><div class="grid grid-cols-3 gap-2"><button class="btn r" onclick="clearCart()">ยกเลิกบิล</button><button class="btn a" onclick="park()">พักบิล</button><button class="btn g" onclick="payM()">ชำระเงิน</button></div></div></div>`,
+  pos: () => `<div class="flex gap-3" style="height:calc(100vh - 70px)"><div class="card flex-1 overflow-y-auto"><div class="flex flex-wrap gap-2 items-center mb-3"><b>ลูกค้า:</b><span class="bg-indigo-100 text-indigo-900 font-bold px-3 py-1 rounded-lg">${esc(cust)}</span><button class="btn" onclick="editCust()">✏️ แก้ชื่อ</button><button class="btn" onclick="go('cust')">เปลี่ยนลูกค้า</button><button class="btn a" onclick="parkedList()">🕐 บิลที่พัก (${db.parked.length})</button><button class="btn p ml-auto" onclick="addProd()">+ สร้างปุ่มสินค้า</button></div>${pgrid('c')}</div><div class="w-[420px] flex flex-col gap-2"><div class="card flex-1 overflow-y-auto">${receipt({ date: nowS(), customer: cust, total: sum(cart) }, cartLines(cart, 'delCart'))}</div><div class="grid grid-cols-3 gap-2"><button class="btn r" onclick="clearCart()">ยกเลิกบิล</button><button class="btn a" onclick="park()">พักบิล</button><button class="btn g" onclick="payM()">ชำระเงิน</button></div></div></div>`,
 
   bills: () => {
     const L = db.bills.filter(b => per(b.date, F.p) && (F.s === 'all' || b.status === F.s) && (F.c === 'all' || b.customer === F.c));
@@ -79,7 +94,7 @@ const V = {
     return `<div class="card"><div class="flex flex-wrap gap-2 items-center mb-3">${selH(PO, F.p, "F.p=this.value;render()")}${selH(cs, F.c, "F.c=this.value;render()")}${selH([['all', 'ทุกสถานะ'], ['unpaid', 'ค้างชำระ'], ['paid', 'ชำระแล้ว']], F.s, "F.s=this.value;render()")}<button class="btn p ml-auto" onclick="mergeSel()">รวมบิลที่เลือก</button><button class="btn r" onclick="cancelSel()">ยกเลิกที่เลือก</button></div><table class="w-full text-sm"><tr class="font-bold"><td></td><td>เลขที่</td><td>วันที่</td><td>ลูกค้า</td><td class="text-right">ยอดรวม</td><td>สถานะ</td><td></td></tr>${L.map(b => `<tr><td><input type="checkbox" class="bc" value="${b.id}"></td><td class="font-bold">${b.id}</td><td class="text-xs">${fd(b.date)}</td><td>${esc(b.customer)}${b.merged ? ' <span class="text-xs bg-indigo-100 px-1 rounded">รวมบิล</span>' : ''}</td><td class="text-right font-black">฿${fm(b.total)}</td><td><span class="px-2 py-0.5 rounded-full text-xs font-bold ${b.status === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${stat(b)}</span></td><td><button class="btn" onclick="openBill('${b.id}')">เปิดดู</button></td></tr>`).join('') || '<tr><td colspan="7" class="text-center text-slate-400 p-6">ไม่พบบิล</td></tr>'}</table></div>`;
   },
 
-  purchase: () => `<div class="flex gap-3" style="height:calc(100vh - 70px)"><div class="card flex-1 overflow-y-auto"><div class="flex flex-wrap gap-2 items-center mb-3"><b>ซื้อจาก:</b>${selH([['', '-- เลือกผู้ขาย --'], ...db.suppliers.map(s => [s, s])], sup, "sup=this.value;render()")}<button class="btn g" onclick="addName('suppliers','ชื่อผู้ขาย')">+ ผู้ขาย</button><button class="btn r" onclick="delSup()">ลบผู้ขาย</button><button class="btn p ml-auto" onclick="addProd()">+ สร้างปุ่มสินค้า</button></div>${pgrid('p')}</div><div class="w-[400px] flex flex-col gap-2 overflow-y-auto"><div class="card"><b>รายการซื้อเข้า (${esc(sup || 'ยังไม่เลือกผู้ขาย')})</b><div class="space-y-1 my-2">${cartLines(pcart, 'delP')}</div><div class="flex justify-between font-black text-lg border-t pt-1"><span>รวม</span><span>฿${fm(sum(pcart))}</span></div><button class="btn g w-full mt-2" onclick="savePur()">ยืนยัน (ค้างจ่าย)</button></div><div class="card space-y-2"><b>ประวัติซื้อเข้า</b>${db.purchases.map(p => `<div class="border rounded-xl p-2 text-sm"><div class="flex justify-between"><b>${esc(p.supplier)}</b><span class="text-xs">${fd(p.date)}</span></div><div class="text-xs text-slate-500">${p.items.map(i => esc(i.name) + ' ' + i.qty).join(', ')}</div><div class="flex justify-between"><b>฿${fm(p.total)}</b><b class="${p.status === 'paid' ? 'text-emerald-600' : 'text-amber-600'}">${p.status === 'paid' ? 'จ่ายแล้ว (' + PAY[p.pay] + ')' : 'ค้างจ่าย'}</b></div><div class="flex gap-1 mt-1">${p.status === 'paid' ? '' : `<button class="btn g" onclick="choosePay('p','${p.id}')">เปลี่ยนเป็นจ่ายแล้ว</button>`}<button class="btn r" onclick="delPur('${p.id}')">ลบ</button></div></div>`).join('') || '<p class="text-slate-400 text-sm">ยังไม่มีรายการ</p>'}</div></div></div>`,
+  purchase: () => `<div class="flex gap-3" style="height:calc(100vh - 70px)"><div class="card flex-1 overflow-y-auto"><div class="flex flex-wrap gap-2 items-center mb-3"><b>ซื้อจาก:</b>${selH([['', '-- เลือกผู้ขาย --'], ...db.suppliers.map(s => [s, s])], sup, "sup=this.value;render()")}<button class="btn g" onclick="addName('suppliers','ชื่อผู้ขาย')">+ ผู้ขาย</button><button class="btn r" onclick="delSup()">ลบผู้ขาย</button><button class="btn p ml-auto" onclick="addProd()">+ สร้างปุ่มสินค้า</button></div>${pgrid('p')}</div><div class="w-[440px] flex flex-col gap-2 overflow-y-auto"><div class="card"><b>รายการซื้อเข้า (${esc(sup || 'ยังไม่เลือกผู้ขาย')})</b><div class="space-y-1 my-2">${cartLines(pcart, 'delP')}</div><div class="flex justify-between font-black text-lg border-t pt-1"><span>รวม</span><span>฿${fm(sum(pcart))}</span></div><button class="btn g w-full mt-2" onclick="savePur()">ยืนยัน (ค้างจ่าย)</button></div><div class="card space-y-2"><b>ประวัติซื้อเข้า</b>${db.purchases.map(p => `<div class="border rounded-xl p-2 text-sm"><div class="flex justify-between"><b>${esc(p.supplier)}</b><span class="text-xs">${fd(p.date)}</span></div><div class="text-xs text-slate-500">${p.items.map(i => esc(i.name) + ' ' + i.qty).join(', ')}</div><div class="flex justify-between"><b>฿${fm(p.total)}</b><b class="${p.status === 'paid' ? 'text-emerald-600' : 'text-amber-600'}">${p.status === 'paid' ? 'จ่ายแล้ว (' + PAY[p.pay] + ')' : 'ค้างจ่าย'}</b></div><div class="flex gap-1 mt-1">${p.status === 'paid' ? '' : `<button class="btn g" onclick="choosePay('p','${p.id}')">เปลี่ยนเป็นจ่ายแล้ว</button>`}<button class="btn r" onclick="delPur('${p.id}')">ลบ</button></div></div>`).join('') || '<p class="text-slate-400 text-sm">ยังไม่มีรายการ</p>'}</div></div></div>`,
 
   staff: () => {
     const tabs = `<div class="flex gap-2 mb-3"><button class="btn ${ST.tab === 'list' ? 'p' : ''}" onclick="ST.tab='list';ST.id=null;render()">รายชื่อพนักงาน</button><button class="btn ${ST.tab === 'all' ? 'p' : ''}" onclick="ST.tab='all';ST.id=null;render()">ดูรวมทุกคน</button></div>`;
@@ -120,8 +135,10 @@ function addProd() {
 function delProd(id) { if (confirm('ลบปุ่มสินค้านี้?')) { db.products = db.products.filter(p => p.id != id); save(); render(); } }
 function tap(id, t) {
   const p = db.products.find(x => x.id == id), k = p.type === 'kg';
-  form(p.name, [{ k: 'q', l: k ? 'น้ำหนัก (kg)' : 'จำนวน (ชิ้น/ถุง)', t: 'number' }, { k: 'p', l: k ? 'ราคาต่อ kg (บาท)' : 'ราคาต่อหน่วย (บาท)', t: 'number', v: k ? '' : (p.price || '') }],
-    v => { const q = n(v.q), pc = n(v.p); if (q <= 0 || pc <= 0) return toast('กรอกจำนวนและราคาให้ครบ'); (t === 'c' ? cart : pcart).push({ id: uid(), name: p.name, unit: p.type, qty: q, price: pc, total: q * pc }); closeM(); render(); },
+  const fl = [{ k: 'q', l: k ? 'น้ำหนัก (kg)' : 'จำนวน (ชิ้น/ถุง)', t: 'number' }, { k: 'p', l: k ? 'ราคาต่อ kg (บาท)' : 'ราคาต่อหน่วย (บาท)', t: 'number', v: k ? '' : (p.price || '') }];
+  if (k) fl.push({ k: 'c', l: 'จำนวนตัว (ไม่บังคับ)', t: 'number' });
+  form(p.name, fl,
+    v => { const q = n(v.q), pc = n(v.p); if (q <= 0 || pc <= 0) return toast('กรอกจำนวนและราคาให้ครบ'); (t === 'c' ? cart : pcart).push({ id: uid(), name: p.name, unit: p.type, qty: q, price: pc, total: q * pc, cnt: n(v.c) }); closeM(); render(); },
     '<div class="text-right text-3xl font-black text-indigo-700 mt-3">฿<span id="lt">0.00</span></div>');
   const upd = () => $('#lt').textContent = fm(n($('#f_q').value) * n($('#f_p').value));
   $('#mbox').oninput = upd; upd();
