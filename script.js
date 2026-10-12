@@ -98,7 +98,7 @@ function runBlocks(ctx, blocks, draw) {
     else if (b.t === 'c' || b.t === 'l') {
       ctx.font = fnt(sz, b.b);
       for (const ln of wrapT(ctx, b.x, W)) {
-        if (draw) { ctx.fillStyle = '#000'; ctx.textAlign = b.t === 'c' ? 'center' : 'left'; ctx.fillText(ln, b.t === 'c' ? PW / 2 : PADX, y + lh / 2); }
+        if (draw) { ctx.fillStyle = '#000'; ctx.textAlign = 'left'; ctx.fillText(ln, b.t === 'c' ? (PW - ctx.measureText(ln).width) / 2 : PADX, y + lh / 2); }
         y += lh;
       }
     }
@@ -109,7 +109,7 @@ function runBlocks(ctx, blocks, draw) {
       ls.forEach((ln, k) => {
         if (draw) {
           ctx.fillStyle = '#000'; ctx.textAlign = 'left'; ctx.fillText(ln, PADX + ind, y + nlh / 2);
-          if (k === 0) { ctx.textAlign = 'right'; ctx.fillText(b.r, PW - PADX, y + nlh / 2); }
+          if (k === 0) { ctx.fillText(b.r, PW - PADX - rw, y + nlh / 2); }
         }
         y += nlh;
       });
@@ -140,7 +140,7 @@ async function makeCanvas(blocks, k = 1, bin = true) {
   return c;
 }
 
-const headBlocks = () => [{ t: 'logo', w: 340 }, { t: 'c', x: ADDR, sz: 24, b: 1 }, { t: 'c', x: TEL, sz: 24, b: 1 }];
+const headBlocks = () => [{ t: 'logo', w: 238 }, { t: 'c', x: ADDR, sz: 24, b: 1 }, { t: 'c', x: TEL, sz: 24, b: 1 }];
 const itemBlock = i => ({ t: 'item', n: itemT(i), s: itemS(i), r: '฿' + fm(i.total) });
 function billBlocks(b) {
   const L = [...headBlocks(), { t: 'rule' }, { t: 'c', x: 'ใบเสร็จรับเงิน', sz: 28, b: 1 }, { t: 'rule' }];
@@ -207,7 +207,7 @@ function settings() {
 }
 
 // ===== ใบเสร็จ =====
-const HEAD = `<img src="logo.png" alt="ร้านปลาเม้า" style="display:block;width:68%;margin:0 auto 4px"><div class="text-center text-xs font-semibold">${ADDR}</div><div class="text-center text-xs font-semibold">${TEL}</div>`;
+const HEAD = `<img src="logo.png" alt="ร้านปลาเม้า" style="display:block;width:48%;margin:0 auto 4px"><div class="text-center text-xs font-semibold">${ADDR}</div><div class="text-center text-xs font-semibold">${TEL}</div>`;
 const itemT = i => `${i.name} / ${i.qty}${i.unit === 'kg' ? ' kg' : ' ชิ้น'}${i.cnt ? ' (' + i.cnt + ' ตัว)' : ''}`;
 const itemS = i => `(@฿${fm(i.price)}${i.unit === 'kg' ? '/kg' : '/หน่วย'})`;
 const line = i => `<div class="flex justify-between items-start"><div><b style="font-size:24px">${esc(itemT(i))}</b><div style="font-size:16px">${esc(itemS(i))}</div></div><b style="font-size:24px">฿${fm(i.total)}</b></div>`;
@@ -327,7 +327,7 @@ async function shareBill(id) {
     const c = await makeCanvas(billBlocks(b), 2, false);
     const blob = await new Promise(r => c.toBlob(r, 'image/png')), file = new File([blob], b.id + '.png', { type: 'image/png' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: 'ใบเสร็จ ' + b.id }); } catch (e) { if (e.name !== 'AbortError') toast('แชร์ไม่สำเร็จ'); return; }
+      try { await navigator.share({ files: [file] }); } catch (e) { if (e.name !== 'AbortError') toast('แชร์ไม่สำเร็จ'); return; }
     } else {
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; a.click(); toast('บันทึกรูปลงเครื่องแล้ว');
     }
