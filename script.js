@@ -30,6 +30,7 @@ const WALK = 'ลูกค้าหน้าร้าน (ทั่วไป)';
 const PAY = { cash: 'เงินสด', transfer: 'เงินโอน' };
 const TX = { wage: 'จ่ายค่าจ้าง', adv: 'เบิกล่วงหน้า', dep: 'ฝากเงิน', rep: 'หักคืนเงินเบิก' };
 const stat = b => b.status === 'paid' ? `ชำระแล้ว (${PAY[b.pay]})` : 'ค้างชำระ';
+let freshId = null;
 let cust = WALK, cart = [], pcart = [], view = 'home', split = 'bill', sup = '';
 let F = { p: 'all', s: 'all', c: 'all' }, ST = { tab: 'list', id: null, p: 'all' };
 let S = { p: 'day', from: ymd(new Date()), to: ymd(new Date()) };
@@ -61,11 +62,155 @@ function form(title, fields, ok, extra = '') {
   $('#fok').onclick = () => { const v = {}; fields.forEach(f => v[f.k] = $('#f_' + f.k).value.trim()); ok(v); };
   const i = $('#mbox input:not(.np)'); if (i) i.focus();
 }
-function pr(html) { $('#print-area').innerHTML = html; window.print(); }
+// ===== พิมพ์ / แชร์เป็นรูป (วาดใบเสร็จเป็นภาพ 80mm = 576 จุด) =====
+const PW = 576, PADX = 10;
+const ADDR = '551/145 ถนนมิตรภาพ (ซอย 10) ตำบลในเมือง อำเภอเมืองนครราชสีมา จังหวัดนครราชสีมา 30000', TEL = 'โทร: 081-760-2807';
+const LOGO = new Image(); LOGO.src = 'logo.png';
+const logoReady = new Promise(r => { LOGO.onload = LOGO.onerror = r; });
+const fontsReady = () => Promise.all([document.fonts.load('400 30px Prompt', 'ก1A'), document.fonts.load('700 30px Prompt', 'ก1A')]).catch(() => { });
+let PM = localStorage.getItem('pm') || 'rawbt';
+const fnt = (sz, b) => `${b ? 700 : 400} ${sz}px Prompt, sans-serif`;
+
+function wrapT(ctx, text, maxW) {
+  const t = String(text);
+  let segs = typeof Intl !== 'undefined' && Intl.Segmenter ? [...new Intl.Segmenter('th', { granularity: 'word' }).segment(t)].map(s => s.segment) : [...t];
+  segs = segs.flatMap(s => ctx.measureText(s).width > maxW ? [...s] : [s]);
+  const lines = []; let cur = '';
+  for (const s of segs) {
+    if (!cur || ctx.measureText(cur + s).width <= maxW) cur += s;
+    else { lines.push(cur.trimEnd()); cur = s.trimStart(); }
+  }
+  if (cur) lines.push(cur);
+  return lines.length ? lines : [''];
+}
+
+function runBlocks(ctx, blocks, draw) {
+  let y = 10; const W = PW - 2 * PADX;
+  ctx.textBaseline = 'middle';
+  for (const b of blocks) {
+    const sz = b.sz || 26, lh = Math.round(sz * 1.45);
+    if (b.t === 'gap') y += b.h;
+    else if (b.t === 'rule') { const w = b.w || 3; y += 6; if (draw) { ctx.fillStyle = '#000'; ctx.fillRect(PADX, y, W, w); } y += w + 6; }
+    else if (b.t === 'logo') {
+      const w = b.w || 340, h = LOGO.naturalWidth ? Math.round(w * LOGO.naturalHeight / LOGO.naturalWidth) : 0;
+      if (draw && h) ctx.drawImage(LOGO, (PW - w) / 2, y, w, h); y += h + 6;
+    }
+    else if (b.t === 'c' || b.t === 'l') {
+      ctx.font = fnt(sz, b.b);
+      for (const ln of wrapT(ctx, b.x, W)) {
+        if (draw) { ctx.fillStyle = '#000'; ctx.textAlign = b.t === 'c' ? 'center' : 'left'; ctx.fillText(ln, b.t === 'c' ? PW / 2 : PADX, y + lh / 2); }
+        y += lh;
+      }
+    }
+    else if (b.t === 'lr' || b.t === 'item') {
+      const it = b.t === 'item', nsz = it ? 36 : sz, nlh = Math.round(nsz * 1.45), ind = b.ind || 0;
+      ctx.font = fnt(nsz, it ? 1 : b.b);
+      const rw = ctx.measureText(b.r).width, ls = wrapT(ctx, it ? b.n : b.l, W - ind - rw - 14);
+      ls.forEach((ln, k) => {
+        if (draw) {
+          ctx.fillStyle = '#000'; ctx.textAlign = 'left'; ctx.fillText(ln, PADX + ind, y + nlh / 2);
+          if (k === 0) { ctx.textAlign = 'right'; ctx.fillText(b.r, PW - PADX, y + nlh / 2); }
+        }
+        y += nlh;
+      });
+      if (it && b.s) {
+        ctx.font = fnt(24, 0);
+        if (draw) { ctx.textAlign = 'left'; ctx.fillText(b.s, PADX, y + 17); }
+        y += 34;
+      }
+      if (it) y += 6;
+    }
+  }
+  return y + 10;
+}
+
+async function makeCanvas(blocks, k = 1, bin = true) {
+  await Promise.all([fontsReady(), logoReady]);
+  const scratch = document.createElement('canvas').getContext('2d');
+  const h = runBlocks(scratch, blocks, false);
+  const c = document.createElement('canvas'); c.width = PW * k; c.height = h * k;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.scale(k, k);
+  runBlocks(ctx, blocks, true);
+  if (bin) {
+    const im = ctx.getImageData(0, 0, c.width, c.height), d = im.data;
+    for (let i = 0; i < d.length; i += 4) { const v = d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11 < 170 ? 0 : 255; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255; }
+    ctx.putImageData(im, 0, 0);
+  }
+  return c;
+}
+
+const headBlocks = () => [{ t: 'logo', w: 340 }, { t: 'c', x: ADDR, sz: 24, b: 1 }, { t: 'c', x: TEL, sz: 24, b: 1 }];
+const itemBlock = i => ({ t: 'item', n: itemT(i), s: itemS(i), r: '฿' + fm(i.total) });
+function billBlocks(b) {
+  const L = [...headBlocks(), { t: 'rule' }, { t: 'c', x: 'ใบเสร็จรับเงิน', sz: 28, b: 1 }, { t: 'rule' }];
+  if (b.id) L.push({ t: 'l', x: 'เลขที่: ' + b.id, sz: 26 });
+  L.push({ t: 'l', x: 'เวลา: ' + fd(b.date), sz: 26 }, { t: 'l', x: 'ลูกค้า: ' + b.customer, sz: 26, b: 1 });
+  if (b.status) L.push({ t: 'l', x: 'สถานะ: ' + stat(b), sz: 26 });
+  L.push({ t: 'rule' });
+  if (!b.merged) b.items.forEach(i => L.push(itemBlock(i)));
+  else {
+    const g = {}; b.merged.forEach(m => { const k = split === 'day' ? m.date.slice(0, 10) : m.id; (g[k] = g[k] || []).push(m); });
+    Object.entries(g).forEach(([k, ms]) => {
+      L.push({ t: 'l', x: split === 'day' ? 'วันที่ ' + new Date(k).toLocaleDateString('th-TH') : 'บิล ' + k + ' (' + fd(ms[0].date) + ')', sz: 24, b: 1 });
+      ms.forEach(m => m.items.forEach(i => L.push(itemBlock(i))));
+      L.push({ t: 'lr', l: 'รวม', r: '฿' + fm(sum(ms)), sz: 28, b: 1 }, { t: 'rule', w: 1 });
+    });
+  }
+  L.push({ t: 'rule' }, { t: 'lr', l: 'รวมทั้งสิ้น', r: '฿' + fm(b.total), sz: 44, b: 1 }, { t: 'gap', h: 8 },
+    { t: 'c', x: 'Line: @yourstore', sz: 24 }, { t: 'c', x: '" THANK YOU "', sz: 26, b: 1 }, { t: 'gap', h: 16 });
+  return L;
+}
+function sumBlocks() {
+  const L = [...headBlocks(), { t: 'rule' }, { t: 'c', x: 'สรุปบัญชี', sz: 28, b: 1 }, { t: 'c', x: `${S.from} ถึง ${S.to}`, sz: 24 }, { t: 'rule' }];
+  calc().forEach(([l, v, b]) => { if (b) L.push({ t: 'rule', w: 1 }); L.push({ t: 'lr', l: l.trim(), r: '฿' + fm(v), sz: b ? 30 : 26, b: !!b, ind: /^ /.test(l) ? 24 : 0 }); });
+  L.push({ t: 'rule' }, { t: 'c', x: 'พิมพ์เมื่อ ' + fd(nowS()), sz: 22 }, { t: 'gap', h: 16 });
+  return L;
+}
+
+function escpos(c) {
+  const w = c.width, h = c.height, wb = w >> 3, px = c.getContext('2d').getImageData(0, 0, w, h).data;
+  const out = new Uint8Array(2 + Math.ceil(h / 128) * 8 + h * wb + 8); let o = 0;
+  out[o++] = 0x1B; out[o++] = 0x40;
+  for (let y0 = 0; y0 < h; y0 += 128) {
+    const sh = Math.min(128, h - y0);
+    out.set([0x1D, 0x76, 0x30, 0x00, wb & 255, wb >> 8, sh & 255, sh >> 8], o); o += 8;
+    for (let y = y0; y < y0 + sh; y++) for (let bx = 0; bx < wb; bx++) {
+      let v = 0; for (let bit = 0; bit < 8; bit++) if (px[(y * w + bx * 8 + bit) * 4] < 128) v |= 0x80 >> bit;
+      out[o++] = v;
+    }
+  }
+  out.set([0x1B, 0x64, 0x04, 0x1D, 0x56, 0x42, 0x00], o); o += 7;
+  return out.subarray(0, o);
+}
+function sendRaw(bytes) {
+  let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  location.href = 'intent:base64,' + btoa(s) + '#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;';
+}
+async function printBlocks(blocks) {
+  const c = await makeCanvas(blocks);
+  if (PM === 'system') {
+    const im = new Image(); im.src = c.toDataURL('image/png'); await im.decode();
+    $('#print-area').replaceChildren(im); window.print();
+  } else sendRaw(escpos(c));
+}
+function openDrawer() {
+  if (PM === 'system') return toast('โหมดนี้เปิดลิ้นชักไม่ได้ (ตั้งค่า > ส่งตรงไป RawBT)');
+  sendRaw(new Uint8Array([0x1B, 0x40, 0x1B, 0x70, 0x00, 0x19, 0xFA]));
+}
+async function safePrint(blocks) { try { await printBlocks(blocks); return true; } catch (e) { toast('พิมพ์ไม่สำเร็จ: ' + (e.message || e)); return false; } }
+function printSum() { safePrint(sumBlocks()); }
+function testPrint() { safePrint([...headBlocks(), { t: 'rule' }, { t: 'c', x: 'ทดสอบพิมพ์', sz: 30, b: 1 }, { t: 'c', x: fd(nowS()), sz: 24 }, { t: 'gap', h: 16 }]); }
+function setPM(v) { PM = v; localStorage.setItem('pm', v); toast('บันทึกแล้ว'); }
+function settings() {
+  modal(`<div class="flex justify-between mb-3"><b class="text-xl">ตั้งค่าเครื่องพิมพ์</b><button onclick="closeM()">✕</button></div><label class="block font-bold mb-1">วิธีพิมพ์</label><select class="inp" onchange="setPM(this.value)"><option value="rawbt" ${PM === 'rawbt' ? 'selected' : ''}>ส่งตรงไป RawBT (พิมพ์ทันที)</option><option value="system" ${PM === 'system' ? 'selected' : ''}>ผ่านหน้าต่างพิมพ์ของ Android (สำรอง)</option></select><div class="grid grid-cols-2 gap-2 mt-3"><button class="btn p" onclick="testPrint()">ทดสอบพิมพ์</button><button class="btn" onclick="openDrawer()">ทดสอบเปิดลิ้นชัก</button></div><p class="text-sm text-slate-500 mt-3">ต้องติดตั้งแอป RawBT และตั้งเครื่องพิมพ์ในแอปให้พิมพ์ได้ก่อน ถ้าโหมดแรกไม่ทำงานให้เลือกโหมดสำรอง (โหมดสำรองเปิดลิ้นชักไม่ได้)</p>`);
+}
 
 // ===== ใบเสร็จ =====
-const HEAD = `<div class="text-center font-black text-2xl">ร้านปลาเม้า</div><div class="text-center text-xs font-semibold">551/145 ถนนมิตรภาพ (ซอย 10) ตำบลในเมือง อำเภอเมืองนครราชสีมา จังหวัดนครราชสีมา 30000</div><div class="text-center text-xs font-semibold">โทร: 081-760-2807</div>`;
-const line = i => `<div class="flex justify-between items-start"><div><b>${esc(i.name)} / ${i.qty}${i.unit === 'kg' ? ' kg' : ' ชิ้น'}${i.cnt ? ' (' + i.cnt + ' ตัว)' : ''}</b><div class="text-[11px]">(@฿${fm(i.price)}${i.unit === 'kg' ? '/kg' : '/หน่วย'})</div></div><b>฿${fm(i.total)}</b></div>`;
+const HEAD = `<img src="logo.png" alt="ร้านปลาเม้า" style="display:block;width:68%;margin:0 auto 4px"><div class="text-center text-xs font-semibold">${ADDR}</div><div class="text-center text-xs font-semibold">${TEL}</div>`;
+const itemT = i => `${i.name} / ${i.qty}${i.unit === 'kg' ? ' kg' : ' ชิ้น'}${i.cnt ? ' (' + i.cnt + ' ตัว)' : ''}`;
+const itemS = i => `(@฿${fm(i.price)}${i.unit === 'kg' ? '/kg' : '/หน่วย'})`;
+const line = i => `<div class="flex justify-between items-start"><div><b style="font-size:24px">${esc(itemT(i))}</b><div style="font-size:16px">${esc(itemS(i))}</div></div><b style="font-size:24px">฿${fm(i.total)}</b></div>`;
 const cartLines = (a, fn) => a.length ? a.map(i => `<div class="flex gap-1"><div class="flex-1">${line(i)}</div><button class="text-rose-600 no-print" onclick="${fn}('${i.id}')">✕</button></div>`).join('') : '<div class="text-center text-slate-400 py-6">- ยังไม่มีรายการ -</div>';
 function body(b) {
   if (!b.merged) return b.items.map(line).join('');
@@ -86,7 +231,7 @@ const V = {
 
   cust: () => `<div class="max-w-4xl mx-auto grid gap-3"><button class="btn p text-2xl py-8" onclick="selCust(WALK)">👤 ${WALK}</button>${nameBox('customers', 'ลูกค้าประจำ', 'selReg')}</div>`,
 
-  pos: () => `<div class="flex gap-3" style="height:calc(100vh - 70px)"><div class="card flex-1 overflow-y-auto"><div class="flex flex-wrap gap-2 items-center mb-3"><b>ลูกค้า:</b><span class="bg-indigo-100 text-indigo-900 font-bold px-3 py-1 rounded-lg">${esc(cust)}</span><button class="btn" onclick="editCust()">✏️ แก้ชื่อ</button><button class="btn" onclick="go('cust')">เปลี่ยนลูกค้า</button><button class="btn a" onclick="parkedList()">🕐 บิลที่พัก (${db.parked.length})</button><button class="btn p ml-auto" onclick="addProd()">+ สร้างปุ่มสินค้า</button></div>${pgrid('c')}</div><div class="w-[420px] flex flex-col gap-2"><div class="card flex-1 overflow-y-auto">${receipt({ date: nowS(), customer: cust, total: sum(cart) }, cartLines(cart, 'delCart'))}</div><div class="grid grid-cols-3 gap-2"><button class="btn r" onclick="clearCart()">ยกเลิกบิล</button><button class="btn a" onclick="park()">พักบิล</button><button class="btn g" onclick="payM()">ชำระเงิน</button></div></div></div>`,
+  pos: () => `<div class="flex gap-3 fill"><div class="card flex-1 overflow-y-auto"><div class="flex flex-wrap gap-2 items-center mb-3"><b>ลูกค้า:</b><span class="bg-indigo-100 text-indigo-900 font-bold px-3 py-1 rounded-lg">${esc(cust)}</span><button class="btn" onclick="editCust()">✏️ แก้ชื่อ</button><button class="btn" onclick="go('cust')">เปลี่ยนลูกค้า</button><button class="btn a" onclick="parkedList()">🕐 บิลที่พัก (${db.parked.length})</button><button class="btn p ml-auto" onclick="addProd()">+ สร้างปุ่มสินค้า</button></div>${pgrid('c')}</div><div class="w-[400px] shrink-0 flex flex-col gap-2"><div class="card flex-1 overflow-y-auto">${receipt({ date: nowS(), customer: cust, total: sum(cart) }, cartLines(cart, 'delCart'))}</div><div class="grid grid-cols-3 gap-2"><button class="btn r" onclick="clearCart()">ยกเลิกบิล</button><button class="btn a" onclick="park()">พักบิล</button><button class="btn g" onclick="payM()">ชำระเงิน</button></div></div></div>`,
 
   bills: () => {
     const L = db.bills.filter(b => per(b.date, F.p) && (F.s === 'all' || b.status === F.s) && (F.c === 'all' || b.customer === F.c));
@@ -94,7 +239,7 @@ const V = {
     return `<div class="card"><div class="flex flex-wrap gap-2 items-center mb-3">${selH(PO, F.p, "F.p=this.value;render()")}${selH(cs, F.c, "F.c=this.value;render()")}${selH([['all', 'ทุกสถานะ'], ['unpaid', 'ค้างชำระ'], ['paid', 'ชำระแล้ว']], F.s, "F.s=this.value;render()")}<button class="btn p ml-auto" onclick="mergeSel()">รวมบิลที่เลือก</button><button class="btn r" onclick="cancelSel()">ยกเลิกที่เลือก</button></div><table class="w-full text-sm"><tr class="font-bold"><td></td><td>เลขที่</td><td>วันที่</td><td>ลูกค้า</td><td class="text-right">ยอดรวม</td><td>สถานะ</td><td></td></tr>${L.map(b => `<tr><td><input type="checkbox" class="bc" value="${b.id}"></td><td class="font-bold">${b.id}</td><td class="text-xs">${fd(b.date)}</td><td>${esc(b.customer)}${b.merged ? ' <span class="text-xs bg-indigo-100 px-1 rounded">รวมบิล</span>' : ''}</td><td class="text-right font-black">฿${fm(b.total)}</td><td><span class="px-2 py-0.5 rounded-full text-xs font-bold ${b.status === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${stat(b)}</span></td><td><button class="btn" onclick="openBill('${b.id}')">เปิดดู</button></td></tr>`).join('') || '<tr><td colspan="7" class="text-center text-slate-400 p-6">ไม่พบบิล</td></tr>'}</table></div>`;
   },
 
-  purchase: () => `<div class="flex gap-3" style="height:calc(100vh - 70px)"><div class="card flex-1 overflow-y-auto"><div class="flex flex-wrap gap-2 items-center mb-3"><b>ซื้อจาก:</b>${selH([['', '-- เลือกผู้ขาย --'], ...db.suppliers.map(s => [s, s])], sup, "sup=this.value;render()")}<button class="btn g" onclick="addName('suppliers','ชื่อผู้ขาย')">+ ผู้ขาย</button><button class="btn r" onclick="delSup()">ลบผู้ขาย</button><button class="btn p ml-auto" onclick="addProd()">+ สร้างปุ่มสินค้า</button></div>${pgrid('p')}</div><div class="w-[440px] flex flex-col gap-2 overflow-y-auto"><div class="card"><b>รายการซื้อเข้า (${esc(sup || 'ยังไม่เลือกผู้ขาย')})</b><div class="space-y-1 my-2">${cartLines(pcart, 'delP')}</div><div class="flex justify-between font-black text-lg border-t pt-1"><span>รวม</span><span>฿${fm(sum(pcart))}</span></div><button class="btn g w-full mt-2" onclick="savePur()">ยืนยัน (ค้างจ่าย)</button></div><div class="card space-y-2"><b>ประวัติซื้อเข้า</b>${db.purchases.map(p => `<div class="border rounded-xl p-2 text-sm"><div class="flex justify-between"><b>${esc(p.supplier)}</b><span class="text-xs">${fd(p.date)}</span></div><div class="text-xs text-slate-500">${p.items.map(i => esc(i.name) + ' ' + i.qty).join(', ')}</div><div class="flex justify-between"><b>฿${fm(p.total)}</b><b class="${p.status === 'paid' ? 'text-emerald-600' : 'text-amber-600'}">${p.status === 'paid' ? 'จ่ายแล้ว (' + PAY[p.pay] + ')' : 'ค้างจ่าย'}</b></div><div class="flex gap-1 mt-1">${p.status === 'paid' ? '' : `<button class="btn g" onclick="choosePay('p','${p.id}')">เปลี่ยนเป็นจ่ายแล้ว</button>`}<button class="btn r" onclick="delPur('${p.id}')">ลบ</button></div></div>`).join('') || '<p class="text-slate-400 text-sm">ยังไม่มีรายการ</p>'}</div></div></div>`,
+  purchase: () => `<div class="flex gap-3 fill"><div class="card flex-1 overflow-y-auto"><div class="flex flex-wrap gap-2 items-center mb-3"><b>ซื้อจาก:</b>${selH([['', '-- เลือกผู้ขาย --'], ...db.suppliers.map(s => [s, s])], sup, "sup=this.value;render()")}<button class="btn g" onclick="addName('suppliers','ชื่อผู้ขาย')">+ ผู้ขาย</button><button class="btn r" onclick="delSup()">ลบผู้ขาย</button><button class="btn p ml-auto" onclick="addProd()">+ สร้างปุ่มสินค้า</button></div>${pgrid('p')}</div><div class="w-[420px] shrink-0 flex flex-col gap-2 overflow-y-auto"><div class="card"><b>รายการซื้อเข้า (${esc(sup || 'ยังไม่เลือกผู้ขาย')})</b><div class="space-y-1 my-2">${cartLines(pcart, 'delP')}</div><div class="flex justify-between font-black text-lg border-t pt-1"><span>รวม</span><span>฿${fm(sum(pcart))}</span></div><button class="btn g w-full mt-2" onclick="savePur()">ยืนยัน (ค้างจ่าย)</button></div><div class="card space-y-2"><b>ประวัติซื้อเข้า</b>${db.purchases.map(p => `<div class="border rounded-xl p-2 text-sm"><div class="flex justify-between"><b>${esc(p.supplier)}</b><span class="text-xs">${fd(p.date)}</span></div><div class="text-xs text-slate-500">${p.items.map(i => esc(i.name) + ' ' + i.qty).join(', ')}</div><div class="flex justify-between"><b>฿${fm(p.total)}</b><b class="${p.status === 'paid' ? 'text-emerald-600' : 'text-amber-600'}">${p.status === 'paid' ? 'จ่ายแล้ว (' + PAY[p.pay] + ')' : 'ค้างจ่าย'}</b></div><div class="flex gap-1 mt-1">${p.status === 'paid' ? '' : `<button class="btn g" onclick="choosePay('p','${p.id}')">เปลี่ยนเป็นจ่ายแล้ว</button>`}<button class="btn r" onclick="delPur('${p.id}')">ลบ</button></div></div>`).join('') || '<p class="text-slate-400 text-sm">ยังไม่มีรายการ</p>'}</div></div></div>`,
 
   staff: () => {
     const tabs = `<div class="flex gap-2 mb-3"><button class="btn ${ST.tab === 'list' ? 'p' : ''}" onclick="ST.tab='list';ST.id=null;render()">รายชื่อพนักงาน</button><button class="btn ${ST.tab === 'all' ? 'p' : ''}" onclick="ST.tab='all';ST.id=null;render()">ดูรวมทุกคน</button></div>`;
@@ -117,7 +262,7 @@ const V = {
 };
 
 function render() { $('#home').classList.toggle('hidden', view === 'home'); $('#app').innerHTML = V[view](); }
-function go(v) { view = v; render(); }
+function go(v) { if (view === 'pos' && v !== 'pos' && cart.length) { parkCart(); toast('พักบิลอัตโนมัติแล้ว'); } view = v; render(); }
 
 // ===== ลูกค้า / รายชื่อ =====
 function selCust(name) { cust = name; go('pos'); }
@@ -147,11 +292,12 @@ function tap(id, t) {
 // ===== ขาย =====
 function delCart(id) { cart = cart.filter(i => i.id != id); render(); }
 function clearCart() { if (cart.length && confirm('ยกเลิกบิลนี้?')) { cart = []; render(); } }
-function park() { if (!cart.length) return alert('ไม่มีรายการให้พัก'); db.parked.push({ id: uid(), customer: cust, items: cart, time: nowS() }); save(); cart = []; toast('พักบิลแล้ว'); render(); }
+function parkCart() { db.parked.push({ id: uid(), customer: cust, items: cart, time: nowS() }); save(); cart = []; }
+function park() { if (!cart.length) return alert('ไม่มีรายการให้พัก'); parkCart(); toast('พักบิลแล้ว'); render(); }
 function parkedList() {
   modal(`<div class="flex justify-between mb-2"><b>บิลที่พักไว้</b><button onclick="closeM()">✕</button></div>${db.parked.map(b => `<div class="border rounded-xl p-2 mb-2 flex justify-between items-center"><div><b>${esc(b.customer)}</b><div class="text-xs">${b.items.length} รายการ ฿${fm(sum(b.items))}</div></div><div class="flex gap-1"><button class="btn a" onclick="restore('${b.id}')">ดึงกลับ</button><button class="btn r" onclick="delParked('${b.id}')">ลบ</button></div></div>`).join('') || '<p class="text-slate-400">ไม่มีบิลที่พัก</p>'}`);
 }
-function restore(id) { const b = db.parked.find(x => x.id == id); cart = b.items; cust = b.customer; db.parked = db.parked.filter(x => x.id != id); save(); closeM(); render(); }
+function restore(id) { const b = db.parked.find(x => x.id == id); if (!b) return; if (cart.length) parkCart(); cart = b.items; cust = b.customer; db.parked = db.parked.filter(x => x.id != id); save(); closeM(); render(); }
 function delParked(id) { db.parked = db.parked.filter(x => x.id != id); save(); parkedList(); render(); }
 function payM() {
   if (!cart.length) return alert('เพิ่มสินค้าก่อน');
@@ -159,27 +305,45 @@ function payM() {
 }
 function sale(st, m) {
   const b = { id: 'INV-' + uid().slice(-6), date: nowS(), customer: cust, items: cart, total: sum(cart), status: st, pay: m || null, paidAt: st === 'paid' ? nowS() : null };
-  db.bills.unshift(b); save(); cart = []; render(); openBill(b.id);
-  if (m === 'cash') toast('🔊 เปิดลิ้นชักเก็บเงินแล้ว');
+  db.bills.unshift(b); save(); cart = []; freshId = b.id; closeM(); render();
+  if (m === 'cash') openDrawer();
+  openBill(b.id);
 }
 
 // ===== ประวัติบิล =====
 function openBill(id) {
   const b = db.bills.find(x => x.id == id); if (!b) return;
-  modal(`<div class="flex justify-between mb-2"><b>รายละเอียดใบเสร็จ</b><button onclick="closeM()">✕</button></div>${b.merged ? `<div class="flex gap-1 mb-2"><button class="btn flex-1 ${split === 'bill' ? 'p' : ''}" onclick="split='bill';openBill('${id}')">แยกรายบิล</button><button class="btn flex-1 ${split === 'day' ? 'p' : ''}" onclick="split='day';openBill('${id}')">แยกรายวัน</button></div>` : ''}<div id="rc">${receipt(b)}</div><div class="grid grid-cols-2 gap-2 mt-3">${b.status === 'unpaid' ? `<button class="btn g col-span-2" onclick="choosePay('b','${id}')">เปลี่ยนสถานะเป็น "ชำระแล้ว"</button>` : ''}<button class="btn" onclick="share('${id}')">แชร์บิล</button><button class="btn p" onclick="pr($('#rc').innerHTML)">พิมพ์ (80mm)</button></div>`);
+  const fresh = freshId === id;
+  modal(`<div class="flex justify-between mb-2"><b>รายละเอียดใบเสร็จ</b>${fresh ? '' : `<button onclick="closeBill('${id}')">✕</button>`}</div>${b.merged ? `<div class="flex gap-1 mb-2"><button class="btn flex-1 ${split === 'bill' ? 'p' : ''}" onclick="split='bill';openBill('${id}')">แยกรายบิล</button><button class="btn flex-1 ${split === 'day' ? 'p' : ''}" onclick="split='day';openBill('${id}')">แยกรายวัน</button></div>` : ''}<div id="rc">${receipt(b)}</div><div class="grid grid-cols-2 gap-2 mt-3">${b.status === 'unpaid' ? `<button class="btn g col-span-2" onclick="choosePay('b','${id}')">เปลี่ยนสถานะเป็น "ชำระแล้ว"</button>` : ''}<button class="btn" onclick="shareBill('${id}')">แชร์เป็นรูป</button><button class="btn p" onclick="printBill('${id}')">พิมพ์ทันที</button>${fresh ? `<button class="btn col-span-2" onclick="closeBill('${id}')">ปิดโดยไม่พิมพ์ (กลับไปเลือกลูกค้า)</button>` : ''}</div>`);
 }
+function closeBill(id) { const fresh = freshId === id; freshId = null; closeM(); if (fresh) go('cust'); }
+async function printBill(id) {
+  const b = db.bills.find(x => x.id == id); if (!b) return;
+  if (await safePrint(billBlocks(b))) closeBill(id);
+}
+async function shareBill(id) {
+  const b = db.bills.find(x => x.id == id); if (!b) return;
+  try {
+    const c = await makeCanvas(billBlocks(b), 2, false);
+    const blob = await new Promise(r => c.toBlob(r, 'image/png')), file = new File([blob], b.id + '.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: 'ใบเสร็จ ' + b.id }); } catch (e) { if (e.name !== 'AbortError') toast('แชร์ไม่สำเร็จ'); return; }
+    } else {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; a.click(); toast('บันทึกรูปลงเครื่องแล้ว');
+    }
+    closeBill(id);
+  } catch (e) { toast('แชร์ไม่สำเร็จ: ' + (e.message || e)); }
+}
+
 function choosePay(kind, id) {
   modal(`<b class="block mb-3">เลือกประเภทการชำระเงิน</b><div class="space-y-2"><button class="btn g w-full py-3" onclick="doPay('${kind}','${id}','cash')">เงินสด${kind === 'b' ? ' (เปิดลิ้นชัก)' : ''}</button><button class="btn p w-full py-3" onclick="doPay('${kind}','${id}','transfer')">เงินโอน</button><button class="btn w-full" onclick="closeM()">ยกเลิก</button></div>`);
 }
 function doPay(kind, id, m) {
   const x = (kind === 'b' ? db.bills : db.purchases).find(x => x.id == id);
   x.status = 'paid'; x.pay = m; x.paidAt = nowS(); save(); closeM(); render();
-  if (kind === 'b') { openBill(id); if (m === 'cash') toast('🔊 เปิดลิ้นชักเก็บเงินแล้ว'); } else toast('อัปเดตแล้ว');
+  if (kind === 'b') { openBill(id); if (m === 'cash') openDrawer(); } else toast('อัปเดตแล้ว');
 }
-function share(id) {
-  const b = db.bills.find(x => x.id == id), t = `ร้านปลาเม้า\nบิล ${b.id}\nลูกค้า: ${b.customer}\nยอดรวม ฿${fm(b.total)}\nสถานะ: ${stat(b)}`;
-  navigator.share ? navigator.share({ text: t }) : navigator.clipboard.writeText(t).then(() => toast('คัดลอกแล้ว'));
-}
+
 function mergeSel() {
   const ids = [...document.querySelectorAll('.bc:checked')].map(c => c.value), bs = db.bills.filter(b => ids.includes(b.id));
   if (bs.length < 2 || bs.some(b => b.status !== 'unpaid')) return alert('เลือกบิลค้างชำระอย่างน้อย 2 บิล');
@@ -236,7 +400,6 @@ function calc() {
   ['กำไร/ขาดทุนสุทธิ', inc - exp, 1], ['ลูกค้าค้างชำระ', sum(db.bills.filter(x => x.status === 'unpaid' && ir(x.date)))], ['ค้างจ่ายผู้ขาย', sum(db.purchases.filter(x => x.status === 'unpaid' && ir(x.date)))], ['เงินฝากพนักงาน (ไม่นับเป็นรายจ่าย)', sT('dep')]];
 }
 const rowsH = r => r.map(([l, v, b]) => `<div class="flex justify-between ${b ? 'font-black border-t mt-1 pt-1' : ''}"><span>${l.replace(/^ +/, '&nbsp;&nbsp;')}</span><span>฿${fm(v)}</span></div>`).join('');
-function printSum() { pr(`<div class="receipt">${HEAD}<div class="font-extrabold text-center border-y-2 border-black my-2 py-1">สรุปบัญชี<br><span class="text-xs">${S.from} ถึง ${S.to}</span></div><div class="text-sm space-y-1">${rowsH(calc())}</div><div class="text-center text-xs mt-3">พิมพ์เมื่อ ${fd(nowS())}</div></div>`); }
 function wipe() {
   if (!confirm('ลบประวัติทั้งหมด (บิล ซื้อเข้า ค่าจ้าง รายจ่าย บิลพัก)?\nรายชื่อและปุ่มสินค้าจะยังอยู่')) return;
   if (!confirm('ยืนยันอีกครั้ง! ลบแล้วกู้คืนไม่ได้')) return;
