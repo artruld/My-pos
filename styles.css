@@ -1,4 +1,11 @@
-html { font-size: 20px; }
+html { font-size: clamp(16px, 1.55vw, 21px); }
+body { height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; overscroll-behavior: none; touch-action: manipulation; }
+main { flex: 1; min-height: 0; overflow-y: auto; }
+.fill { height: 100%; }
+.fill > * { min-height: 0; }
+.fill .flex-1 { min-height: 0; }
+#mbox { max-height: 92vh; max-height: 92dvh; }
+#print-area img { width: 100%; display: block; }
 * { font-family: 'Prompt', sans-serif; -webkit-tap-highlight-color: transparent; }
 .btn { padding: .7rem 1.1rem; border-radius: .75rem; font-weight: 700; background: #e2e8f0; color: #1e293b; }
 .btn:active { transform: scale(.96); }
