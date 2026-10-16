@@ -10,12 +10,12 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=3.0">
 </head>
 <body class="bg-slate-100 text-slate-800">
 <div id="rot" class="no-print">📱 กรุณาหมุนหน้าจอเป็นแนวนอนเพื่อใช้งาน</div>
 <header class="bg-indigo-900 text-white px-4 py-2 flex justify-between items-center no-print">
-  <b class="text-lg">🏪 POS ร้านปลาเม้า</b>
+  <b class="text-lg">🏪 POS ร้านปลาเม้า <span id="ver" class="text-xs font-normal opacity-70"></span></b>
   <div class="flex gap-2">
     <button class="btn" onclick="settings()">⚙️ ตั้งค่า</button>
     <button id="home" class="hidden btn" onclick="go('home')">🏠 หน้าหลัก</button>
@@ -27,6 +27,6 @@
 </div>
 <div id="toast" class="hidden fixed bottom-5 right-5 bg-slate-900 text-white px-5 py-3 rounded-xl z-50 font-bold no-print"></div>
 <div id="print-area"></div>
-<script src="script.js"></script>
+<script src="script.js?v=3.0"></script>
 </body>
 </html>
