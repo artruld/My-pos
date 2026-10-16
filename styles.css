@@ -21,6 +21,7 @@ main { flex: 1; min-height: 0; overflow-y: auto; }
 .pbtn b { line-height: 1.15; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .pbtn small { color: #6366f1; }
 .pbtn .x { position: absolute; top: 2px; right: 6px; color: #94a3b8; }
+.pane .receipt { max-width: none; }
 .receipt { background: #fff; color: #000; max-width: 380px; margin: 0 auto; padding: 10px; font-size: 16px; line-height: 1.3; }
 table td, table th { padding: .4rem; text-align: left; border-bottom: 1px solid #f1f5f9; }
 #print-area { display: none; }
