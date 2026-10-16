@@ -1,6 +1,6 @@
 // ===== ข้อมูล (เก็บใน localStorage) =====
-const VER = '3.0';
-const CHANGES = ['v3.0: ใบแจ้งยอดรวม (เก็บบิลเดิม ชำระแล้วอัปเดตทุกบิล ไม่นับยอดซ้ำ ยกเลิกการรวมได้)', 'v3.0: สลิป — ตัดกระดาษโดย RawBT/แอป ปรับบรรทัดป้อนกระดาษ ลดขอบบน ชื่อสินค้า 1 บรรทัด', 'v2.x: พิมพ์ทันทีผ่าน RawBT แชร์เป็นรูป โลโก้ พักบิลอัตโนมัติ'];
+const VER = '3.0.1';
+const CHANGES = ['v3.0.1: รายการสินค้าบนหน้าจอพอดี 1 บรรทัดเหมือนสลิป, ป้อนกระดาษท้ายสลิปตั้งต้น 5 บรรทัด', 'v3.0: ใบแจ้งยอดรวม (เก็บบิลเดิม ชำระแล้วอัปเดตทุกบิล ไม่นับยอดซ้ำ ยกเลิกการรวมได้)', 'v3.0: สลิป — ตัดกระดาษโดย RawBT/แอป ปรับบรรทัดป้อนกระดาษ ลดขอบบน ชื่อสินค้า 1 บรรทัด', 'v2.x: พิมพ์ทันทีผ่าน RawBT แชร์เป็นรูป โลโก้ พักบิลอัตโนมัติ'];
 const K = 'mypos2';
 let db = Object.assign({ customers: [], products: [], suppliers: [], staff: [], bills: [], parked: [], purchases: [], tx: [], exps: [], expItems: [] }, JSON.parse(localStorage.getItem(K) || '{}'));
 const save = () => localStorage.setItem(K, JSON.stringify(db));
@@ -53,7 +53,7 @@ let F = { p: 'all', s: 'all', c: 'all', k: false }, ST = { tab: 'list', id: null
 let S = { p: 'day', from: ymd(new Date()), to: ymd(new Date()) };
 
 // ===== Modal / Toast / ฟอร์ม =====
-function modal(h) { $('#mbox').style.maxWidth = ''; $('#mbox').innerHTML = h; $('#mbox').oninput = null; $('#modal').classList.remove('hidden'); }
+function modal(h) { $('#mbox').style.maxWidth = ''; $('#mbox').innerHTML = h; $('#mbox').oninput = null; $('#modal').classList.remove('hidden'); fitLines(); }
 function closeM() { $('#modal').classList.add('hidden'); }
 function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.add('hidden'), 2500); }
 let npA = null;
@@ -87,7 +87,7 @@ const logoReady = new Promise(r => { LOGO.onload = LOGO.onerror = r; });
 const fontsReady = () => Promise.all([document.fonts.load('400 30px Prompt', 'ก1A'), document.fonts.load('700 30px Prompt', 'ก1A')]).catch(() => { });
 let PM = localStorage.getItem('pm') || 'rawbt';
 let CUT = localStorage.getItem('pcut') || 'rawbt';
-const FEED0 = { rawbt: 10, app: 3 };
+const FEED0 = { rawbt: 5, app: 3 };
 const feedN = () => { const v = parseInt(localStorage.getItem('pf_' + CUT)); return isNaN(v) ? FEED0[CUT] : v; };
 const fnt = (sz, b) => `${b ? 700 : 400} ${sz}px Prompt, sans-serif`;
 
@@ -252,7 +252,15 @@ function settings() {
 const HEAD = `<img src="logo.png" alt="ร้านปลาเม้า" style="display:block;width:48%;margin:0 auto 4px"><div class="text-center text-xs font-semibold">${ADDR}</div><div class="text-center text-xs font-semibold">${TEL}</div>`;
 const itemT = i => `${i.name} / ${i.qty}${i.unit === 'kg' ? ' kg' : ' ชิ้น'}${i.cnt ? ' (' + i.cnt + ' ตัว)' : ''}`;
 const itemS = i => `(@฿${fm(i.price)}${i.unit === 'kg' ? '/kg' : '/หน่วย'})`;
-const line = i => `<div class="flex justify-between items-start"><div><b style="font-size:24px">${esc(itemT(i))}</b><div style="font-size:16px">${esc(itemS(i))}</div></div><b style="font-size:24px">฿${fm(i.total)}</b></div>`;
+const line = i => `<div><div class="ln" style="display:flex;align-items:baseline"><b class="ln-n" style="font-size:24px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(itemT(i))}</b><b class="ln-p" style="font-size:24px;flex-shrink:0;margin-left:8px">฿${fm(i.total)}</b></div><div style="font-size:16px">${esc(itemS(i))}</div></div>`;
+function fitLines() {
+  document.querySelectorAll('.ln').forEach(el => {
+    const nm = el.querySelector('.ln-n'), pr = el.querySelector('.ln-p'); if (!nm || !el.offsetWidth) return;
+    let sz = 24; nm.style.fontSize = pr.style.fontSize = sz + 'px';
+    while (sz > 13 && nm.scrollWidth > nm.clientWidth + 1) { sz--; nm.style.fontSize = pr.style.fontSize = sz + 'px'; }
+  });
+}
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitLines);
 const cartLines = (a, fn) => a.length ? a.map(i => `<div class="flex gap-1"><div class="flex-1">${line(i)}</div><button class="text-rose-600 no-print" onclick="${fn}('${i.id}')">✕</button></div>`).join('') : '<div class="text-center text-slate-400 py-6">- ยังไม่มีรายการ -</div>';
 function body(b) {
   if (!isMG(b)) return b.items.map(line).join('');
@@ -304,7 +312,7 @@ const V = {
   sum: () => `<div class="max-w-xl mx-auto card"><div class="flex gap-1 mb-2">${[['day', 'รายวัน'], ['week', 'สัปดาห์'], ['month', 'เดือน'], ['year', 'ปี']].map(([p, l]) => `<button class="btn flex-1 ${S.p === p ? 'p' : ''}" onclick="setP('${p}')">${l}</button>`).join('')}</div><div class="flex gap-2 items-center mb-3">จาก<input type="date" class="inp" value="${S.from}" onchange="S.from=this.value;S.p='';render()">ถึง<input type="date" class="inp" value="${S.to}" onchange="S.to=this.value;S.p='';render()"></div><div class="space-y-1">${rowsH(calc())}</div><div class="grid grid-cols-2 gap-2 mt-4"><button class="btn p" onclick="printSum()">🖨 พิมพ์สลิปสรุปบัญชี</button><button class="btn r" onclick="wipe()">ลบประวัติทั้งหมด</button></div></div>`
 };
 
-function render() { const v = $('#ver'); if (v) v.textContent = 'v' + VER; $('#home').classList.toggle('hidden', view === 'home'); $('#app').innerHTML = V[view](); }
+function render() { const v = $('#ver'); if (v) v.textContent = 'v' + VER; $('#home').classList.toggle('hidden', view === 'home'); $('#app').innerHTML = V[view](); fitLines(); }
 function go(v) { if (view === 'pos' && v !== 'pos' && cart.length) { parkCart(); toast('พักบิลอัตโนมัติแล้ว'); } view = v; render(); }
 
 // ===== ลูกค้า / รายชื่อ =====
