@@ -1,7 +1,24 @@
 // ===== ข้อมูล (เก็บใน localStorage) =====
+const VER = '3.0';
+const CHANGES = ['v3.0: ใบแจ้งยอดรวม (เก็บบิลเดิม ชำระแล้วอัปเดตทุกบิล ไม่นับยอดซ้ำ ยกเลิกการรวมได้)', 'v3.0: สลิป — ตัดกระดาษโดย RawBT/แอป ปรับบรรทัดป้อนกระดาษ ลดขอบบน ชื่อสินค้า 1 บรรทัด', 'v2.x: พิมพ์ทันทีผ่าน RawBT แชร์เป็นรูป โลโก้ พักบิลอัตโนมัติ'];
 const K = 'mypos2';
 let db = Object.assign({ customers: [], products: [], suppliers: [], staff: [], bills: [], parked: [], purchases: [], tx: [], exps: [], expItems: [] }, JSON.parse(localStorage.getItem(K) || '{}'));
 const save = () => localStorage.setItem(K, JSON.stringify(db));
+const isMG = b => Array.isArray(b.mergedIds);
+const kids = b => b.mergedIds.map(id => db.bills.find(x => x.id == id)).filter(Boolean);
+const tops = () => db.bills.filter(b => !b.mergedInto);
+const rTitle = b => isMG(b) ? 'ใบแจ้งยอดรวม' : 'ใบเสร็จรับเงิน';
+// ย้ายข้อมูลบิลรวมแบบเก่า (บิลเดิมฝังอยู่ข้างใน) เป็นแบบใหม่ (บิลเดิมเป็นบิลจริง ติดตรา mergedInto)
+(function migrate() {
+  let ch = false;
+  [...db.bills].forEach(b => {
+    if (!Array.isArray(b.merged)) return;
+    const ids = [];
+    b.merged.forEach(c => { if (!db.bills.some(x => x.id == c.id)) db.bills.push(Object.assign({}, c, { mergedInto: b.id, status: b.status, pay: b.pay || null, paidAt: b.paidAt || null })); ids.push(c.id); });
+    b.mergedIds = ids; delete b.merged; ch = true;
+  });
+  if (ch) save();
+})();
 
 // ===== ตัวช่วย =====
 const $ = s => document.querySelector(s);
@@ -32,7 +49,7 @@ const TX = { wage: 'จ่ายค่าจ้าง', adv: 'เบิกล่
 const stat = b => b.status === 'paid' ? `ชำระแล้ว (${PAY[b.pay]})` : 'ค้างชำระ';
 let freshId = null;
 let cust = WALK, cart = [], pcart = [], view = 'home', split = 'bill', sup = '';
-let F = { p: 'all', s: 'all', c: 'all' }, ST = { tab: 'list', id: null, p: 'all' };
+let F = { p: 'all', s: 'all', c: 'all', k: false }, ST = { tab: 'list', id: null, p: 'all' };
 let S = { p: 'day', from: ymd(new Date()), to: ymd(new Date()) };
 
 // ===== Modal / Toast / ฟอร์ม =====
@@ -69,6 +86,9 @@ const LOGO = new Image(); LOGO.src = 'logo.png';
 const logoReady = new Promise(r => { LOGO.onload = LOGO.onerror = r; });
 const fontsReady = () => Promise.all([document.fonts.load('400 30px Prompt', 'ก1A'), document.fonts.load('700 30px Prompt', 'ก1A')]).catch(() => { });
 let PM = localStorage.getItem('pm') || 'rawbt';
+let CUT = localStorage.getItem('pcut') || 'rawbt';
+const FEED0 = { rawbt: 10, app: 3 };
+const feedN = () => { const v = parseInt(localStorage.getItem('pf_' + CUT)); return isNaN(v) ? FEED0[CUT] : v; };
 const fnt = (sz, b) => `${b ? 700 : 400} ${sz}px Prompt, sans-serif`;
 
 function wrapT(ctx, text, maxW) {
@@ -84,8 +104,8 @@ function wrapT(ctx, text, maxW) {
   return lines.length ? lines : [''];
 }
 
-function runBlocks(ctx, blocks, draw) {
-  let y = 10; const W = PW - 2 * PADX;
+function runBlocks(ctx, blocks, draw, pad = 10) {
+  let y = pad; const W = PW - 2 * PADX;
   ctx.textBaseline = 'middle';
   for (const b of blocks) {
     const sz = b.sz || 26, lh = Math.round(sz * 1.45);
@@ -103,9 +123,16 @@ function runBlocks(ctx, blocks, draw) {
       }
     }
     else if (b.t === 'lr' || b.t === 'item') {
-      const it = b.t === 'item', nsz = it ? 36 : sz, nlh = Math.round(nsz * 1.45), ind = b.ind || 0;
-      ctx.font = fnt(nsz, it ? 1 : b.b);
-      const rw = ctx.measureText(b.r).width, ls = wrapT(ctx, it ? b.n : b.l, W - ind - rw - 14);
+      const it = b.t === 'item', ind = b.ind || 0;
+      let nsz = it ? 36 : sz, rw, ls;
+      if (it) {
+        for (nsz = 36; nsz > 24; nsz -= 2) { ctx.font = fnt(nsz, 1); rw = ctx.measureText(b.r).width; if (ctx.measureText(b.n).width <= W - ind - rw - 14) break; }
+        ctx.font = fnt(nsz, 1); rw = ctx.measureText(b.r).width;
+        let t = b.n; const room = W - ind - rw - 14;
+        if (ctx.measureText(t).width > room) { while (t.length > 1 && ctx.measureText(t + '…').width > room) t = t.slice(0, -1); t = t.trimEnd() + '…'; }
+        ls = [t];
+      } else { ctx.font = fnt(nsz, b.b); rw = ctx.measureText(b.r).width; ls = wrapT(ctx, b.l, W - ind - rw - 14); }
+      const nlh = Math.round(nsz * 1.45);
       ls.forEach((ln, k) => {
         if (draw) {
           ctx.fillStyle = '#000'; ctx.textAlign = 'left'; ctx.fillText(ln, PADX + ind, y + nlh / 2);
@@ -121,17 +148,19 @@ function runBlocks(ctx, blocks, draw) {
       if (it) y += 6;
     }
   }
-  return y + 10;
+  return y + pad;
 }
 
 async function makeCanvas(blocks, k = 1, bin = true) {
   await Promise.all([fontsReady(), logoReady]);
+  if (bin && blocks.length && blocks[blocks.length - 1].t === 'gap') blocks = blocks.slice(0, -1);
+  const pd = bin ? 2 : 10;
   const scratch = document.createElement('canvas').getContext('2d');
-  const h = runBlocks(scratch, blocks, false);
+  const h = runBlocks(scratch, blocks, false, pd);
   const c = document.createElement('canvas'); c.width = PW * k; c.height = h * k;
   const ctx = c.getContext('2d', { willReadFrequently: true });
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.scale(k, k);
-  runBlocks(ctx, blocks, true);
+  runBlocks(ctx, blocks, true, pd);
   if (bin) {
     const im = ctx.getImageData(0, 0, c.width, c.height), d = im.data;
     for (let i = 0; i < d.length; i += 4) { const v = d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11 < 170 ? 0 : 255; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255; }
@@ -143,14 +172,16 @@ async function makeCanvas(blocks, k = 1, bin = true) {
 const headBlocks = () => [{ t: 'logo', w: 238 }, { t: 'c', x: ADDR, sz: 24, b: 1 }, { t: 'c', x: TEL, sz: 24, b: 1 }];
 const itemBlock = i => ({ t: 'item', n: itemT(i), s: itemS(i), r: '฿' + fm(i.total) });
 function billBlocks(b) {
-  const L = [...headBlocks(), { t: 'rule' }, { t: 'c', x: 'ใบเสร็จรับเงิน', sz: 28, b: 1 }, { t: 'rule' }];
+  const ks = isMG(b) ? kids(b) : null;
+  const L = [...headBlocks(), { t: 'rule' }, { t: 'c', x: rTitle(b), sz: 28, b: 1 }, { t: 'rule' }];
   if (b.id) L.push({ t: 'l', x: 'เลขที่: ' + b.id, sz: 26 });
   L.push({ t: 'l', x: 'เวลา: ' + fd(b.date), sz: 26 }, { t: 'l', x: 'ลูกค้า: ' + b.customer, sz: 26, b: 1 });
   if (b.status) L.push({ t: 'l', x: 'สถานะ: ' + stat(b), sz: 26 });
+  if (ks) L.push({ t: 'l', x: 'รวมจาก ' + ks.length + ' บิล: ' + ks.map(k => k.id).join(', '), sz: 22 });
   L.push({ t: 'rule' });
-  if (!b.merged) b.items.forEach(i => L.push(itemBlock(i)));
+  if (!ks) b.items.forEach(i => L.push(itemBlock(i)));
   else {
-    const g = {}; b.merged.forEach(m => { const k = split === 'day' ? m.date.slice(0, 10) : m.id; (g[k] = g[k] || []).push(m); });
+    const g = {}; ks.forEach(m => { const k = split === 'day' ? m.date.slice(0, 10) : m.id; (g[k] = g[k] || []).push(m); });
     Object.entries(g).forEach(([k, ms]) => {
       L.push({ t: 'l', x: split === 'day' ? 'วันที่ ' + new Date(k).toLocaleDateString('th-TH') : 'บิล ' + k + ' (' + fd(ms[0].date) + ')', sz: 24, b: 1 });
       ms.forEach(m => m.items.forEach(i => L.push(itemBlock(i))));
@@ -180,7 +211,8 @@ function escpos(c) {
       out[o++] = v;
     }
   }
-  out.set([0x1B, 0x64, 0x04, 0x1D, 0x56, 0x42, 0x00], o); o += 7;
+  const tail = [0x1B, 0x64, feedN()].concat(CUT === 'app' ? [0x1D, 0x56, 0x42, 0x00] : []);
+  out.set(tail, o); o += tail.length;
   return out.subarray(0, o);
 }
 function sendRaw(bytes) {
@@ -202,8 +234,18 @@ async function safePrint(blocks) { try { await printBlocks(blocks); return true;
 function printSum() { safePrint(sumBlocks()); }
 function testPrint() { safePrint([...headBlocks(), { t: 'rule' }, { t: 'c', x: 'ทดสอบพิมพ์', sz: 30, b: 1 }, { t: 'c', x: fd(nowS()), sz: 24 }, { t: 'gap', h: 16 }]); }
 function setPM(v) { PM = v; localStorage.setItem('pm', v); toast('บันทึกแล้ว'); }
+function setCut(v) { CUT = v; localStorage.setItem('pcut', v); settings(); }
+function setFeed(v) { localStorage.setItem('pf_' + CUT, v); toast('บันทึกแล้ว'); }
 function settings() {
-  modal(`<div class="flex justify-between mb-3"><b class="text-xl">ตั้งค่าเครื่องพิมพ์</b><button onclick="closeM()">✕</button></div><label class="block font-bold mb-1">วิธีพิมพ์</label><select class="inp" onchange="setPM(this.value)"><option value="rawbt" ${PM === 'rawbt' ? 'selected' : ''}>ส่งตรงไป RawBT (พิมพ์ทันที)</option><option value="system" ${PM === 'system' ? 'selected' : ''}>ผ่านหน้าต่างพิมพ์ของ Android (สำรอง)</option></select><div class="grid grid-cols-2 gap-2 mt-3"><button class="btn p" onclick="testPrint()">ทดสอบพิมพ์</button><button class="btn" onclick="openDrawer()">ทดสอบเปิดลิ้นชัก</button></div><p class="text-sm text-slate-500 mt-3">ต้องติดตั้งแอป RawBT และตั้งเครื่องพิมพ์ในแอปให้พิมพ์ได้ก่อน ถ้าโหมดแรกไม่ทำงานให้เลือกโหมดสำรอง (โหมดสำรองเปิดลิ้นชักไม่ได้)</p>`);
+  const fo = Array.from({ length: 21 }, (_, i) => `<option value="${i}" ${feedN() === i ? 'selected' : ''}>${i}</option>`).join('');
+  modal(`<div class="flex justify-between mb-3"><b class="text-xl">ตั้งค่า (v${VER})</b><button onclick="closeM()">✕</button></div>
+<label class="block font-bold mb-1">วิธีพิมพ์</label><select class="inp" onchange="setPM(this.value)"><option value="rawbt" ${PM === 'rawbt' ? 'selected' : ''}>ส่งตรงไป RawBT (พิมพ์ทันที)</option><option value="system" ${PM === 'system' ? 'selected' : ''}>ผ่านหน้าต่างพิมพ์ของ Android (สำรอง)</option></select>
+<label class="block font-bold mt-3 mb-1">ตัดกระดาษโดย</label><select class="inp" onchange="setCut(this.value)"><option value="rawbt" ${CUT === 'rawbt' ? 'selected' : ''}>RawBT (ตัดครั้งเดียว)</option><option value="app" ${CUT === 'app' ? 'selected' : ''}>แอปนี้ (ถ้า RawBT ปิดตัดอัตโนมัติ)</option></select>
+<label class="block font-bold mt-3 mb-1">ป้อนกระดาษท้ายสลิป (บรรทัด)</label><select class="inp" onchange="setFeed(this.value)">${fo}</select>
+<p class="text-sm text-slate-500 mt-1">1 บรรทัด ≈ 3 มม. ถ้าท้ายสลิปโดนตัดขาดให้เพิ่ม ถ้าเว้นท้ายมากไปให้ลด</p>
+<div class="grid grid-cols-2 gap-2 mt-3"><button class="btn p" onclick="testPrint()">ทดสอบพิมพ์</button><button class="btn" onclick="openDrawer()">ทดสอบเปิดลิ้นชัก</button></div>
+<p class="text-sm text-slate-500 mt-3">ต้องติดตั้งแอป RawBT และตั้งเครื่องพิมพ์ในแอปให้พิมพ์ได้ก่อน ถ้าโหมดแรกไม่ทำงานให้เลือกโหมดสำรอง (โหมดสำรองเปิดลิ้นชักไม่ได้)</p>
+<div class="mt-3 text-xs text-slate-500">${CHANGES.map(c => '• ' + esc(c)).join('<br>')}</div>`);
 }
 
 // ===== ใบเสร็จ =====
@@ -213,11 +255,12 @@ const itemS = i => `(@฿${fm(i.price)}${i.unit === 'kg' ? '/kg' : '/หน่�
 const line = i => `<div class="flex justify-between items-start"><div><b style="font-size:24px">${esc(itemT(i))}</b><div style="font-size:16px">${esc(itemS(i))}</div></div><b style="font-size:24px">฿${fm(i.total)}</b></div>`;
 const cartLines = (a, fn) => a.length ? a.map(i => `<div class="flex gap-1"><div class="flex-1">${line(i)}</div><button class="text-rose-600 no-print" onclick="${fn}('${i.id}')">✕</button></div>`).join('') : '<div class="text-center text-slate-400 py-6">- ยังไม่มีรายการ -</div>';
 function body(b) {
-  if (!b.merged) return b.items.map(line).join('');
-  const g = {}; b.merged.forEach(m => { const k = split === 'day' ? m.date.slice(0, 10) : m.id; (g[k] = g[k] || []).push(m); });
+  if (!isMG(b)) return b.items.map(line).join('');
+  const ks = kids(b);
+  const g = {}; ks.forEach(m => { const k = split === 'day' ? m.date.slice(0, 10) : m.id; (g[k] = g[k] || []).push(m); });
   return Object.entries(g).map(([k, ms]) => `<div class="border-t border-dashed border-black pt-1 mt-1"><div class="font-bold text-xs">${split === 'day' ? 'วันที่ ' + new Date(k).toLocaleDateString('th-TH') : 'บิล ' + k + ' (' + fd(ms[0].date) + ')'}</div>${ms.map(m => m.items.map(line).join('')).join('')}<div class="text-right text-sm font-bold">รวม ฿${fm(sum(ms))}</div></div>`).join('');
 }
-const receipt = (b, pre) => `<div class="receipt">${HEAD}<div class="font-extrabold text-center border-y-2 border-black my-2 py-1">ใบเสร็จรับเงิน</div><div class="text-xs mb-1">${b.id ? 'เลขที่: ' + b.id + '<br>' : ''}เวลา: ${fd(b.date)}<br>ลูกค้า: <b>${esc(b.customer)}</b>${b.status ? '<br>สถานะ: ' + stat(b) : ''}</div><div class="border-t-2 border-black pt-1 space-y-1">${pre || body(b)}</div><div class="border-t-2 border-black mt-2 pt-1 flex justify-between text-xl font-black"><span>รวมทั้งสิ้น</span><span>฿${fm(b.total)}</span></div><div class="text-center text-xs mt-3">Line: @yourstore<br><b>" THANK YOU "</b></div></div>`;
+const receipt = (b, pre) => `<div class="receipt">${HEAD}<div class="font-extrabold text-center border-y-2 border-black my-2 py-1">${rTitle(b)}</div><div class="text-xs mb-1">${b.id ? 'เลขที่: ' + b.id + '<br>' : ''}เวลา: ${fd(b.date)}<br>ลูกค้า: <b>${esc(b.customer)}</b>${b.status ? '<br>สถานะ: ' + stat(b) : ''}${isMG(b) ? '<br>รวมจาก ' + kids(b).length + ' บิล' : ''}</div><div class="border-t-2 border-black pt-1 space-y-1">${pre || body(b)}</div><div class="border-t-2 border-black mt-2 pt-1 flex justify-between text-xl font-black"><span>รวมทั้งสิ้น</span><span>฿${fm(b.total)}</span></div><div class="text-center text-xs mt-3">Line: @yourstore<br><b>" THANK YOU "</b></div></div>`;
 
 // ===== หน้าจอ =====
 const tile = (e, l, v, c) => `<button onclick="go('${v}')" class="${c} text-white rounded-2xl p-6 text-center font-extrabold text-xl shadow active:scale-95"><div class="text-4xl mb-1">${e}</div>${l}</button>`;
@@ -234,9 +277,9 @@ const V = {
   pos: () => `<div class="flex gap-3 fill"><div class="card flex-1 overflow-y-auto"><div class="flex flex-wrap gap-2 items-center mb-3"><b>ลูกค้า:</b><span class="bg-indigo-100 text-indigo-900 font-bold px-3 py-1 rounded-lg">${esc(cust)}</span><button class="btn" onclick="editCust()">✏️ แก้ชื่อ</button><button class="btn" onclick="go('cust')">เปลี่ยนลูกค้า</button><button class="btn a" onclick="parkedList()">🕐 บิลที่พัก (${db.parked.length})</button><button class="btn p ml-auto" onclick="addProd()">+ สร้างปุ่มสินค้า</button></div>${pgrid('c')}</div><div class="w-[400px] shrink-0 flex flex-col gap-2"><div class="card flex-1 overflow-y-auto">${receipt({ date: nowS(), customer: cust, total: sum(cart) }, cartLines(cart, 'delCart'))}</div><div class="grid grid-cols-3 gap-2"><button class="btn r" onclick="clearCart()">ยกเลิกบิล</button><button class="btn a" onclick="park()">พักบิล</button><button class="btn g" onclick="payM()">ชำระเงิน</button></div></div></div>`,
 
   bills: () => {
-    const L = db.bills.filter(b => per(b.date, F.p) && (F.s === 'all' || b.status === F.s) && (F.c === 'all' || b.customer === F.c));
-    const cs = [['all', 'ลูกค้าทั้งหมด'], ...[...new Set(db.bills.map(b => b.customer))].map(c => [c, c])];
-    return `<div class="card"><div class="flex flex-wrap gap-2 items-center mb-3">${selH(PO, F.p, "F.p=this.value;render()")}${selH(cs, F.c, "F.c=this.value;render()")}${selH([['all', 'ทุกสถานะ'], ['unpaid', 'ค้างชำระ'], ['paid', 'ชำระแล้ว']], F.s, "F.s=this.value;render()")}<button class="btn p ml-auto" onclick="mergeSel()">รวมบิลที่เลือก</button><button class="btn r" onclick="cancelSel()">ยกเลิกที่เลือก</button></div><table class="w-full text-sm"><tr class="font-bold"><td></td><td>เลขที่</td><td>วันที่</td><td>ลูกค้า</td><td class="text-right">ยอดรวม</td><td>สถานะ</td><td></td></tr>${L.map(b => `<tr><td><input type="checkbox" class="bc" value="${b.id}"></td><td class="font-bold">${b.id}</td><td class="text-xs">${fd(b.date)}</td><td>${esc(b.customer)}${b.merged ? ' <span class="text-xs bg-indigo-100 px-1 rounded">รวมบิล</span>' : ''}</td><td class="text-right font-black">฿${fm(b.total)}</td><td><span class="px-2 py-0.5 rounded-full text-xs font-bold ${b.status === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${stat(b)}</span></td><td><button class="btn" onclick="openBill('${b.id}')">เปิดดู</button></td></tr>`).join('') || '<tr><td colspan="7" class="text-center text-slate-400 p-6">ไม่พบบิล</td></tr>'}</table></div>`;
+    const L = (F.k ? db.bills : tops()).filter(b => per(b.date, F.p) && (F.s === 'all' || b.status === F.s) && (F.c === 'all' || b.customer === F.c));
+    const cs = [['all', 'ลูกค้าทั้งหมด'], ...[...new Set(tops().map(b => b.customer))].map(c => [c, c])];
+    return `<div class="card"><div class="flex flex-wrap gap-2 items-center mb-3">${selH(PO, F.p, "F.p=this.value;render()")}${selH(cs, F.c, "F.c=this.value;render()")}${selH([['all', 'ทุกสถานะ'], ['unpaid', 'ค้างชำระ'], ['paid', 'ชำระแล้ว']], F.s, "F.s=this.value;render()")}<label class="flex items-center gap-1 text-sm ml-auto"><input type="checkbox" ${F.k ? 'checked' : ''} onchange="F.k=this.checked;render()">แสดงบิลที่รวมแล้ว</label><button class="btn p" onclick="mergeSel()">รวมบิลที่เลือก</button><button class="btn r" onclick="cancelSel()">ยกเลิกที่เลือก</button></div><table class="w-full text-sm"><tr class="font-bold"><td></td><td>เลขที่</td><td>วันที่</td><td>ลูกค้า</td><td class="text-right">ยอดรวม</td><td>สถานะ</td><td></td></tr>${L.map(b => `<tr><td>${b.mergedInto ? '' : `<input type="checkbox" class="bc" value="${b.id}">`}</td><td class="font-bold">${b.id}</td><td class="text-xs">${fd(b.date)}</td><td>${esc(b.customer)}${isMG(b) ? ' <span class="text-xs bg-indigo-100 px-1 rounded">ใบแจ้งยอดรวม</span>' : ''}${b.mergedInto ? ' <span class="text-xs bg-slate-200 px-1 rounded">รวมแล้วใน ' + b.mergedInto + '</span>' : ''}</td><td class="text-right font-black">฿${fm(b.total)}</td><td><span class="px-2 py-0.5 rounded-full text-xs font-bold ${b.status === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${stat(b)}</span></td><td><button class="btn" onclick="openBill('${b.id}')">เปิดดู</button></td></tr>`).join('') || '<tr><td colspan="7" class="text-center text-slate-400 p-6">ไม่พบบิล</td></tr>'}</table></div>`;
   },
 
   purchase: () => `<div class="flex gap-3 fill"><div class="card flex-1 overflow-y-auto"><div class="flex flex-wrap gap-2 items-center mb-3"><b>ซื้อจาก:</b>${selH([['', '-- เลือกผู้ขาย --'], ...db.suppliers.map(s => [s, s])], sup, "sup=this.value;render()")}<button class="btn g" onclick="addName('suppliers','ชื่อผู้ขาย')">+ ผู้ขาย</button><button class="btn r" onclick="delSup()">ลบผู้ขาย</button><button class="btn p ml-auto" onclick="addProd()">+ สร้างปุ่มสินค้า</button></div>${pgrid('p')}</div><div class="w-[420px] shrink-0 flex flex-col gap-2 overflow-y-auto"><div class="card"><b>รายการซื้อเข้า (${esc(sup || 'ยังไม่เลือกผู้ขาย')})</b><div class="space-y-1 my-2">${cartLines(pcart, 'delP')}</div><div class="flex justify-between font-black text-lg border-t pt-1"><span>รวม</span><span>฿${fm(sum(pcart))}</span></div><button class="btn g w-full mt-2" onclick="savePur()">ยืนยัน (ค้างจ่าย)</button></div><div class="card space-y-2"><b>ประวัติซื้อเข้า</b>${db.purchases.map(p => `<div class="border rounded-xl p-2 text-sm"><div class="flex justify-between"><b>${esc(p.supplier)}</b><span class="text-xs">${fd(p.date)}</span></div><div class="text-xs text-slate-500">${p.items.map(i => esc(i.name) + ' ' + i.qty).join(', ')}</div><div class="flex justify-between"><b>฿${fm(p.total)}</b><b class="${p.status === 'paid' ? 'text-emerald-600' : 'text-amber-600'}">${p.status === 'paid' ? 'จ่ายแล้ว (' + PAY[p.pay] + ')' : 'ค้างจ่าย'}</b></div><div class="flex gap-1 mt-1">${p.status === 'paid' ? '' : `<button class="btn g" onclick="choosePay('p','${p.id}')">เปลี่ยนเป็นจ่ายแล้ว</button>`}<button class="btn r" onclick="delPur('${p.id}')">ลบ</button></div></div>`).join('') || '<p class="text-slate-400 text-sm">ยังไม่มีรายการ</p>'}</div></div></div>`,
@@ -261,7 +304,7 @@ const V = {
   sum: () => `<div class="max-w-xl mx-auto card"><div class="flex gap-1 mb-2">${[['day', 'รายวัน'], ['week', 'สัปดาห์'], ['month', 'เดือน'], ['year', 'ปี']].map(([p, l]) => `<button class="btn flex-1 ${S.p === p ? 'p' : ''}" onclick="setP('${p}')">${l}</button>`).join('')}</div><div class="flex gap-2 items-center mb-3">จาก<input type="date" class="inp" value="${S.from}" onchange="S.from=this.value;S.p='';render()">ถึง<input type="date" class="inp" value="${S.to}" onchange="S.to=this.value;S.p='';render()"></div><div class="space-y-1">${rowsH(calc())}</div><div class="grid grid-cols-2 gap-2 mt-4"><button class="btn p" onclick="printSum()">🖨 พิมพ์สลิปสรุปบัญชี</button><button class="btn r" onclick="wipe()">ลบประวัติทั้งหมด</button></div></div>`
 };
 
-function render() { $('#home').classList.toggle('hidden', view === 'home'); $('#app').innerHTML = V[view](); }
+function render() { const v = $('#ver'); if (v) v.textContent = 'v' + VER; $('#home').classList.toggle('hidden', view === 'home'); $('#app').innerHTML = V[view](); }
 function go(v) { if (view === 'pos' && v !== 'pos' && cart.length) { parkCart(); toast('พักบิลอัตโนมัติแล้ว'); } view = v; render(); }
 
 // ===== ลูกค้า / รายชื่อ =====
@@ -314,7 +357,7 @@ function sale(st, m) {
 function openBill(id) {
   const b = db.bills.find(x => x.id == id); if (!b) return;
   const fresh = freshId === id;
-  modal(`<div class="flex justify-between mb-2"><b>รายละเอียดใบเสร็จ</b>${fresh ? '' : `<button onclick="closeBill('${id}')">✕</button>`}</div>${b.merged ? `<div class="flex gap-1 mb-2"><button class="btn flex-1 ${split === 'bill' ? 'p' : ''}" onclick="split='bill';openBill('${id}')">แยกรายบิล</button><button class="btn flex-1 ${split === 'day' ? 'p' : ''}" onclick="split='day';openBill('${id}')">แยกรายวัน</button></div>` : ''}<div id="rc">${receipt(b)}</div><div class="grid grid-cols-2 gap-2 mt-3">${b.status === 'unpaid' ? `<button class="btn g col-span-2" onclick="choosePay('b','${id}')">เปลี่ยนสถานะเป็น "ชำระแล้ว"</button>` : ''}<button class="btn" onclick="shareBill('${id}')">แชร์เป็นรูป</button><button class="btn p" onclick="printBill('${id}')">พิมพ์ทันที</button>${fresh ? `<button class="btn col-span-2" onclick="closeBill('${id}')">ปิดโดยไม่พิมพ์ (กลับไปเลือกลูกค้า)</button>` : ''}</div>`);
+  modal(`<div class="flex justify-between mb-2"><b>รายละเอียดใบเสร็จ</b>${fresh ? '' : `<button onclick="closeBill('${id}')">✕</button>`}</div>${isMG(b) ? `<div class="flex gap-1 mb-2"><button class="btn flex-1 ${split === 'bill' ? 'p' : ''}" onclick="split='bill';openBill('${id}')">แยกรายบิล</button><button class="btn flex-1 ${split === 'day' ? 'p' : ''}" onclick="split='day';openBill('${id}')">แยกรายวัน</button></div>` : ''}<div id="rc">${receipt(b)}</div><div class="grid grid-cols-2 gap-2 mt-3">${b.status === 'unpaid' && !b.mergedInto ? `<button class="btn g col-span-2" onclick="choosePay('b','${id}')">เปลี่ยนสถานะเป็น "ชำระแล้ว"</button>` : ''}${b.mergedInto ? `<div class="col-span-2 text-center text-sm text-slate-500">บิลนี้ถูกรวมใน ${b.mergedInto} ชำระที่ใบแจ้งยอดรวม</div>` : ''}${isMG(b) && b.status === 'unpaid' ? `<button class="btn col-span-2" onclick="unmerge('${id}')">ยกเลิกการรวม (แยกกลับเป็นบิลเดิม)</button>` : ''}<button class="btn" onclick="shareBill('${id}')">แชร์เป็นรูป</button><button class="btn p" onclick="printBill('${id}')">พิมพ์ทันที</button>${fresh ? `<button class="btn col-span-2" onclick="closeBill('${id}')">ปิดโดยไม่พิมพ์ (กลับไปเลือกลูกค้า)</button>` : ''}</div>`);
 }
 function closeBill(id) { const fresh = freshId === id; freshId = null; closeM(); if (fresh) go('cust'); }
 async function printBill(id) {
@@ -340,23 +383,37 @@ function choosePay(kind, id) {
 }
 function doPay(kind, id, m) {
   const x = (kind === 'b' ? db.bills : db.purchases).find(x => x.id == id);
-  x.status = 'paid'; x.pay = m; x.paidAt = nowS(); save(); closeM(); render();
+  x.status = 'paid'; x.pay = m; x.paidAt = nowS();
+  if (kind === 'b' && isMG(x)) kids(x).forEach(k => { k.status = 'paid'; k.pay = m; k.paidAt = x.paidAt; });
+  save(); closeM(); render();
   if (kind === 'b') { openBill(id); if (m === 'cash') openDrawer(); } else toast('อัปเดตแล้ว');
 }
 
 function mergeSel() {
-  const ids = [...document.querySelectorAll('.bc:checked')].map(c => c.value), bs = db.bills.filter(b => ids.includes(b.id));
+  const ids = [...document.querySelectorAll('.bc:checked')].map(c => c.value), bs = db.bills.filter(b => ids.includes(b.id) && !b.mergedInto);
   if (bs.length < 2 || bs.some(b => b.status !== 'unpaid')) return alert('เลือกบิลค้างชำระอย่างน้อย 2 บิล');
   if (new Set(bs.map(b => b.customer)).size > 1) return alert('รวมได้เฉพาะลูกค้ารายเดียวกัน');
-  const ch = bs.flatMap(b => b.merged || [b]);
-  db.bills = db.bills.filter(b => !ids.includes(b.id));
-  db.bills.unshift({ id: 'MG-' + uid().slice(-5), date: nowS(), customer: bs[0].customer, items: [], merged: ch, total: sum(ch), status: 'unpaid', pay: null });
-  save(); toast('รวมบิลแล้ว'); render();
+  const leaf = bs.flatMap(b => isMG(b) ? kids(b) : [b]), id = 'MG-' + uid().slice(-5);
+  leaf.forEach(k => { k.mergedInto = id; });
+  db.bills = db.bills.filter(b => !(isMG(b) && ids.includes(b.id)));
+  db.bills.unshift({ id, date: nowS(), customer: bs[0].customer, items: [], mergedIds: leaf.map(k => k.id), total: sum(leaf), status: 'unpaid', pay: null });
+  save(); toast('สร้างใบแจ้งยอดรวมแล้ว'); render();
+}
+function unmerge(id) {
+  const b = db.bills.find(x => x.id == id); if (!b || !isMG(b) || b.status !== 'unpaid') return;
+  if (!confirm('ยกเลิกการรวม ' + id + ' และแยกกลับเป็นบิลเดิม?')) return;
+  kids(b).forEach(k => { delete k.mergedInto; });
+  db.bills = db.bills.filter(x => x.id != id); save(); closeM(); toast('แยกกลับเป็นบิลเดิมแล้ว'); render();
 }
 function cancelSel() {
   const ids = [...document.querySelectorAll('.bc:checked')].map(c => c.value);
   if (!ids.length) return alert('เลือกบิลก่อน');
-  if (confirm(`ยกเลิก (ลบ) ${ids.length} บิลที่เลือก?`)) { db.bills = db.bills.filter(b => !ids.includes(b.id)); save(); render(); }
+  if (!confirm(`ยกเลิก (ลบ) ${ids.length} บิลที่เลือก?`)) return;
+  db.bills.filter(b => ids.includes(b.id) && isMG(b)).forEach(b => {
+    if (confirm(`${b.id}: ลบบิลเดิมที่รวมอยู่ (${kids(b).length} บิล) ด้วยไหม?\nตกลง = ลบทั้งหมด\nยกเลิก = เก็บบิลเดิมกลับเป็นบิลปกติ`)) db.bills = db.bills.filter(x => x.mergedInto !== b.id);
+    else kids(b).forEach(k => { delete k.mergedInto; });
+  });
+  db.bills = db.bills.filter(b => !ids.includes(b.id)); save(); render();
 }
 
 // ===== ซื้อเข้า =====
@@ -393,11 +450,11 @@ function delExp(id) { if (confirm('ลบรายการนี้?')) { db.ex
 function setP(p) { const [a, b] = rng(p); S = { p, from: a, to: b }; render(); }
 function calc() {
   const a = S.from, b = S.to, ir = d => d && inR(d, a, b), sT = t => sum(db.tx.filter(x => x.type === t && ir(x.date)), 'amount');
-  const pb = db.bills.filter(x => x.status === 'paid' && ir(x.paidAt || x.date));
+  const pb = tops().filter(x => x.status === 'paid' && ir(x.paidAt || x.date));
   const inc = sum(pb), buy = sum(db.purchases.filter(x => x.status === 'paid' && ir(x.paidAt))), wage = sT('wage'), adv = sT('adv'), gen = sum(db.exps.filter(x => ir(x.date)), 'amount'), exp = buy + wage + adv + gen;
   return [['รายรับ (ชำระแล้ว)', inc, 1], ['  เงินสด', sum(pb.filter(x => x.pay === 'cash'))], ['  เงินโอน', sum(pb.filter(x => x.pay === 'transfer'))],
   ['รายจ่าย', exp, 1], ['  ซื้อเข้า (จ่ายแล้ว)', buy], ['  ค่าจ้าง', wage], ['  เบิกล่วงหน้า', adv], ['  รายจ่ายทั่วไป', gen],
-  ['กำไร/ขาดทุนสุทธิ', inc - exp, 1], ['ลูกค้าค้างชำระ', sum(db.bills.filter(x => x.status === 'unpaid' && ir(x.date)))], ['ค้างจ่ายผู้ขาย', sum(db.purchases.filter(x => x.status === 'unpaid' && ir(x.date)))], ['เงินฝากพนักงาน (ไม่นับเป็นรายจ่าย)', sT('dep')]];
+  ['กำไร/ขาดทุนสุทธิ', inc - exp, 1], ['ลูกค้าค้างชำระ', sum(tops().filter(x => x.status === 'unpaid' && ir(x.date)))], ['ค้างจ่ายผู้ขาย', sum(db.purchases.filter(x => x.status === 'unpaid' && ir(x.date)))], ['เงินฝากพนักงาน (ไม่นับเป็นรายจ่าย)', sT('dep')]];
 }
 const rowsH = r => r.map(([l, v, b]) => `<div class="flex justify-between ${b ? 'font-black border-t mt-1 pt-1' : ''}"><span>${l.replace(/^ +/, '&nbsp;&nbsp;')}</span><span>฿${fm(v)}</span></div>`).join('');
 function wipe() {
