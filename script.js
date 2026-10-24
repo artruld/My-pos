@@ -1,12 +1,17 @@
 // ===== ข้อมูล (เก็บใน localStorage) =====
-const VER = '3.0.2';
-const CHANGES = ['v3.0.2: หน้าขาย/ซื้อเข้า ขยายกล่องบิลเป็น 560 จุด แก้ข้อความล้นกล่อง', 'v3.0.1: รายการสินค้าบนหน้าจอพอดี 1 บรรทัดเหมือนสลิป, ป้อนกระดาษท้ายสลิปตั้งต้น 5 บรรทัด', 'v3.0: ใบแจ้งยอดรวม (เก็บบิลเดิม ชำระแล้วอัปเดตทุกบิล ไม่นับยอดซ้ำ ยกเลิกการรวมได้)', 'v3.0: สลิป — ตัดกระดาษโดย RawBT/แอป ปรับบรรทัดป้อนกระดาษ ลดขอบบน ชื่อสินค้า 1 บรรทัด', 'v2.x: พิมพ์ทันทีผ่าน RawBT แชร์เป็นรูป โลโก้ พักบิลอัตโนมัติ'];
+const VER = '3.1.0';
+const CHANGES = ['v3.1.0: ประกาศท้ายบิล (เลือกเป็นบางบิล, ตัวช่วยปรับราคา), ตั้งค่า Line ID ที่สลิป, ลูกค้าประจำที่ออกบิลแล้วย้ายลงล่างสุดวนเป็นรอบ', 'v3.0.2: หน้าขาย/ซื้อเข้า ขยายกล่องบิลเป็น 560 จุด แก้ข้อความล้นกล่อง', 'v3.0.1: รายการสินค้าบนหน้าจอพอดี 1 บรรทัดเหมือนสลิป, ป้อนกระดาษท้ายสลิปตั้งต้น 5 บรรทัด', 'v3.0: ใบแจ้งยอดรวม (เก็บบิลเดิม ชำระแล้วอัปเดตทุกบิล ไม่นับยอดซ้ำ ยกเลิกการรวมได้)', 'v3.0: สลิป — ตัดกระดาษโดย RawBT/แอป ปรับบรรทัดป้อนกระดาษ ลดขอบบน ชื่อสินค้า 1 บรรทัด', 'v2.x: พิมพ์ทันทีผ่าน RawBT แชร์เป็นรูป โลโก้ พักบิลอัตโนมัติ'];
 const K = 'mypos2';
-let db = Object.assign({ customers: [], products: [], suppliers: [], staff: [], bills: [], parked: [], purchases: [], tx: [], exps: [], expItems: [] }, JSON.parse(localStorage.getItem(K) || '{}'));
+let db = Object.assign({ customers: [], products: [], suppliers: [], staff: [], bills: [], parked: [], purchases: [], tx: [], exps: [], expItems: [], notices: [], lineId: '' }, JSON.parse(localStorage.getItem(K) || '{}'));
 const save = () => localStorage.setItem(K, JSON.stringify(db));
 const isMG = b => Array.isArray(b.mergedIds);
 const kids = b => b.mergedIds.map(id => db.bills.find(x => x.id == id)).filter(Boolean);
 const tops = () => db.bills.filter(b => !b.mergedInto);
+const todayS = () => ymd(new Date());
+const liveNotices = () => db.notices.filter(x => x.on !== false && (!x.end || x.end >= todayS()));
+const noticesOf = b => isMG(b) ? [...new Set(kids(b).flatMap(k => k.notices || []))] : (b.notices || []);
+let selN = [];
+const selTexts = () => liveNotices().filter(x => selN.includes(x.id)).map(x => x.text);
 const rTitle = b => isMG(b) ? 'ใบแจ้งยอดรวม' : 'ใบเสร็จรับเงิน';
 // ย้ายข้อมูลบิลรวมแบบเก่า (บิลเดิมฝังอยู่ข้างใน) เป็นแบบใหม่ (บิลเดิมเป็นบิลจริง ติดตรา mergedInto)
 (function migrate() {
@@ -188,8 +193,11 @@ function billBlocks(b) {
       L.push({ t: 'lr', l: 'รวม', r: '฿' + fm(sum(ms)), sz: 28, b: 1 }, { t: 'rule', w: 1 });
     });
   }
-  L.push({ t: 'rule' }, { t: 'lr', l: 'รวมทั้งสิ้น', r: '฿' + fm(b.total), sz: 44, b: 1 }, { t: 'gap', h: 8 },
-    { t: 'c', x: 'Line: @yourstore', sz: 24 }, { t: 'c', x: '" THANK YOU "', sz: 26, b: 1 }, { t: 'gap', h: 16 });
+  L.push({ t: 'rule' }, { t: 'lr', l: 'รวมทั้งสิ้น', r: '฿' + fm(b.total), sz: 44, b: 1 }, { t: 'gap', h: 8 });
+  const ns = noticesOf(b);
+  if (ns.length) { L.push({ t: 'rule', w: 1 }, { t: 'c', x: '** ประกาศ **', sz: 22, b: 1 }); ns.forEach(x => L.push({ t: 'l', x, sz: 22, b: 1 })); L.push({ t: 'rule', w: 1 }); }
+  if (db.lineId) L.push({ t: 'c', x: 'Line: ' + db.lineId, sz: 24 });
+  L.push({ t: 'c', x: '" THANK YOU "', sz: 26, b: 1 }, { t: 'gap', h: 16 });
   return L;
 }
 function sumBlocks() {
@@ -239,13 +247,40 @@ function setFeed(v) { localStorage.setItem('pf_' + CUT, v); toast('บันท�
 function settings() {
   const fo = Array.from({ length: 21 }, (_, i) => `<option value="${i}" ${feedN() === i ? 'selected' : ''}>${i}</option>`).join('');
   modal(`<div class="flex justify-between mb-3"><b class="text-xl">ตั้งค่า (v${VER})</b><button onclick="closeM()">✕</button></div>
-<label class="block font-bold mb-1">วิธีพิมพ์</label><select class="inp" onchange="setPM(this.value)"><option value="rawbt" ${PM === 'rawbt' ? 'selected' : ''}>ส่งตรงไป RawBT (พิมพ์ทันที)</option><option value="system" ${PM === 'system' ? 'selected' : ''}>ผ่านหน้าต่างพิมพ์ของ Android (สำรอง)</option></select>
+<label class="block font-bold mb-1">ID LINE ที่แสดงบนสลิป (เว้นว่าง = ไม่แสดง)</label><input class="inp" value="${esc(db.lineId)}" onchange="db.lineId=this.value.trim();save();toast('บันทึกแล้ว')">
+<div class="flex justify-between items-center mt-3 mb-1"><b>📢 ประกาศท้ายบิล</b><div class="flex gap-1"><button class="btn" onclick="priceNotice()">💲 ปรับราคา</button><button class="btn g" onclick="noticeForm()">+ เพิ่ม</button></div></div>
+${db.notices.map(x => `<div class="border rounded-xl p-2 mb-1 flex gap-2 items-center"><input type="checkbox" class="w-6 h-6" ${x.on !== false ? 'checked' : ''} onchange="togNotice('${x.id}')"><button class="flex-1 text-left" onclick="noticeForm('${x.id}')"><div class="font-bold">${esc(x.text)}</div><div class="text-xs text-slate-500">${x.end ? 'แสดงถึง ' + new Date(x.end).toLocaleDateString('th-TH') + (x.end < todayS() ? ' (หมดอายุ)' : '') : 'ไม่มีวันหมด'}</div></button><button class="text-rose-600" onclick="delNotice('${x.id}')">🗑</button></div>`).join('') || '<p class="text-sm text-slate-400">ยังไม่มีประกาศ</p>'}
+<label class="block font-bold mt-3 mb-1">วิธีพิมพ์</label><select class="inp" onchange="setPM(this.value)"><option value="rawbt" ${PM === 'rawbt' ? 'selected' : ''}>ส่งตรงไป RawBT (พิมพ์ทันที)</option><option value="system" ${PM === 'system' ? 'selected' : ''}>ผ่านหน้าต่างพิมพ์ของ Android (สำรอง)</option></select>
 <label class="block font-bold mt-3 mb-1">ตัดกระดาษโดย</label><select class="inp" onchange="setCut(this.value)"><option value="rawbt" ${CUT === 'rawbt' ? 'selected' : ''}>RawBT (ตัดครั้งเดียว)</option><option value="app" ${CUT === 'app' ? 'selected' : ''}>แอปนี้ (ถ้า RawBT ปิดตัดอัตโนมัติ)</option></select>
 <label class="block font-bold mt-3 mb-1">ป้อนกระดาษท้ายสลิป (บรรทัด)</label><select class="inp" onchange="setFeed(this.value)">${fo}</select>
 <p class="text-sm text-slate-500 mt-1">1 บรรทัด ≈ 3 มม. ถ้าท้ายสลิปโดนตัดขาดให้เพิ่ม ถ้าเว้นท้ายมากไปให้ลด</p>
 <div class="grid grid-cols-2 gap-2 mt-3"><button class="btn p" onclick="testPrint()">ทดสอบพิมพ์</button><button class="btn" onclick="openDrawer()">ทดสอบเปิดลิ้นชัก</button></div>
 <p class="text-sm text-slate-500 mt-3">ต้องติดตั้งแอป RawBT และตั้งเครื่องพิมพ์ในแอปให้พิมพ์ได้ก่อน ถ้าโหมดแรกไม่ทำงานให้เลือกโหมดสำรอง (โหมดสำรองเปิดลิ้นชักไม่ได้)</p>
 <div class="mt-3 text-xs text-slate-500">${CHANGES.map(c => '• ' + esc(c)).join('<br>')}</div>`);
+}
+
+// ===== ประกาศท้ายบิล =====
+function togNotice(id) { const x = db.notices.find(v => v.id == id); x.on = x.on === false; save(); }
+function delNotice(id) { if (confirm('ลบประกาศนี้?')) { db.notices = db.notices.filter(v => v.id != id); selN = selN.filter(v => v != id); save(); settings(); } }
+function noticeForm(id, text, end) {
+  const x = db.notices.find(v => v.id == id) || {};
+  form(id ? 'แก้ประกาศ' : 'เพิ่มประกาศ', [{ k: 't', l: 'ข้อความ (ไม่เกิน 100 ตัวอักษร)', v: x.text ?? text ?? '' }, { k: 'e', l: 'แสดงถึงวันที่ (เว้นว่าง = ไม่มีวันหมด)', t: 'date', v: x.end ?? end ?? '' }],
+    v => { if (!v.t) return toast('กรอกข้อความ'); if (v.t.length > 100) return toast('ยาวเกิน 100 ตัวอักษร'); if (id) { x.text = v.t; x.end = v.e; } else db.notices.push({ id: uid(), text: v.t, on: true, end: v.e }); save(); closeM(); settings(); });
+}
+function priceNotice() {
+  if (!db.products.length) return toast('ยังไม่มีปุ่มสินค้า');
+  modal(`<div class="flex justify-between mb-2"><b class="text-xl">เลือกสินค้าที่ปรับราคา</b><button onclick="settings()">✕</button></div><div class="grid grid-cols-3 gap-2">${db.products.map(p => `<button class="btn p" onclick="priceNotice2('${p.id}')">${esc(p.name)}</button>`).join('')}</div>`);
+}
+function priceNotice2(pid) {
+  const p = db.products.find(x => x.id == pid);
+  form('ปรับราคา ' + p.name, [{ k: 'p', l: 'ราคาใหม่ (บาท)', t: 'number' }, { k: 'd', l: 'มีผลตั้งแต่วันที่', t: 'date', v: todayS() }],
+    v => { const pr = n(v.p); if (pr <= 0 || !v.d) return toast('กรอกราคาและวันที่'); const u = p.type === 'kg' ? 'กก.' : 'หน่วย';
+      noticeForm(null, `ปรับราคา ${p.name} เป็น ${pr} บาท/${u} ตั้งแต่ ${new Date(v.d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}`, v.d); });
+}
+function togN(id) { selN = selN.includes(id) ? selN.filter(v => v != id) : [...selN, id]; noticePick(); }
+function noticePick() {
+  const L = liveNotices();
+  modal(`<div class="flex justify-between mb-2"><b class="text-xl">📢 เลือกประกาศท้ายบิลนี้</b><button onclick="closeM();render()">✕</button></div>${L.map(x => `<button class="w-full text-left border-2 rounded-xl p-3 mb-2 flex gap-3 items-center ${selN.includes(x.id) ? 'border-indigo-600 bg-indigo-50' : ''}" onclick="togN('${x.id}')"><span class="text-2xl">${selN.includes(x.id) ? '☑' : '☐'}</span><span class="font-bold text-lg">${esc(x.text)}</span></button>`).join('') || '<p class="text-slate-400 py-4">ยังไม่มีประกาศที่เปิดใช้ ไปเพิ่มที่ ⚙️ ตั้งค่า</p>'}<button class="btn p w-full py-3 mt-2" onclick="closeM();render()">ตกลง</button>`);
 }
 
 // ===== ใบเสร็จ =====
@@ -268,21 +303,31 @@ function body(b) {
   const g = {}; ks.forEach(m => { const k = split === 'day' ? m.date.slice(0, 10) : m.id; (g[k] = g[k] || []).push(m); });
   return Object.entries(g).map(([k, ms]) => `<div class="border-t border-dashed border-black pt-1 mt-1"><div class="font-bold text-xs">${split === 'day' ? 'วันที่ ' + new Date(k).toLocaleDateString('th-TH') : 'บิล ' + k + ' (' + fd(ms[0].date) + ')'}</div>${ms.map(m => m.items.map(line).join('')).join('')}<div class="text-right text-sm font-bold">รวม ฿${fm(sum(ms))}</div></div>`).join('');
 }
-const receipt = (b, pre) => `<div class="receipt">${HEAD}<div class="font-extrabold text-center border-y-2 border-black my-2 py-1">${rTitle(b)}</div><div class="text-xs mb-1">${b.id ? 'เลขที่: ' + b.id + '<br>' : ''}เวลา: ${fd(b.date)}<br>ลูกค้า: <b>${esc(b.customer)}</b>${b.status ? '<br>สถานะ: ' + stat(b) : ''}${isMG(b) ? '<br>รวมจาก ' + kids(b).length + ' บิล' : ''}</div><div class="border-t-2 border-black pt-1 space-y-1">${pre || body(b)}</div><div class="border-t-2 border-black mt-2 pt-1 flex justify-between text-xl font-black"><span>รวมทั้งสิ้น</span><span>฿${fm(b.total)}</span></div><div class="text-center text-xs mt-3">Line: @yourstore<br><b>" THANK YOU "</b></div></div>`;
+const noticeHtml = b => { const ns = noticesOf(b); return ns.length ? `<div class="border-t border-black mt-2 pt-1 text-center font-bold text-xs">** ประกาศ **</div>${ns.map(x => `<div class="font-bold" style="font-size:15px">${esc(x)}</div>`).join('')}<div class="border-t border-black mt-1"></div>` : ''; };
+const receipt = (b, pre) => `<div class="receipt">${HEAD}<div class="font-extrabold text-center border-y-2 border-black my-2 py-1">${rTitle(b)}</div><div class="text-xs mb-1">${b.id ? 'เลขที่: ' + b.id + '<br>' : ''}เวลา: ${fd(b.date)}<br>ลูกค้า: <b>${esc(b.customer)}</b>${b.status ? '<br>สถานะ: ' + stat(b) : ''}${isMG(b) ? '<br>รวมจาก ' + kids(b).length + ' บิล' : ''}</div><div class="border-t-2 border-black pt-1 space-y-1">${pre || body(b)}</div><div class="border-t-2 border-black mt-2 pt-1 flex justify-between text-xl font-black"><span>รวมทั้งสิ้น</span><span>฿${fm(b.total)}</span></div>${noticeHtml(b)}<div class="text-center text-xs mt-3">${db.lineId ? 'Line: ' + esc(db.lineId) + '<br>' : ''}<b>" THANK YOU "</b></div></div>`;
 
 // ===== หน้าจอ =====
 const tile = (e, l, v, c) => `<button onclick="go('${v}')" class="${c} text-white rounded-2xl p-6 text-center font-extrabold text-xl shadow active:scale-95"><div class="text-4xl mb-1">${e}</div>${l}</button>`;
 const pgrid = t => `<div class="pgrid">${db.products.map(p => `<div class="pbtn" onclick="tap('${p.id}','${t}')"><button class="x" onclick="event.stopPropagation();delProd('${p.id}')">✕</button><b>${esc(p.name)}</b><small>${p.type === 'kg' ? 'ชั่งน้ำหนัก' : 'ชิ้น/ถุง'}</small></div>`).join('') || '<p class="text-slate-400">ยังไม่มีปุ่มสินค้า กด "+ สร้างปุ่มสินค้า"</p>'}</div>`;
 const txTable = (rows, showName) => `<table class="w-full text-sm">${rows.map(t => `<tr><td>${fd(t.date)}</td>${showName ? `<td>${esc(sname(t.sid))}</td>` : ''}<td>${TX[t.type]}</td><td class="text-right font-bold">฿${fm(t.amount)}</td><td class="text-xs text-slate-500">${esc(t.note || '')}</td><td><button class="text-rose-600" onclick="delTx('${t.id}')">✕</button></td></tr>`).join('') || '<tr><td class="text-slate-400">ไม่มีรายการ</td></tr>'}</table>`;
 const sname = id => (db.staff.find(s => s.id == id) || {}).name || '-';
-const nameBox = (key, label, onsel) => `<div class="card"><div class="flex justify-between mb-2"><b>${label}</b><button class="btn g" onclick="addName('${key}','ชื่อ')">+ เพิ่มรายชื่อ</button></div><div class="grid grid-cols-3 gap-2">${db[key].map((c, i) => `<div class="border rounded-xl p-2 flex gap-1 items-center"><button class="btn p flex-1" onclick="${onsel}(${i})">${esc(c)}</button><button class="text-rose-600" onclick="delName('${key}',${i})">🗑</button></div>`).join('') || '<p class="text-slate-400">ยังไม่มีรายชื่อ</p>'}</div></div>`;
+const nameBox = (key, label, onsel) => {
+  let ord = db[key].map((c, i) => i); const info = {};
+  if (key === 'customers') {
+    const last = {}; db.bills.forEach((b, r) => { if (!isMG(b) && !(b.customer in last)) last[b.customer] = { r, d: b.date }; });
+    const served = i => db[key][i] in last;
+    ord = [...ord.filter(i => !served(i)), ...ord.filter(served).sort((a, b) => last[db[key][b]].r - last[db[key][a]].r)];
+    ord.forEach(i => { const l = last[db[key][i]]; if (l) info[i] = '✓ ' + (l.d.slice(0, 10) === todayS() ? l.d.slice(11) : new Date(l.d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })); });
+  }
+  return `<div class="card"><div class="flex justify-between mb-2"><b>${label}</b><button class="btn g" onclick="addName('${key}','ชื่อ')">+ เพิ่มรายชื่อ</button></div><div class="grid grid-cols-3 gap-2">${ord.map(i => `<div class="border rounded-xl p-2 flex gap-1 items-center ${info[i] ? 'opacity-60' : ''}"><button class="btn p flex-1" onclick="${onsel}(${i})">${esc(db[key][i])}${info[i] ? `<br><small>${info[i]}</small>` : ''}</button><button class="text-rose-600" onclick="delName('${key}',${i})">🗑</button></div>`).join('') || '<p class="text-slate-400">ยังไม่มีรายชื่อ</p>'}</div></div>`;
+};
 
 const V = {
   home: () => `<div class="grid grid-cols-3 gap-4 max-w-4xl mx-auto mt-4">${tile('🛒', 'เมนูการขาย', 'cust', 'bg-indigo-600 col-span-3')}${tile('🧾', 'ประวัติบิล', 'bills', 'bg-sky-600')}${tile('📦', 'ซื้อเข้า', 'purchase', 'bg-emerald-600')}${tile('👷', 'ค่าจ้างพนักงาน', 'staff', 'bg-amber-600')}${tile('💸', 'รายจ่ายทั่วไป', 'exp', 'bg-rose-600')}${tile('📊', 'สรุปบัญชี', 'sum', 'bg-slate-700')}</div>`,
 
   cust: () => `<div class="max-w-4xl mx-auto grid gap-3"><button class="btn p text-2xl py-8" onclick="selCust(WALK)">👤 ${WALK}</button>${nameBox('customers', 'ลูกค้าประจำ', 'selReg')}</div>`,
 
-  pos: () => `<div class="flex gap-3 fill"><div class="card flex-1 min-w-0 overflow-y-auto"><div class="flex flex-wrap gap-2 items-center mb-3"><b>ลูกค้า:</b><span class="bg-indigo-100 text-indigo-900 font-bold px-3 py-1 rounded-lg">${esc(cust)}</span><button class="btn" onclick="editCust()">✏️ แก้ชื่อ</button><button class="btn" onclick="go('cust')">เปลี่ยนลูกค้า</button><button class="btn a" onclick="parkedList()">🕐 บิลที่พัก (${db.parked.length})</button><button class="btn p ml-auto" onclick="addProd()">+ สร้างปุ่มสินค้า</button></div>${pgrid('c')}</div><div class="pane w-[560px] shrink-0 flex flex-col gap-2"><div class="card flex-1 min-w-0 overflow-y-auto">${receipt({ date: nowS(), customer: cust, total: sum(cart) }, cartLines(cart, 'delCart'))}</div><div class="grid grid-cols-3 gap-2"><button class="btn r" onclick="clearCart()">ยกเลิกบิล</button><button class="btn a" onclick="park()">พักบิล</button><button class="btn g" onclick="payM()">ชำระเงิน</button></div></div></div>`,
+  pos: () => `<div class="flex gap-3 fill"><div class="card flex-1 min-w-0 overflow-y-auto"><div class="flex flex-wrap gap-2 items-center mb-3"><b>ลูกค้า:</b><span class="bg-indigo-100 text-indigo-900 font-bold px-3 py-1 rounded-lg">${esc(cust)}</span><button class="btn" onclick="editCust()">✏️ แก้ชื่อ</button><button class="btn" onclick="go('cust')">เปลี่ยนลูกค้า</button><button class="btn a" onclick="parkedList()">🕐 บิลที่พัก (${db.parked.length})</button><button class="btn ${selN.length ? 'p' : ''}" onclick="noticePick()">📢 ประกาศ (${selTexts().length})</button><button class="btn p ml-auto" onclick="addProd()">+ สร้างปุ่มสินค้า</button></div>${pgrid('c')}</div><div class="pane w-[560px] shrink-0 flex flex-col gap-2"><div class="card flex-1 min-w-0 overflow-y-auto">${receipt({ date: nowS(), customer: cust, total: sum(cart), notices: selTexts() }, cartLines(cart, 'delCart'))}</div><div class="grid grid-cols-3 gap-2"><button class="btn r" onclick="clearCart()">ยกเลิกบิล</button><button class="btn a" onclick="park()">พักบิล</button><button class="btn g" onclick="payM()">ชำระเงิน</button></div></div></div>`,
 
   bills: () => {
     const L = (F.k ? db.bills : tops()).filter(b => per(b.date, F.p) && (F.s === 'all' || b.status === F.s) && (F.c === 'all' || b.customer === F.c));
@@ -316,7 +361,7 @@ function render() { const v = $('#ver'); if (v) v.textContent = 'v' + VER; $('#h
 function go(v) { if (view === 'pos' && v !== 'pos' && cart.length) { parkCart(); toast('พักบิลอัตโนมัติแล้ว'); } view = v; render(); }
 
 // ===== ลูกค้า / รายชื่อ =====
-function selCust(name) { cust = name; go('pos'); }
+function selCust(name) { selN = []; cust = name; go('pos'); }
 function selReg(i) { selCust(db.customers[i]); }
 function editCust() { form('แก้ชื่อลูกค้าในบิลนี้', [{ k: 'n', l: 'ชื่อลูกค้า', v: cust === WALK ? '' : cust }], v => { cust = v.n || WALK; closeM(); render(); }); }
 function addName(key, l) { form('เพิ่มรายชื่อ', [{ k: 'n', l }], v => { if (v.n && !db[key].includes(v.n)) { db[key].push(v.n); save(); } closeM(); render(); }); }
@@ -342,7 +387,7 @@ function tap(id, t) {
 
 // ===== ขาย =====
 function delCart(id) { cart = cart.filter(i => i.id != id); render(); }
-function clearCart() { if (cart.length && confirm('ยกเลิกบิลนี้?')) { cart = []; render(); } }
+function clearCart() { if (cart.length && confirm('ยกเลิกบิลนี้?')) { cart = []; selN = []; render(); } }
 function parkCart() { db.parked.push({ id: uid(), customer: cust, items: cart, time: nowS() }); save(); cart = []; }
 function park() { if (!cart.length) return alert('ไม่มีรายการให้พัก'); parkCart(); toast('พักบิลแล้ว'); render(); }
 function parkedList() {
@@ -356,7 +401,8 @@ function payM() {
 }
 function sale(st, m) {
   const b = { id: 'INV-' + uid().slice(-6), date: nowS(), customer: cust, items: cart, total: sum(cart), status: st, pay: m || null, paidAt: st === 'paid' ? nowS() : null };
-  db.bills.unshift(b); save(); cart = []; freshId = b.id; closeM(); render();
+  const nt = selTexts(); if (nt.length) b.notices = nt;
+  db.bills.unshift(b); save(); cart = []; selN = []; freshId = b.id; closeM(); render();
   if (m === 'cash') openDrawer();
   openBill(b.id);
 }
