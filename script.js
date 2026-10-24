@@ -1,12 +1,18 @@
 // ===== ข้อมูล (เก็บใน localStorage) =====
-const VER = '3.1.0';
-const CHANGES = ['v3.1.0: ประกาศท้ายบิล (เลือกเป็นบางบิล, ตัวช่วยปรับราคา), ตั้งค่า Line ID ที่สลิป, ลูกค้าประจำที่ออกบิลแล้วย้ายลงล่างสุดวนเป็นรอบ', 'v3.0.2: หน้าขาย/ซื้อเข้า ขยายกล่องบิลเป็น 560 จุด แก้ข้อความล้นกล่อง', 'v3.0.1: รายการสินค้าบนหน้าจอพอดี 1 บรรทัดเหมือนสลิป, ป้อนกระดาษท้ายสลิปตั้งต้น 5 บรรทัด', 'v3.0: ใบแจ้งยอดรวม (เก็บบิลเดิม ชำระแล้วอัปเดตทุกบิล ไม่นับยอดซ้ำ ยกเลิกการรวมได้)', 'v3.0: สลิป — ตัดกระดาษโดย RawBT/แอป ปรับบรรทัดป้อนกระดาษ ลดขอบบน ชื่อสินค้า 1 บรรทัด', 'v2.x: พิมพ์ทันทีผ่าน RawBT แชร์เป็นรูป โลโก้ พักบิลอัตโนมัติ'];
+const VER = '3.1.2';
+const CHANGES = ['v3.1.2: ชื่อลูกค้าที่ออกบิลแล้วจางจนถึงเวลารีเซ็ต (ตั้งเวลาได้ ค่าตั้งต้น 06:00) และปุ่มรีเซ็ตทันที', 'v3.1.1: ปุ่มบิลค้างจ่ายในหน้าหลัก (แสดงจำนวนและยอดรวม)', 'v3.1.0: ประกาศท้ายบิล (เลือกเป็นบางบิล, ตัวช่วยปรับราคา), ตั้งค่า Line ID ที่สลิป, ลูกค้าประจำที่ออกบิลแล้วย้ายลงล่างสุดวนเป็นรอบ', 'v3.0.2: หน้าขาย/ซื้อเข้า ขยายกล่องบิลเป็น 560 จุด แก้ข้อความล้นกล่อง', 'v3.0.1: รายการสินค้าบนหน้าจอพอดี 1 บรรทัดเหมือนสลิป, ป้อนกระดาษท้ายสลิปตั้งต้น 5 บรรทัด', 'v3.0: ใบแจ้งยอดรวม (เก็บบิลเดิม ชำระแล้วอัปเดตทุกบิล ไม่นับยอดซ้ำ ยกเลิกการรวมได้)', 'v3.0: สลิป — ตัดกระดาษโดย RawBT/แอป ปรับบรรทัดป้อนกระดาษ ลดขอบบน ชื่อสินค้า 1 บรรทัด', 'v2.x: พิมพ์ทันทีผ่าน RawBT แชร์เป็นรูป โลโก้ พักบิลอัตโนมัติ'];
 const K = 'mypos2';
-let db = Object.assign({ customers: [], products: [], suppliers: [], staff: [], bills: [], parked: [], purchases: [], tx: [], exps: [], expItems: [], notices: [], lineId: '' }, JSON.parse(localStorage.getItem(K) || '{}'));
+let db = Object.assign({ customers: [], products: [], suppliers: [], staff: [], bills: [], parked: [], purchases: [], tx: [], exps: [], expItems: [], notices: [], lineId: '', resetHour: 6, resetAt: '' }, JSON.parse(localStorage.getItem(K) || '{}'));
 const save = () => localStorage.setItem(K, JSON.stringify(db));
 const isMG = b => Array.isArray(b.mergedIds);
 const kids = b => b.mergedIds.map(id => db.bills.find(x => x.id == id)).filter(Boolean);
 const tops = () => db.bills.filter(b => !b.mergedInto);
+const resetThr = () => {
+  const d = new Date(); const h = +db.resetHour || 0;
+  if (d.getHours() < h) d.setDate(d.getDate() - 1);
+  const sch = ymd(d) + 'T' + pad(h) + ':00';
+  return db.resetAt && db.resetAt > sch ? db.resetAt : sch;
+};
 const todayS = () => ymd(new Date());
 const liveNotices = () => db.notices.filter(x => x.on !== false && (!x.end || x.end >= todayS()));
 const noticesOf = b => isMG(b) ? [...new Set(kids(b).flatMap(k => k.notices || []))] : (b.notices || []);
@@ -250,6 +256,7 @@ function settings() {
 <label class="block font-bold mb-1">ID LINE ที่แสดงบนสลิป (เว้นว่าง = ไม่แสดง)</label><input class="inp" value="${esc(db.lineId)}" onchange="db.lineId=this.value.trim();save();toast('บันทึกแล้ว')">
 <div class="flex justify-between items-center mt-3 mb-1"><b>📢 ประกาศท้ายบิล</b><div class="flex gap-1"><button class="btn" onclick="priceNotice()">💲 ปรับราคา</button><button class="btn g" onclick="noticeForm()">+ เพิ่ม</button></div></div>
 ${db.notices.map(x => `<div class="border rounded-xl p-2 mb-1 flex gap-2 items-center"><input type="checkbox" class="w-6 h-6" ${x.on !== false ? 'checked' : ''} onchange="togNotice('${x.id}')"><button class="flex-1 text-left" onclick="noticeForm('${x.id}')"><div class="font-bold">${esc(x.text)}</div><div class="text-xs text-slate-500">${x.end ? 'แสดงถึง ' + new Date(x.end).toLocaleDateString('th-TH') + (x.end < todayS() ? ' (หมดอายุ)' : '') : 'ไม่มีวันหมด'}</div></button><button class="text-rose-600" onclick="delNotice('${x.id}')">🗑</button></div>`).join('') || '<p class="text-sm text-slate-400">ยังไม่มีประกาศ</p>'}
+<label class="block font-bold mt-3 mb-1">รีเซ็ตสีชื่อลูกค้าประจำ (ที่ออกบิลแล้ว) ทุกวันเวลา</label><div class="flex gap-2"><select class="inp" onchange="db.resetHour=+this.value;save();toast('บันทึกแล้ว')">${Array.from({ length: 13 }, (_, h) => `<option value="${h}" ${(+db.resetHour || 0) === h ? 'selected' : ''}>${pad(h)}:00</option>`).join('')}</select><button class="btn a shrink-0" onclick="resetNow()">รีเซ็ตทันที</button></div>
 <label class="block font-bold mt-3 mb-1">วิธีพิมพ์</label><select class="inp" onchange="setPM(this.value)"><option value="rawbt" ${PM === 'rawbt' ? 'selected' : ''}>ส่งตรงไป RawBT (พิมพ์ทันที)</option><option value="system" ${PM === 'system' ? 'selected' : ''}>ผ่านหน้าต่างพิมพ์ของ Android (สำรอง)</option></select>
 <label class="block font-bold mt-3 mb-1">ตัดกระดาษโดย</label><select class="inp" onchange="setCut(this.value)"><option value="rawbt" ${CUT === 'rawbt' ? 'selected' : ''}>RawBT (ตัดครั้งเดียว)</option><option value="app" ${CUT === 'app' ? 'selected' : ''}>แอปนี้ (ถ้า RawBT ปิดตัดอัตโนมัติ)</option></select>
 <label class="block font-bold mt-3 mb-1">ป้อนกระดาษท้ายสลิป (บรรทัด)</label><select class="inp" onchange="setFeed(this.value)">${fo}</select>
@@ -259,6 +266,7 @@ ${db.notices.map(x => `<div class="border rounded-xl p-2 mb-1 flex gap-2 items-c
 <div class="mt-3 text-xs text-slate-500">${CHANGES.map(c => '• ' + esc(c)).join('<br>')}</div>`);
 }
 
+function resetNow() { if (confirm('รีเซ็ตสีชื่อลูกค้าประจำทั้งหมดตอนนี้?')) { db.resetAt = nowS(); save(); toast('รีเซ็ตแล้ว'); } }
 // ===== ประกาศท้ายบิล =====
 function togNotice(id) { const x = db.notices.find(v => v.id == id); x.on = x.on === false; save(); }
 function delNotice(id) { if (confirm('ลบประกาศนี้?')) { db.notices = db.notices.filter(v => v.id != id); selN = selN.filter(v => v != id); save(); settings(); } }
@@ -314,16 +322,16 @@ const sname = id => (db.staff.find(s => s.id == id) || {}).name || '-';
 const nameBox = (key, label, onsel) => {
   let ord = db[key].map((c, i) => i); const info = {};
   if (key === 'customers') {
-    const last = {}; db.bills.forEach((b, r) => { if (!isMG(b) && !(b.customer in last)) last[b.customer] = { r, d: b.date }; });
+    const thr = resetThr(), last = {}; db.bills.forEach((b, r) => { if (!isMG(b) && !(b.customer in last)) last[b.customer] = { r, d: b.date }; });
     const served = i => db[key][i] in last;
     ord = [...ord.filter(i => !served(i)), ...ord.filter(served).sort((a, b) => last[db[key][b]].r - last[db[key][a]].r)];
-    ord.forEach(i => { const l = last[db[key][i]]; if (l) info[i] = '✓ ' + (l.d.slice(0, 10) === todayS() ? l.d.slice(11) : new Date(l.d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })); });
+    ord.forEach(i => { const l = last[db[key][i]]; if (l && l.d > thr) info[i] = '✓ ' + (l.d.slice(0, 10) === todayS() ? l.d.slice(11) : new Date(l.d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })); });
   }
   return `<div class="card"><div class="flex justify-between mb-2"><b>${label}</b><button class="btn g" onclick="addName('${key}','ชื่อ')">+ เพิ่มรายชื่อ</button></div><div class="grid grid-cols-3 gap-2">${ord.map(i => `<div class="border rounded-xl p-2 flex gap-1 items-center ${info[i] ? 'opacity-60' : ''}"><button class="btn p flex-1" onclick="${onsel}(${i})">${esc(db[key][i])}${info[i] ? `<br><small>${info[i]}</small>` : ''}</button><button class="text-rose-600" onclick="delName('${key}',${i})">🗑</button></div>`).join('') || '<p class="text-slate-400">ยังไม่มีรายชื่อ</p>'}</div></div>`;
 };
 
 const V = {
-  home: () => `<div class="grid grid-cols-3 gap-4 max-w-4xl mx-auto mt-4">${tile('🛒', 'เมนูการขาย', 'cust', 'bg-indigo-600 col-span-3')}${tile('🧾', 'ประวัติบิล', 'bills', 'bg-sky-600')}${tile('📦', 'ซื้อเข้า', 'purchase', 'bg-emerald-600')}${tile('👷', 'ค่าจ้างพนักงาน', 'staff', 'bg-amber-600')}${tile('💸', 'รายจ่ายทั่วไป', 'exp', 'bg-rose-600')}${tile('📊', 'สรุปบัญชี', 'sum', 'bg-slate-700')}</div>`,
+  home: () => `<div class="grid grid-cols-3 gap-4 max-w-4xl mx-auto mt-4">${tile('🛒', 'เมนูการขาย', 'cust', 'bg-indigo-600 col-span-3')}${(() => { const u = tops().filter(b => b.status === 'unpaid'); return `<button onclick="showUnpaid()" class="bg-orange-500 text-white rounded-2xl p-4 text-center font-extrabold text-xl shadow active:scale-95 col-span-3">💰 บิลค้างจ่าย ${u.length ? u.length + ' บิล รวม ฿' + fm(sum(u)) : '(ไม่มี)'}</button>`; })()}${tile('🧾', 'ประวัติบิล', 'bills', 'bg-sky-600')}${tile('📦', 'ซื้อเข้า', 'purchase', 'bg-emerald-600')}${tile('👷', 'ค่าจ้างพนักงาน', 'staff', 'bg-amber-600')}${tile('💸', 'รายจ่ายทั่วไป', 'exp', 'bg-rose-600')}${tile('📊', 'สรุปบัญชี', 'sum', 'bg-slate-700')}</div>`,
 
   cust: () => `<div class="max-w-4xl mx-auto grid gap-3"><button class="btn p text-2xl py-8" onclick="selCust(WALK)">👤 ${WALK}</button>${nameBox('customers', 'ลูกค้าประจำ', 'selReg')}</div>`,
 
@@ -332,7 +340,7 @@ const V = {
   bills: () => {
     const L = (F.k ? db.bills : tops()).filter(b => per(b.date, F.p) && (F.s === 'all' || b.status === F.s) && (F.c === 'all' || b.customer === F.c));
     const cs = [['all', 'ลูกค้าทั้งหมด'], ...[...new Set(tops().map(b => b.customer))].map(c => [c, c])];
-    return `<div class="card"><div class="flex flex-wrap gap-2 items-center mb-3">${selH(PO, F.p, "F.p=this.value;render()")}${selH(cs, F.c, "F.c=this.value;render()")}${selH([['all', 'ทุกสถานะ'], ['unpaid', 'ค้างชำระ'], ['paid', 'ชำระแล้ว']], F.s, "F.s=this.value;render()")}<label class="flex items-center gap-1 text-sm ml-auto"><input type="checkbox" ${F.k ? 'checked' : ''} onchange="F.k=this.checked;render()">แสดงบิลที่รวมแล้ว</label><button class="btn p" onclick="mergeSel()">รวมบิลที่เลือก</button><button class="btn r" onclick="cancelSel()">ยกเลิกที่เลือก</button></div><table class="w-full text-sm"><tr class="font-bold"><td></td><td>เลขที่</td><td>วันที่</td><td>ลูกค้า</td><td class="text-right">ยอดรวม</td><td>สถานะ</td><td></td></tr>${L.map(b => `<tr><td>${b.mergedInto ? '' : `<input type="checkbox" class="bc" value="${b.id}">`}</td><td class="font-bold">${b.id}</td><td class="text-xs">${fd(b.date)}</td><td>${esc(b.customer)}${isMG(b) ? ' <span class="text-xs bg-indigo-100 px-1 rounded">ใบแจ้งยอดรวม</span>' : ''}${b.mergedInto ? ' <span class="text-xs bg-slate-200 px-1 rounded">รวมแล้วใน ' + b.mergedInto + '</span>' : ''}</td><td class="text-right font-black">฿${fm(b.total)}</td><td><span class="px-2 py-0.5 rounded-full text-xs font-bold ${b.status === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${stat(b)}</span></td><td><button class="btn" onclick="openBill('${b.id}')">เปิดดู</button></td></tr>`).join('') || '<tr><td colspan="7" class="text-center text-slate-400 p-6">ไม่พบบิล</td></tr>'}</table></div>`;
+    return `<div class="card"><div class="flex flex-wrap gap-2 items-center mb-3">${selH(PO, F.p, "F.p=this.value;render()")}${selH(cs, F.c, "F.c=this.value;render()")}${selH([['all', 'ทุกสถานะ'], ['unpaid', 'ค้างชำระ'], ['paid', 'ชำระแล้ว']], F.s, "F.s=this.value;render()")}<label class="flex items-center gap-1 text-sm ml-auto"><input type="checkbox" ${F.k ? 'checked' : ''} onchange="F.k=this.checked;render()">แสดงบิลที่รวมแล้ว</label><button class="btn p" onclick="mergeSel()">รวมบิลที่เลือก</button><button class="btn r" onclick="cancelSel()">ยกเลิกที่เลือก</button></div>${F.s === 'unpaid' ? `<div class="bg-orange-100 text-orange-900 font-black text-xl rounded-xl p-2 mb-2">ค้างจ่ายรวม ${L.filter(x => !x.mergedInto).length} บิล ฿${fm(sum(L.filter(x => !x.mergedInto)))}</div>` : ''}<table class="w-full text-sm"><tr class="font-bold"><td></td><td>เลขที่</td><td>วันที่</td><td>ลูกค้า</td><td class="text-right">ยอดรวม</td><td>สถานะ</td><td></td></tr>${L.map(b => `<tr><td>${b.mergedInto ? '' : `<input type="checkbox" class="bc" value="${b.id}">`}</td><td class="font-bold">${b.id}</td><td class="text-xs">${fd(b.date)}</td><td>${esc(b.customer)}${isMG(b) ? ' <span class="text-xs bg-indigo-100 px-1 rounded">ใบแจ้งยอดรวม</span>' : ''}${b.mergedInto ? ' <span class="text-xs bg-slate-200 px-1 rounded">รวมแล้วใน ' + b.mergedInto + '</span>' : ''}</td><td class="text-right font-black">฿${fm(b.total)}</td><td><span class="px-2 py-0.5 rounded-full text-xs font-bold ${b.status === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${stat(b)}</span></td><td><button class="btn" onclick="openBill('${b.id}')">เปิดดู</button></td></tr>`).join('') || '<tr><td colspan="7" class="text-center text-slate-400 p-6">ไม่พบบิล</td></tr>'}</table></div>`;
   },
 
   purchase: () => `<div class="flex gap-3 fill"><div class="card flex-1 min-w-0 overflow-y-auto"><div class="flex flex-wrap gap-2 items-center mb-3"><b>ซื้อจาก:</b>${selH([['', '-- เลือกผู้ขาย --'], ...db.suppliers.map(s => [s, s])], sup, "sup=this.value;render()")}<button class="btn g" onclick="addName('suppliers','ชื่อผู้ขาย')">+ ผู้ขาย</button><button class="btn r" onclick="delSup()">ลบผู้ขาย</button><button class="btn p ml-auto" onclick="addProd()">+ สร้างปุ่มสินค้า</button></div>${pgrid('p')}</div><div class="pane w-[560px] shrink-0 flex flex-col gap-2 overflow-y-auto"><div class="card"><b>รายการซื้อเข้า (${esc(sup || 'ยังไม่เลือกผู้ขาย')})</b><div class="space-y-1 my-2">${cartLines(pcart, 'delP')}</div><div class="flex justify-between font-black text-lg border-t pt-1"><span>รวม</span><span>฿${fm(sum(pcart))}</span></div><button class="btn g w-full mt-2" onclick="savePur()">ยืนยัน (ค้างจ่าย)</button></div><div class="card space-y-2"><b>ประวัติซื้อเข้า</b>${db.purchases.map(p => `<div class="border rounded-xl p-2 text-sm"><div class="flex justify-between"><b>${esc(p.supplier)}</b><span class="text-xs">${fd(p.date)}</span></div><div class="text-xs text-slate-500">${p.items.map(i => esc(i.name) + ' ' + i.qty).join(', ')}</div><div class="flex justify-between"><b>฿${fm(p.total)}</b><b class="${p.status === 'paid' ? 'text-emerald-600' : 'text-amber-600'}">${p.status === 'paid' ? 'จ่ายแล้ว (' + PAY[p.pay] + ')' : 'ค้างจ่าย'}</b></div><div class="flex gap-1 mt-1">${p.status === 'paid' ? '' : `<button class="btn g" onclick="choosePay('p','${p.id}')">เปลี่ยนเป็นจ่ายแล้ว</button>`}<button class="btn r" onclick="delPur('${p.id}')">ลบ</button></div></div>`).join('') || '<p class="text-slate-400 text-sm">ยังไม่มีรายการ</p>'}</div></div></div>`,
@@ -358,6 +366,7 @@ const V = {
 };
 
 function render() { const v = $('#ver'); if (v) v.textContent = 'v' + VER; $('#home').classList.toggle('hidden', view === 'home'); $('#app').innerHTML = V[view](); fitLines(); }
+function showUnpaid() { F = { p: 'all', s: 'unpaid', c: 'all', k: false }; go('bills'); }
 function go(v) { if (view === 'pos' && v !== 'pos' && cart.length) { parkCart(); toast('พักบิลอัตโนมัติแล้ว'); } view = v; render(); }
 
 // ===== ลูกค้า / รายชื่อ =====
