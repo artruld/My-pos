@@ -1,6 +1,6 @@
 // ===== ข้อมูล (เก็บใน localStorage) =====
-const VER = '3.1.2';
-const CHANGES = ['v3.1.2: ชื่อลูกค้าที่ออกบิลแล้วจางจนถึงเวลารีเซ็ต (ตั้งเวลาได้ ค่าตั้งต้น 06:00) และปุ่มรีเซ็ตทันที', 'v3.1.1: ปุ่มบิลค้างจ่ายในหน้าหลัก (แสดงจำนวนและยอดรวม)', 'v3.1.0: ประกาศท้ายบิล (เลือกเป็นบางบิล, ตัวช่วยปรับราคา), ตั้งค่า Line ID ที่สลิป, ลูกค้าประจำที่ออกบิลแล้วย้ายลงล่างสุดวนเป็นรอบ', 'v3.0.2: หน้าขาย/ซื้อเข้า ขยายกล่องบิลเป็น 560 จุด แก้ข้อความล้นกล่อง', 'v3.0.1: รายการสินค้าบนหน้าจอพอดี 1 บรรทัดเหมือนสลิป, ป้อนกระดาษท้ายสลิปตั้งต้น 5 บรรทัด', 'v3.0: ใบแจ้งยอดรวม (เก็บบิลเดิม ชำระแล้วอัปเดตทุกบิล ไม่นับยอดซ้ำ ยกเลิกการรวมได้)', 'v3.0: สลิป — ตัดกระดาษโดย RawBT/แอป ปรับบรรทัดป้อนกระดาษ ลดขอบบน ชื่อสินค้า 1 บรรทัด', 'v2.x: พิมพ์ทันทีผ่าน RawBT แชร์เป็นรูป โลโก้ พักบิลอัตโนมัติ'];
+const VER = '3.1.3';
+const CHANGES = ['v3.1.3: คีย์บอร์ดตัวเลขจริง (ซ่อนแป้นบนจอ มีปุ่มสลับ), รับเงินสดและเงินทอน, ปัดเศษลงที่ยอดบิล, ประกาศขนาด 26 กึ่งกลาง, พักบิลพร้อมประกาศ', 'v3.1.2: ชื่อลูกค้าที่ออกบิลแล้วจางจนถึงเวลารีเซ็ต (ตั้งเวลาได้ ค่าตั้งต้น 06:00) และปุ่มรีเซ็ตทันที', 'v3.1.1: ปุ่มบิลค้างจ่ายในหน้าหลัก (แสดงจำนวนและยอดรวม)', 'v3.1.0: ประกาศท้ายบิล (เลือกเป็นบางบิล, ตัวช่วยปรับราคา), ตั้งค่า Line ID ที่สลิป, ลูกค้าประจำที่ออกบิลแล้วย้ายลงล่างสุดวนเป็นรอบ', 'v3.0.2: หน้าขาย/ซื้อเข้า ขยายกล่องบิลเป็น 560 จุด แก้ข้อความล้นกล่อง', 'v3.0.1: รายการสินค้าบนหน้าจอพอดี 1 บรรทัดเหมือนสลิป, ป้อนกระดาษท้ายสลิปตั้งต้น 5 บรรทัด', 'v3.0: ใบแจ้งยอดรวม (เก็บบิลเดิม ชำระแล้วอัปเดตทุกบิล ไม่นับยอดซ้ำ ยกเลิกการรวมได้)', 'v3.0: สลิป — ตัดกระดาษโดย RawBT/แอป ปรับบรรทัดป้อนกระดาษ ลดขอบบน ชื่อสินค้า 1 บรรทัด', 'v2.x: พิมพ์ทันทีผ่าน RawBT แชร์เป็นรูป โลโก้ พักบิลอัตโนมัติ'];
 const K = 'mypos2';
 let db = Object.assign({ customers: [], products: [], suppliers: [], staff: [], bills: [], parked: [], purchases: [], tx: [], exps: [], expItems: [], notices: [], lineId: '', resetHour: 6, resetAt: '' }, JSON.parse(localStorage.getItem(K) || '{}'));
 const save = () => localStorage.setItem(K, JSON.stringify(db));
@@ -13,6 +13,8 @@ const resetThr = () => {
   const sch = ymd(d) + 'T' + pad(h) + ':00';
   return db.resetAt && db.resetAt > sch ? db.resetAt : sch;
 };
+const cartRnd = () => { const r = Math.round(sum(cart) * 100) / 100, d = r - rdn(r); return d >= 0.005 ? +d.toFixed(2) : 0; };
+const rdn = x => Math.floor(Math.round(x * 100) / 100);
 const todayS = () => ymd(new Date());
 const liveNotices = () => db.notices.filter(x => x.on !== false && (!x.end || x.end >= todayS()));
 const noticesOf = b => isMG(b) ? [...new Set(kids(b).flatMap(k => k.notices || []))] : (b.notices || []);
@@ -68,6 +70,29 @@ function modal(h) { $('#mbox').style.maxWidth = ''; $('#mbox').innerHTML = h; $(
 function closeM() { $('#modal').classList.add('hidden'); }
 function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.add('hidden'), 2500); }
 let npA = null;
+const padOn = () => { try { return localStorage.getItem('npad') === '1'; } catch (e) { return false; } };
+const padHtml = () => `<div id="npadbox" class="w-64 ${padOn() ? '' : 'hidden'}"><div class="grid grid-cols-3 gap-2 mt-2">${['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'].map(k => `<button type="button" class="numpad-btn" onclick="np('${k}')">${k}</button>`).join('')}</div><button type="button" class="btn w-full mt-2" onclick="np('C')">ล้างช่องนี้</button></div>`;
+const padBtn = () => `<button type="button" class="btn flex-1" id="npt" onclick="togPad()">${padOn() ? '⌨️ ซ่อนแป้นเลข' : '⌨️ แสดงแป้นเลข'}</button>`;
+function togPad() {
+  const on = !padOn(); try { localStorage.setItem('npad', on ? '1' : '0'); } catch (e) { }
+  $('#npadbox').classList.toggle('hidden', !on); $('#npt').textContent = on ? '⌨️ ซ่อนแป้นเลข' : '⌨️ แสดงแป้นเลข'; $('#mbox').style.maxWidth = on ? '48rem' : '';
+}
+document.addEventListener('keydown', e => {
+  if ($('#modal').classList.contains('hidden') || e.repeat) return;
+  const ok = $('#fok'); if (!ok) return;
+  if (e.key === 'Escape') { e.preventDefault(); closeM(); return; }
+  const el = document.activeElement, nps = [...document.querySelectorAll('#mbox .np')];
+  if (el && el.tagName === 'INPUT' && !el.classList.contains('np')) { if (e.key === 'Enter') { e.preventDefault(); ok.click(); } return; }
+  if (!nps.length) { if (e.key === 'Enter') { e.preventDefault(); ok.click(); } return; }
+  if (!npA || !nps.includes(npA)) setNp(nps[0]);
+  const i = nps.indexOf(npA);
+  if (/^[0-9]$/.test(e.key)) { e.preventDefault(); np(e.key); }
+  else if (e.key === '.' || e.key === ',') { e.preventDefault(); np('.'); }
+  else if (e.key === 'Backspace') { e.preventDefault(); np('⌫'); }
+  else if (e.key === 'Delete') { e.preventDefault(); np('C'); }
+  else if (e.key === 'Tab') { e.preventDefault(); setNp(nps[(i + (e.shiftKey ? nps.length - 1 : 1)) % nps.length]); }
+  else if (e.key === 'Enter') { e.preventDefault(); const nx = nps.slice(i + 1).find(x => !x.dataset.opt); if (nx) setNp(nx); else ok.click(); }
+});
 function setNp(i) { npA = i; document.querySelectorAll('#mbox .np').forEach(x => x.classList.toggle('act', x === i)); }
 function np(k) {
   if (!npA) return; let v = npA.value;
@@ -80,11 +105,11 @@ function form(title, fields, ok, extra = '') {
   const hasNum = fields.some(f => f.t === 'number');
   const fh = fields.map(f => `<label class="block text-sm font-bold text-slate-500 mt-2">${f.l}</label>` +
     (f.o ? `<select id="f_${f.k}" class="inp">${f.o.map(o => `<option value="${o[0]}">${o[1]}</option>`).join('')}</select>`
-      : f.t === 'number' ? `<input id="f_${f.k}" class="inp np" readonly inputmode="none" value="${esc(f.v ?? '')}">`
+      : f.t === 'number' ? `<input id="f_${f.k}" class="inp np" readonly inputmode="none" ${f.opt ? 'data-opt="1"' : ''} value="${esc(f.v ?? '')}">`
         : `<input id="f_${f.k}" class="inp" type="${f.t || 'text'}" value="${esc(f.v ?? '')}">`)).join('');
-  const pad = hasNum ? `<div class="w-64"><div class="grid grid-cols-3 gap-2 mt-2">${['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'].map(k => `<button type="button" class="numpad-btn" onclick="np('${k}')">${k}</button>`).join('')}</div><button type="button" class="btn w-full mt-2" onclick="np('C')">ล้างช่องนี้</button></div>` : '';
-  modal(`<h3 class="text-2xl font-bold mb-2">${esc(title)}</h3><div class="flex gap-4"><div class="flex-1">${fh}${extra}</div>${pad}</div><div class="flex gap-2 mt-4"><button class="btn flex-1" onclick="closeM()">ยกเลิก</button><button class="btn p flex-1" id="fok">ตกลง</button></div>`);
-  $('#mbox').style.maxWidth = hasNum ? '48rem' : '';
+  const pad = hasNum ? padHtml() : '';
+  modal(`<h3 class="text-2xl font-bold mb-2">${esc(title)}</h3><div class="flex gap-4"><div class="flex-1">${fh}${extra}</div>${pad}</div><div class="flex gap-2 mt-4"><button class="btn flex-1" onclick="closeM()">ยกเลิก</button>${hasNum ? padBtn() : ''}<button class="btn p flex-1" id="fok">ตกลง</button></div>`);
+  $('#mbox').style.maxWidth = hasNum && padOn() ? '48rem' : '';
   document.querySelectorAll('#mbox .np').forEach(i => i.onclick = () => setNp(i));
   const f1 = document.querySelector('#mbox .np'); if (f1) setNp(f1);
   $('#fok').onclick = () => { const v = {}; fields.forEach(f => v[f.k] = $('#f_' + f.k).value.trim()); ok(v); };
@@ -199,9 +224,13 @@ function billBlocks(b) {
       L.push({ t: 'lr', l: 'รวม', r: '฿' + fm(sum(ms)), sz: 28, b: 1 }, { t: 'rule', w: 1 });
     });
   }
-  L.push({ t: 'rule' }, { t: 'lr', l: 'รวมทั้งสิ้น', r: '฿' + fm(b.total), sz: 44, b: 1 }, { t: 'gap', h: 8 });
+  L.push({ t: 'rule' });
+  if (b.rnd) L.push({ t: 'lr', l: 'ปัดเศษ', r: '-฿' + fm(b.rnd), sz: 26 });
+  L.push({ t: 'lr', l: 'รวมทั้งสิ้น', r: '฿' + fm(b.total), sz: 44, b: 1 });
+  if (b.rcv != null) L.push({ t: 'lr', l: 'รับเงินสด', r: '฿' + fm(b.rcv), sz: 26 }, { t: 'lr', l: 'เงินทอน', r: '฿' + fm(b.chg), sz: 26, b: 1 });
+  L.push({ t: 'gap', h: 8 });
   const ns = noticesOf(b);
-  if (ns.length) { L.push({ t: 'rule', w: 1 }, { t: 'c', x: '** ประกาศ **', sz: 22, b: 1 }); ns.forEach(x => L.push({ t: 'l', x, sz: 22, b: 1 })); L.push({ t: 'rule', w: 1 }); }
+  if (ns.length) { L.push({ t: 'rule', w: 1 }, { t: 'c', x: '** ประกาศ **', sz: 26, b: 1 }); ns.forEach(x => L.push({ t: 'c', x, sz: 26, b: 1 })); L.push({ t: 'rule', w: 1 }); }
   if (db.lineId) L.push({ t: 'c', x: 'Line: ' + db.lineId, sz: 24 });
   L.push({ t: 'c', x: '" THANK YOU "', sz: 26, b: 1 }, { t: 'gap', h: 16 });
   return L;
@@ -311,8 +340,8 @@ function body(b) {
   const g = {}; ks.forEach(m => { const k = split === 'day' ? m.date.slice(0, 10) : m.id; (g[k] = g[k] || []).push(m); });
   return Object.entries(g).map(([k, ms]) => `<div class="border-t border-dashed border-black pt-1 mt-1"><div class="font-bold text-xs">${split === 'day' ? 'วันที่ ' + new Date(k).toLocaleDateString('th-TH') : 'บิล ' + k + ' (' + fd(ms[0].date) + ')'}</div>${ms.map(m => m.items.map(line).join('')).join('')}<div class="text-right text-sm font-bold">รวม ฿${fm(sum(ms))}</div></div>`).join('');
 }
-const noticeHtml = b => { const ns = noticesOf(b); return ns.length ? `<div class="border-t border-black mt-2 pt-1 text-center font-bold text-xs">** ประกาศ **</div>${ns.map(x => `<div class="font-bold" style="font-size:15px">${esc(x)}</div>`).join('')}<div class="border-t border-black mt-1"></div>` : ''; };
-const receipt = (b, pre) => `<div class="receipt">${HEAD}<div class="font-extrabold text-center border-y-2 border-black my-2 py-1">${rTitle(b)}</div><div class="text-xs mb-1">${b.id ? 'เลขที่: ' + b.id + '<br>' : ''}เวลา: ${fd(b.date)}<br>ลูกค้า: <b>${esc(b.customer)}</b>${b.status ? '<br>สถานะ: ' + stat(b) : ''}${isMG(b) ? '<br>รวมจาก ' + kids(b).length + ' บิล' : ''}</div><div class="border-t-2 border-black pt-1 space-y-1">${pre || body(b)}</div><div class="border-t-2 border-black mt-2 pt-1 flex justify-between text-xl font-black"><span>รวมทั้งสิ้น</span><span>฿${fm(b.total)}</span></div>${noticeHtml(b)}<div class="text-center text-xs mt-3">${db.lineId ? 'Line: ' + esc(db.lineId) + '<br>' : ''}<b>" THANK YOU "</b></div></div>`;
+const noticeHtml = b => { const ns = noticesOf(b); return ns.length ? `<div class="border-t border-black mt-2 pt-1 text-center font-bold" style="font-size:18px">** ประกาศ **</div>${ns.map(x => `<div class="font-bold text-center" style="font-size:18px">${esc(x)}</div>`).join('')}<div class="border-t border-black mt-1"></div>` : ''; };
+const receipt = (b, pre) => `<div class="receipt">${HEAD}<div class="font-extrabold text-center border-y-2 border-black my-2 py-1">${rTitle(b)}</div><div class="text-xs mb-1">${b.id ? 'เลขที่: ' + b.id + '<br>' : ''}เวลา: ${fd(b.date)}<br>ลูกค้า: <b>${esc(b.customer)}</b>${b.status ? '<br>สถานะ: ' + stat(b) : ''}${isMG(b) ? '<br>รวมจาก ' + kids(b).length + ' บิล' : ''}</div><div class="border-t-2 border-black pt-1 space-y-1">${pre || body(b)}</div><div class="border-t-2 border-black mt-2 pt-1">${b.rnd ? `<div class="flex justify-between text-sm"><span>ปัดเศษ</span><span>-฿${fm(b.rnd)}</span></div>` : ''}<div class="flex justify-between text-xl font-black"><span>รวมทั้งสิ้น</span><span>฿${fm(b.total)}</span></div>${b.rcv != null ? `<div class="flex justify-between text-sm"><span>รับเงินสด</span><span>฿${fm(b.rcv)}</span></div><div class="flex justify-between text-sm font-bold"><span>เงินทอน</span><span>฿${fm(b.chg)}</span></div>` : ''}</div>${noticeHtml(b)}<div class="text-center text-xs mt-3">${db.lineId ? 'Line: ' + esc(db.lineId) + '<br>' : ''}<b>" THANK YOU "</b></div></div>`;
 
 // ===== หน้าจอ =====
 const tile = (e, l, v, c) => `<button onclick="go('${v}')" class="${c} text-white rounded-2xl p-6 text-center font-extrabold text-xl shadow active:scale-95"><div class="text-4xl mb-1">${e}</div>${l}</button>`;
@@ -331,11 +360,11 @@ const nameBox = (key, label, onsel) => {
 };
 
 const V = {
-  home: () => `<div class="grid grid-cols-3 gap-4 max-w-4xl mx-auto mt-4">${tile('🛒', 'เมนูการขาย', 'cust', 'bg-indigo-600 col-span-3')}${(() => { const u = tops().filter(b => b.status === 'unpaid'); return `<button onclick="showUnpaid()" class="bg-orange-500 text-white rounded-2xl p-4 text-center font-extrabold text-xl shadow active:scale-95 col-span-3">💰 บิลค้างจ่าย ${u.length ? u.length + ' บิล รวม ฿' + fm(sum(u)) : '(ไม่มี)'}</button>`; })()}${tile('🧾', 'ประวัติบิล', 'bills', 'bg-sky-600')}${tile('📦', 'ซื้อเข้า', 'purchase', 'bg-emerald-600')}${tile('👷', 'ค่าจ้างพนักงาน', 'staff', 'bg-amber-600')}${tile('💸', 'รายจ่ายทั่วไป', 'exp', 'bg-rose-600')}${tile('📊', 'สรุปบัญชี', 'sum', 'bg-slate-700')}</div>`,
+  home: () => `<div class="grid grid-cols-3 gap-4 max-w-4xl mx-auto mt-4">${tile('🛒', 'เมนูการขาย', 'cust', 'bg-indigo-600 col-span-3')}${(() => { const u = tops().filter(b => b.status === 'unpaid'); return `<button onclick="showUnpaid()" class="bg-orange-500 text-white rounded-2xl p-4 text-center font-extrabold text-xl shadow active:scale-95 col-span-3">💰 บิลค้างจ่าย ${u.length ? u.length + ' บิล' : '(ไม่มี)'}</button>`; })()}${tile('🧾', 'ประวัติบิล', 'bills', 'bg-sky-600')}${tile('📦', 'ซื้อเข้า', 'purchase', 'bg-emerald-600')}${tile('👷', 'ค่าจ้างพนักงาน', 'staff', 'bg-amber-600')}${tile('💸', 'รายจ่ายทั่วไป', 'exp', 'bg-rose-600')}${tile('📊', 'สรุปบัญชี', 'sum', 'bg-slate-700')}</div>`,
 
   cust: () => `<div class="max-w-4xl mx-auto grid gap-3"><button class="btn p text-2xl py-8" onclick="selCust(WALK)">👤 ${WALK}</button>${nameBox('customers', 'ลูกค้าประจำ', 'selReg')}</div>`,
 
-  pos: () => `<div class="flex gap-3 fill"><div class="card flex-1 min-w-0 overflow-y-auto"><div class="flex flex-wrap gap-2 items-center mb-3"><b>ลูกค้า:</b><span class="bg-indigo-100 text-indigo-900 font-bold px-3 py-1 rounded-lg">${esc(cust)}</span><button class="btn" onclick="editCust()">✏️ แก้ชื่อ</button><button class="btn" onclick="go('cust')">เปลี่ยนลูกค้า</button><button class="btn a" onclick="parkedList()">🕐 บิลที่พัก (${db.parked.length})</button><button class="btn ${selN.length ? 'p' : ''}" onclick="noticePick()">📢 ประกาศ (${selTexts().length})</button><button class="btn p ml-auto" onclick="addProd()">+ สร้างปุ่มสินค้า</button></div>${pgrid('c')}</div><div class="pane w-[560px] shrink-0 flex flex-col gap-2"><div class="card flex-1 min-w-0 overflow-y-auto">${receipt({ date: nowS(), customer: cust, total: sum(cart), notices: selTexts() }, cartLines(cart, 'delCart'))}</div><div class="grid grid-cols-3 gap-2"><button class="btn r" onclick="clearCart()">ยกเลิกบิล</button><button class="btn a" onclick="park()">พักบิล</button><button class="btn g" onclick="payM()">ชำระเงิน</button></div></div></div>`,
+  pos: () => `<div class="flex gap-3 fill"><div class="card flex-1 min-w-0 overflow-y-auto"><div class="flex flex-wrap gap-2 items-center mb-3"><b>ลูกค้า:</b><span class="bg-indigo-100 text-indigo-900 font-bold px-3 py-1 rounded-lg">${esc(cust)}</span><button class="btn" onclick="editCust()">✏️ แก้ชื่อ</button><button class="btn" onclick="go('cust')">เปลี่ยนลูกค้า</button><button class="btn a" onclick="parkedList()">🕐 บิลที่พัก (${db.parked.length})</button><button class="btn ${selN.length ? 'p' : ''}" onclick="noticePick()">📢 ประกาศ (${selTexts().length})</button><button class="btn p ml-auto" onclick="addProd()">+ สร้างปุ่มสินค้า</button></div>${pgrid('c')}</div><div class="pane w-[560px] shrink-0 flex flex-col gap-2"><div class="card flex-1 min-w-0 overflow-y-auto">${receipt({ date: nowS(), customer: cust, total: rdn(sum(cart)), rnd: cartRnd(), notices: selTexts() }, cartLines(cart, 'delCart'))}</div><div class="grid grid-cols-3 gap-2"><button class="btn r" onclick="clearCart()">ยกเลิกบิล</button><button class="btn a" onclick="park()">พักบิล</button><button class="btn g" onclick="payM()">ชำระเงิน</button></div></div></div>`,
 
   bills: () => {
     const L = (F.k ? db.bills : tops()).filter(b => per(b.date, F.p) && (F.s === 'all' || b.status === F.s) && (F.c === 'all' || b.customer === F.c));
@@ -386,7 +415,7 @@ function delProd(id) { if (confirm('ลบปุ่มสินค้านี�
 function tap(id, t) {
   const p = db.products.find(x => x.id == id), k = p.type === 'kg';
   const fl = [{ k: 'q', l: k ? 'น้ำหนัก (kg)' : 'จำนวน (ชิ้น/ถุง)', t: 'number' }, { k: 'p', l: k ? 'ราคาต่อ kg (บาท)' : 'ราคาต่อหน่วย (บาท)', t: 'number', v: k ? '' : (p.price || '') }];
-  if (k) fl.push({ k: 'c', l: 'จำนวนตัว (ไม่บังคับ)', t: 'number' });
+  if (k) fl.push({ k: 'c', l: 'จำนวนตัว (ไม่บังคับ)', t: 'number', opt: 1 });
   form(p.name, fl,
     v => { const q = n(v.q), pc = n(v.p); if (q <= 0 || pc <= 0) return toast('กรอกจำนวนและราคาให้ครบ'); (t === 'c' ? cart : pcart).push({ id: uid(), name: p.name, unit: p.type, qty: q, price: pc, total: q * pc, cnt: n(v.c) }); closeM(); render(); },
     '<div class="text-right text-3xl font-black text-indigo-700 mt-3">฿<span id="lt">0.00</span></div>');
@@ -397,20 +426,37 @@ function tap(id, t) {
 // ===== ขาย =====
 function delCart(id) { cart = cart.filter(i => i.id != id); render(); }
 function clearCart() { if (cart.length && confirm('ยกเลิกบิลนี้?')) { cart = []; selN = []; render(); } }
-function parkCart() { db.parked.push({ id: uid(), customer: cust, items: cart, time: nowS() }); save(); cart = []; }
+function parkCart() { db.parked.push({ id: uid(), customer: cust, items: cart, time: nowS(), notices: selN.slice() }); save(); cart = []; selN = []; }
 function park() { if (!cart.length) return alert('ไม่มีรายการให้พัก'); parkCart(); toast('พักบิลแล้ว'); render(); }
 function parkedList() {
   modal(`<div class="flex justify-between mb-2"><b>บิลที่พักไว้</b><button onclick="closeM()">✕</button></div>${db.parked.map(b => `<div class="border rounded-xl p-2 mb-2 flex justify-between items-center"><div><b>${esc(b.customer)}</b><div class="text-xs">${b.items.length} รายการ ฿${fm(sum(b.items))}</div></div><div class="flex gap-1"><button class="btn a" onclick="restore('${b.id}')">ดึงกลับ</button><button class="btn r" onclick="delParked('${b.id}')">ลบ</button></div></div>`).join('') || '<p class="text-slate-400">ไม่มีบิลที่พัก</p>'}`);
 }
-function restore(id) { const b = db.parked.find(x => x.id == id); if (!b) return; if (cart.length) parkCart(); cart = b.items; cust = b.customer; db.parked = db.parked.filter(x => x.id != id); save(); closeM(); render(); }
+function restore(id) { const b = db.parked.find(x => x.id == id); if (!b) return; if (cart.length) parkCart(); cart = b.items; cust = b.customer; selN = b.notices || []; db.parked = db.parked.filter(x => x.id != id); save(); closeM(); render(); }
 function delParked(id) { db.parked = db.parked.filter(x => x.id != id); save(); parkedList(); render(); }
 function payM() {
   if (!cart.length) return alert('เพิ่มสินค้าก่อน');
-  modal(`<div class="text-center mb-3"><div class="text-slate-500">ยอดรวม</div><div class="text-4xl font-black text-emerald-600">฿${fm(sum(cart))}</div></div><div class="space-y-2"><button class="btn g w-full py-3" onclick="sale('paid','cash')">เงินสด (เปิดลิ้นชัก)</button><button class="btn p w-full py-3" onclick="sale('paid','transfer')">เงินโอน</button><button class="btn a w-full py-3" onclick="sale('unpaid')">ค้างชำระ</button><button class="btn w-full" onclick="closeM()">ยกเลิก</button></div>`);
+  modal(`<div class="text-center mb-3"><div class="text-slate-500">ยอดรวม</div><div class="text-4xl font-black text-emerald-600">฿${fm(rdn(sum(cart)))}</div></div><div class="space-y-2"><button class="btn g w-full py-3" onclick="cashM()">เงินสด</button><button class="btn p w-full py-3" onclick="sale('paid','transfer')">เงินโอน</button><button class="btn a w-full py-3" onclick="sale('unpaid')">ค้างชำระ</button><button class="btn w-full" onclick="closeM()">ยกเลิก</button></div>`);
 }
-function sale(st, m) {
-  const b = { id: 'INV-' + uid().slice(-6), date: nowS(), customer: cust, items: cart, total: sum(cart), status: st, pay: m || null, paidAt: st === 'paid' ? nowS() : null };
+function cashM() {
+  const tot = rdn(sum(cart));
+  modal(`<h3 class="text-2xl font-bold mb-2">รับเงินสด</h3><div class="flex gap-4"><div class="flex-1"><div class="text-slate-500">ยอดที่ต้องรับ</div><div class="text-5xl font-black text-emerald-600 mb-3">฿${fm(tot)}</div><label class="block text-sm font-bold text-slate-500">รับเงินสดมา (บาท)</label><input id="f_r" class="inp np" readonly inputmode="none" style="font-size:32px"><div class="grid grid-cols-3 gap-2 mt-3"><button class="btn g col-span-3 py-3" onclick="cashCheck(${tot})">รับเงินสดมาพอดี</button>${[100, 500, 1000].map(v => `<button class="btn py-3" onclick="cashCheck(${v})">฿${v.toLocaleString()}</button>`).join('')}</div></div>${padHtml()}</div><div class="flex gap-2 mt-4"><button class="btn flex-1" onclick="closeM()">ยกเลิก</button>${padBtn()}<button class="btn p flex-1" id="fok" onclick="cashCheck()">ตกลง</button></div>`);
+  $('#mbox').style.maxWidth = padOn() ? '48rem' : ''; setNp($('#f_r'));
+}
+function cashCheck(v) {
+  const tot = rdn(sum(cart)), r = v != null ? v : n($('#f_r').value);
+  if (r <= 0) return toast('กรอกจำนวนเงินที่รับมา');
+  if (r < tot) return toast('รับเงินไม่พอ ขาดอีก ฿' + fm(tot - r));
+  cashDone(r);
+}
+function cashDone(r) {
+  const tot = rdn(sum(cart)), chg = Math.round((r - tot) * 100) / 100;
+  modal(`<div class="text-center"><div class="text-slate-500 text-xl">ยอด ฿${fm(tot)} · รับเงินสด ฿${fm(r)}</div><div class="text-slate-500 text-2xl mt-3">เงินทอน</div><div class="font-black text-rose-600 my-3" style="font-size:${chg > 0 ? 72 : 44}px">${chg > 0 ? '฿' + fm(chg) : 'ไม่มีเงินทอน'}</div></div><div class="flex gap-2 mt-2"><button class="btn flex-1 py-3" onclick="cashM()">← แก้ไข</button><button class="btn g flex-1 py-3" id="fok" onclick="sale('paid','cash',{rcv:${r},chg:${chg}})">ยืนยัน (เปิดลิ้นชัก)</button></div>`);
+}
+function sale(st, m, ex) {
+  const b = { id: 'INV-' + uid().slice(-6), date: nowS(), customer: cust, items: cart, total: rdn(sum(cart)), status: st, pay: m || null, paidAt: st === 'paid' ? nowS() : null };
   const nt = selTexts(); if (nt.length) b.notices = nt;
+  if (cartRnd()) b.rnd = cartRnd();
+  if (ex) Object.assign(b, ex);
   db.bills.unshift(b); save(); cart = []; selN = []; freshId = b.id; closeM(); render();
   if (m === 'cash') openDrawer();
   openBill(b.id);
