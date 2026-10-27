@@ -35,6 +35,6 @@ table td, table th { padding: .4rem; text-align: left; border-bottom: 1px solid 
 }
 
 .np { font-size: 1.6rem; font-weight: 800; text-align: right; border-width: 2px; }
-.np.act { border-color: #4f46e5; background: #eef2ff; }
+.np.act { border-color: #4f46e5; background: #eef2ff; box-shadow: 0 0 0 4px #818cf8; }
 .numpad-btn { background: #f1f5f9; font-weight: 700; font-size: 1.7rem; padding: .8rem 0; border-radius: 1rem; color: #1e293b; box-shadow: 0 1px 2px #0002; }
 .numpad-btn:active { background: #cbd5e1; transform: scale(.95); }
