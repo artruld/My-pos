@@ -1,8 +1,8 @@
 // ===== ข้อมูล (เก็บใน localStorage) =====
-const VER = '3.2.1';
-const CHANGES = ['v3.2.1: ส่งข้อมูลขึ้น Google Drive อัตโนมัติ (สำรองข้อมูล, สรุปบัญชีลง Google Sheets, รูปสลิปบิลที่ชำระแล้ว), ไฟล์สำรอง/นำเข้า, คำต่อท้ายช่องกรอก (กก. / บาท / ตัว), ใช้ "กก." แทน kg', 'v3.2.0: กรอกสินค้า Enter น้ำหนัก>ราคา>จำนวนตัว(เว้นว่างได้)>ตกลง, บิลค้างจ่ายกดรับชำระได้ทันที (โอน/เงินสด), ติ๊กหลายบิลชำระพร้อมกัน, ย้อนกลับเป็นค้างชำระ', 'v3.1.3: คีย์บอร์ดตัวเลขจริง (ซ่อนแป้นบนจอ มีปุ่มสลับ), รับเงินสดและเงินทอน, ปัดเศษลงที่ยอดบิล, ประกาศขนาด 26 กึ่งกลาง, พักบิลพร้อมประกาศ', 'v3.1.2: ชื่อลูกค้าที่ออกบิลแล้วจางจนถึงเวลารีเซ็ต (ตั้งเวลาได้ ค่าตั้งต้น 06:00) และปุ่มรีเซ็ตทันที', 'v3.1.1: ปุ่มบิลค้างจ่ายในหน้าหลัก (แสดงจำนวนและยอดรวม)', 'v3.1.0: ประกาศท้ายบิล (เลือกเป็นบางบิล, ตัวช่วยปรับราคา), ตั้งค่า Line ID ที่สลิป, ลูกค้าประจำที่ออกบิลแล้วย้ายลงล่างสุดวนเป็นรอบ', 'v3.0.2: หน้าขาย/ซื้อเข้า ขยายกล่องบิลเป็น 560 จุด แก้ข้อความล้นกล่อง', 'v3.0.1: รายการสินค้าบนหน้าจอพอดี 1 บรรทัดเหมือนสลิป, ป้อนกระดาษท้ายสลิปตั้งต้น 5 บรรทัด', 'v3.0: ใบแจ้งยอดรวม (เก็บบิลเดิม ชำระแล้วอัปเดตทุกบิล ไม่นับยอดซ้ำ ยกเลิกการรวมได้)', 'v3.0: สลิป — ตัดกระดาษโดย RawBT/แอป ปรับบรรทัดป้อนกระดาษ ลดขอบบน ชื่อสินค้า 1 บรรทัด', 'v2.x: พิมพ์ทันทีผ่าน RawBT แชร์เป็นรูป โลโก้ พักบิลอัตโนมัติ'];
+const VER = '3.2.2';
+const CHANGES = ['v3.2.2: กลุ่มลูกค้า + รวมบิลกลุ่ม (ใบแจ้งยอดรวมเป็นตารางแชร์ LINE), ชีทโครงสร้างใหม่ (สรุป/รายลูกค้า/รายรับ/รายจ่าย), ลบประวัติไม่แตะข้อมูลใน Drive', 'v3.2.1: ส่งข้อมูลขึ้น Google Drive อัตโนมัติ (สำรองข้อมูล, สรุปบัญชีลง Google Sheets, รูปสลิปบิลที่ชำระแล้ว), ไฟล์สำรอง/นำเข้า, คำต่อท้ายช่องกรอก (กก. / บาท / ตัว), ใช้ "กก." แทน kg', 'v3.2.0: กรอกสินค้า Enter น้ำหนัก>ราคา>จำนวนตัว(เว้นว่างได้)>ตกลง, บิลค้างจ่ายกดรับชำระได้ทันที (โอน/เงินสด), ติ๊กหลายบิลชำระพร้อมกัน, ย้อนกลับเป็นค้างชำระ', 'v3.1.3: คีย์บอร์ดตัวเลขจริง (ซ่อนแป้นบนจอ มีปุ่มสลับ), รับเงินสดและเงินทอน, ปัดเศษลงที่ยอดบิล, ประกาศขนาด 26 กึ่งกลาง, พักบิลพร้อมประกาศ', 'v3.1.2: ชื่อลูกค้าที่ออกบิลแล้วจางจนถึงเวลารีเซ็ต (ตั้งเวลาได้ ค่าตั้งต้น 06:00) และปุ่มรีเซ็ตทันที', 'v3.1.1: ปุ่มบิลค้างจ่ายในหน้าหลัก (แสดงจำนวนและยอดรวม)', 'v3.1.0: ประกาศท้ายบิล (เลือกเป็นบางบิล, ตัวช่วยปรับราคา), ตั้งค่า Line ID ที่สลิป, ลูกค้าประจำที่ออกบิลแล้วย้ายลงล่างสุดวนเป็นรอบ', 'v3.0.2: หน้าขาย/ซื้อเข้า ขยายกล่องบิลเป็น 560 จุด แก้ข้อความล้นกล่อง', 'v3.0.1: รายการสินค้าบนหน้าจอพอดี 1 บรรทัดเหมือนสลิป, ป้อนกระดาษท้ายสลิปตั้งต้น 5 บรรทัด', 'v3.0: ใบแจ้งยอดรวม (เก็บบิลเดิม ชำระแล้วอัปเดตทุกบิล ไม่นับยอดซ้ำ ยกเลิกการรวมได้)', 'v3.0: สลิป — ตัดกระดาษโดย RawBT/แอป ปรับบรรทัดป้อนกระดาษ ลดขอบบน ชื่อสินค้า 1 บรรทัด', 'v2.x: พิมพ์ทันทีผ่าน RawBT แชร์เป็นรูป โลโก้ พักบิลอัตโนมัติ'];
 const K = 'mypos2';
-let db = Object.assign({ customers: [], products: [], suppliers: [], staff: [], bills: [], parked: [], purchases: [], tx: [], exps: [], expItems: [], notices: [], lineId: '', resetHour: 6, resetAt: '' }, JSON.parse(localStorage.getItem(K) || '{}'));
+let db = Object.assign({ customers: [], products: [], suppliers: [], staff: [], bills: [], parked: [], purchases: [], tx: [], exps: [], expItems: [], notices: [], lineId: '', resetHour: 6, resetAt: '', custGroup: {} }, JSON.parse(localStorage.getItem(K) || '{}'));
 const save = () => { try { localStorage.setItem(K, JSON.stringify(db)); } catch (e) { alert('พื้นที่เก็บข้อมูลในเครื่องเต็ม! บันทึกไม่สำเร็จ\nให้สำรองข้อมูลแล้วติดต่อผู้พัฒนาทันที'); } schedSync(); };
 const isMG = b => Array.isArray(b.mergedIds);
 const kids = b => b.mergedIds.map(id => db.bills.find(x => x.id == id)).filter(Boolean);
@@ -15,6 +15,9 @@ const resetThr = () => {
 };
 const cartRnd = () => { const r = Math.round(sum(cart) * 100) / 100, d = r - rdn(r); return d >= 0.005 ? +d.toFixed(2) : 0; };
 const rdn = x => Math.floor(Math.round(x * 100) / 100);
+const grpOf = c => (db.custGroup || {})[c] || (db.customers.includes(c) ? c : 'ลูกค้าทั่วไป');
+const MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const dLab = ds => { const a = ds.split('-'); return (+a[2]) + ' ' + MON[+a[1] - 1]; };
 const todayS = () => ymd(new Date());
 const liveNotices = () => db.notices.filter(x => x.on !== false && (!x.end || x.end >= todayS()));
 const noticesOf = b => isMG(b) ? [...new Set(kids(b).flatMap(k => k.notices || []))] : (b.notices || []);
@@ -305,11 +308,16 @@ const saveCfg = c => localStorage.setItem('mypos_cfg', JSON.stringify(c));
 const saveSyn = x => { try { localStorage.setItem('mypos_sync', JSON.stringify(x)); } catch (e) { } };
 const hsh = str => { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return (h >>> 0).toString(36) + str.length; };
 const TXN = id => (db.staff.find(x => x.id == id) || {}).name || '-';
+const grpSheet = b => b.gm ? b.group : (b.grp || grpOf(b.customer));
+const SYNC_V = 2;
 const SYNC_SHEETS = {
-  'รายรับ': { h: ['รหัสบิล', 'วันที่ชำระ', 'วันที่ออกบิล', 'ลูกค้า', 'ยอดรวม', 'ปัดเศษ', 'วิธีชำระ', 'รับเงิน', 'เงินทอน', 'รวมจากกี่บิล'], rows: () => tops().filter(b => b.status === 'paid').map(b => [b.id, (b.paidAt || b.date).replace('T', ' '), b.date.replace('T', ' '), b.customer, b.total, b.rnd || 0, PAY[b.pay] || '', b.rcv ?? '', b.chg ?? '', isMG(b) ? b.mergedIds.length : '']) },
-  'ซื้อเข้า': { h: ['รหัส', 'วันที่จ่าย', 'วันที่ซื้อ', 'ผู้ขาย', 'ยอดรวม', 'วิธีชำระ'], rows: () => db.purchases.filter(x => x.status === 'paid').map(x => [x.id, (x.paidAt || x.date).replace('T', ' '), x.date.replace('T', ' '), x.supplier, x.total, PAY[x.pay] || '']) },
-  'ค่าจ้างและเบิก': { h: ['รหัส', 'วันที่', 'พนักงาน', 'ประเภท', 'จำนวนเงิน', 'หมายเหตุ'], rows: () => db.tx.map(t => [t.id, t.date.replace('T', ' '), TXN(t.sid), TX[t.type] || t.type, t.amount, t.note || '']) },
-  'รายจ่ายทั่วไป': { h: ['รหัส', 'วันที่', 'รายการ', 'จำนวนเงิน'], rows: () => db.exps.map(e => [e.id, e.date.replace('T', ' '), e.name, e.amount]) }
+  'รายรับ': { t: [1, 2, 3, 4, 5, 8], h: ['รหัสบิล', 'วันที่ชำระ', 'เดือน', 'กลุ่มลูกค้า', 'ชื่อในบิล', 'ยอดรวม', 'ปัดเศษ', 'วิธีชำระ', 'รับเงิน', 'เงินทอน', 'รวมจากกี่บิล'], rows: () => tops().filter(b => b.status === 'paid').map(b => { const pd = (b.paidAt || b.date).replace('T', ' '); return [b.id, pd, pd.slice(0, 7), grpSheet(b), b.gm ? 'กลุ่ม ' + b.group : b.customer, b.total, b.rnd || 0, PAY[b.pay] || '', b.rcv ?? '', b.chg ?? '', isMG(b) ? b.mergedIds.length : '']; }) },
+  'รายจ่าย': { t: [1, 2, 3, 4, 5, 7], h: ['รหัส', 'วันที่', 'เดือน', 'ประเภท', 'รายการ / ผู้รับ', 'จำนวนเงิน', 'วิธีชำระ / หมายเหตุ'], rows: () => {
+    const R = (id, d, ty, nm, amt, nt) => { const dd = d.replace('T', ' '); return [id, dd, dd.slice(0, 7), ty, nm, amt, nt]; };
+    return [...db.purchases.filter(x => x.status === 'paid').map(x => R('PU-' + x.id, x.paidAt || x.date, 'ซื้อเข้า', x.supplier, x.total, PAY[x.pay] || '')),
+      ...db.tx.filter(t => t.type === 'wage' || t.type === 'adv').map(t => R('TX-' + t.id, t.date, TX[t.type], TXN(t.sid), t.amount, t.note || '')),
+      ...db.exps.map(e => R('GE-' + e.id, e.date, 'รายจ่ายทั่วไป', e.name, e.amount, ''))];
+  } }
 };
 async function gPost(body) {
   const c = cfg();
@@ -326,21 +334,23 @@ async function syncNow(manual) {
   const c = cfg(); if (!c.on || !c.url || syncing) { if (manual) toast('ยังไม่ได้เปิด/ตั้งค่าการส่งข้อมูล'); return; }
   if (!navigator.onLine) { if (manual) toast('ไม่มีอินเทอร์เน็ต'); return; }
   syncing = true; const st = syn(); let n1 = 0;
+  if (st.v !== SYNC_V) { st.rows = {}; st.v = SYNC_V; }
   try {
     for (const [name, def] of Object.entries(SYNC_SHEETS)) {
       const cur = new Map(def.rows().map(r => [String(r[0]), r])), old = st.rows[name] = st.rows[name] || {}, up = [], del = [];
       cur.forEach((r, id) => { const h = hsh(JSON.stringify(r)); if (old[id] !== h) up.push([id, h, r]); });
       Object.keys(old).forEach(id => { if (!cur.has(id)) del.push(id); });
-      if (!up.length && del.length) { await gPost({ action: 'rows', sheet: name, header: def.h, rows: [], del }); del.forEach(id => delete old[id]); saveSyn(st); n1 += del.length; }
+      if (!up.length && del.length) { await gPost({ action: 'rows', sheet: name, header: def.h, textCols: def.t, rows: [], del }); del.forEach(id => delete old[id]); saveSyn(st); n1 += del.length; }
       for (let i = 0; i < up.length; i += 100) {
-        const ch = up.slice(i, i + 100); await gPost({ action: 'rows', sheet: name, header: def.h, rows: ch.map(x => x[2]), del: i === 0 ? del : [] });
+        const ch = up.slice(i, i + 100); await gPost({ action: 'rows', sheet: name, header: def.h, textCols: def.t, rows: ch.map(x => x[2]), del: i === 0 ? del : [] });
         ch.forEach(x => { old[x[0]] = x[1]; }); if (i === 0) del.forEach(id => delete old[id]); saveSyn(st); n1 += ch.length;
       }
     }
     const pend = tops().filter(b => b.status === 'paid' && !st.slip[b.id]).slice(0, manual ? 300 : 15);
     for (const b of pend) { await gPost({ action: 'slip', name: b.id + '.png', month: (b.paidAt || b.date).slice(0, 7), data: await slipB64(b) }); st.slip[b.id] = 1; saveSyn(st); n1++; }
     const js = JSON.stringify(db), h = hsh(js);
-    if (h !== st.bk && (manual || Date.now() - st.bkAt > 30 * 60 * 1000)) { await gPost({ action: 'backup', date: ymd(new Date()), content: js }); st.bk = h; st.bkAt = Date.now(); }
+    if (st.bkHold && db.bills.length) st.bkHold = false;
+    if (!st.bkHold && h !== st.bk && (manual || Date.now() - st.bkAt > 30 * 60 * 1000)) { await gPost({ action: 'backup', date: ymd(new Date()), content: js }); st.bk = h; st.bkAt = Date.now(); }
     st.last = nowS(); st.err = '';
   } catch (e) { st.err = (e && e.message) || String(e); }
   saveSyn(st); syncing = false;
@@ -379,6 +389,105 @@ async function importData(f) {
 window.addEventListener('online', () => schedSync());
 setInterval(() => { const c = cfg(); if (c.on) syncNow(); }, 5 * 60 * 1000);
 setTimeout(() => { const c = cfg(); if (c.on) syncNow(); }, 8000);
+
+// ===== กลุ่มลูกค้า / รวมบิลกลุ่ม =====
+function grpForm(i) {
+  const nm = db.customers[i], cur = (db.custGroup || {})[nm] || '', gs = [...new Set(Object.values(db.custGroup || {}))];
+  modal(`<div class="flex justify-between mb-2"><b class="text-xl">กลุ่มของ ${esc(nm)}</b><button onclick="closeM()">✕</button></div><div class="grid grid-cols-2 gap-2">${gs.map(g => `<button class="btn ${g === cur ? 'p' : ''}" onclick="setGrp(${i},this.dataset.g)" data-g="${esc(g)}">${esc(g)}</button>`).join('')}</div><button class="btn g w-full mt-3" onclick="newGrp(${i})">+ สร้างกลุ่มใหม่</button><button class="btn w-full mt-2" onclick="setGrp(${i},'')">ไม่อยู่กลุ่ม</button>`);
+}
+function newGrp(i) { form('สร้างกลุ่มใหม่', [{ k: 'n', l: 'ชื่อกลุ่ม (เช่น กลุ่มโรงเหล้า)' }], v => { if (!v.n) return toast('กรอกชื่อกลุ่ม'); setGrp(i, v.n); }); }
+function setGrp(i, g) { db.custGroup = db.custGroup || {}; if (g) db.custGroup[db.customers[i]] = g; else delete db.custGroup[db.customers[i]]; save(); closeM(); render(); }
+let GM = { g: '', from: '', to: '', off: {}, open: {} };
+const gmElig = g => tops().filter(b => b.status === 'unpaid' && !isMG(b) && (db.custGroup || {})[b.customer] === g).sort((a, b) => a.date.localeCompare(b.date));
+function gmSel() {
+  const all = gmElig(GM.g), lo = all.length ? all[0].date.slice(0, 10) : '', hi = all.length ? all[all.length - 1].date.slice(0, 10) : '';
+  if (!GM.from) GM.from = lo; if (!GM.to) GM.to = hi;
+  const list = all.filter(b => { const d = b.date.slice(0, 10); return d >= GM.from && d <= GM.to; });
+  return { list, sel: list.filter(b => !GM.off[b.id]) };
+}
+function gmM(reset) {
+  const gs = [...new Set(Object.values(db.custGroup || {}))];
+  if (!gs.length) return alert('ยังไม่มีกลุ่มลูกค้า\nตั้งกลุ่มที่หน้าเลือกลูกค้า (ปุ่ม 🏷 ข้างชื่อ)');
+  if (reset || !gs.includes(GM.g)) GM = { g: gs[0], from: '', to: '', off: {}, open: {} };
+  const { list, sel } = gmSel(), cs = [...new Set(list.map(b => b.customer))];
+  const rowsH = cs.map(c => {
+    const bs = list.filter(b => b.customer === c), on = bs.filter(b => !GM.off[b.id]), all = on.length === bs.length;
+    return `<div class="border-2 rounded-xl mb-2 bg-indigo-50 border-indigo-200"><div class="flex items-center gap-3 p-3 text-xl font-bold"><button class="w-9 h-9 rounded-lg border-4 border-indigo-600 ${on.length ? 'bg-indigo-600 text-white' : 'bg-white'}" onclick="gmTogC(this.dataset.c)" data-c="${esc(c)}">${all ? '✓' : on.length ? '–' : ''}</button><button class="flex-1 text-left" onclick="GM.open[this.dataset.c]=!GM.open[this.dataset.c];gmM()" data-c="${esc(c)}">${esc(c)} <span class="text-base font-normal text-slate-500">${on.length}/${bs.length} บิล ${GM.open[c] ? '▲' : '▼'}</span></button><span class="font-black">฿${fm(sum(on))}</span></div>${GM.open[c] ? `<div class="bg-white border-t px-3 py-1">${bs.map(b => `<button class="w-full flex justify-between py-2 border-b border-dashed text-lg" onclick="gmTog('${b.id}')"><span>${GM.off[b.id] ? '☐' : '☑'} ${dLab(b.date.slice(0, 10))} · ${b.id}</span><span>${fm(b.total)}</span></button>`).join('')}</div>` : ''}</div>`;
+  }).join('');
+  modal(`<div class="flex justify-between mb-2"><b class="text-2xl">🧾 รวมบิลกลุ่มลูกค้า</b><button onclick="closeM()">✕</button></div><div class="flex flex-wrap gap-2 items-center mb-2"><b>กลุ่ม:</b>${selH(gs.map(g => [g, g]), GM.g, "GM.g=this.value;GM.from=GM.to='';GM.off={};GM.open={};gmM()")}<b>ตั้งแต่</b><input type="date" class="inp !w-auto" value="${GM.from}" onchange="GM.from=this.value;gmM()"><b>ถึง</b><input type="date" class="inp !w-auto" value="${GM.to}" onchange="GM.to=this.value;gmM()"></div><div class="text-sm text-slate-500 mb-2">แสดงบิลค้างชำระของลูกค้าในกลุ่มนี้ เลือกให้ทั้งหมดตั้งแต่เก่าสุดถึงล่าสุด ติ๊กออกได้ทีละบิลหรือทั้งราย</div>${rowsH || '<p class="text-slate-400 py-4 text-center text-lg">ไม่มีบิลค้างชำระในกลุ่มนี้</p>'}<div class="flex justify-between items-center bg-amber-100 rounded-xl p-3 text-2xl font-black mt-2"><span>รวมที่เลือก ${sel.length} บิล (${new Set(sel.map(b => b.customer)).size} ราย)</span><span class="text-rose-700">฿${fm(sum(sel))}</span></div><div class="flex gap-2 mt-3"><button class="btn flex-1" onclick="closeM()">ยกเลิก</button><button class="btn flex-1" onclick="gmPreview()">👁 ดูตัวอย่าง</button><button class="btn g flex-[1.4]" onclick="gmCreate()">สร้างใบแจ้งยอดรวม</button></div>`);
+  $('#mbox').style.maxWidth = '56rem';
+}
+function gmTog(id) { GM.off[id] = !GM.off[id]; gmM(); }
+function gmTogC(c) { const bs = gmSel().list.filter(b => b.customer === c), allOn = bs.every(b => !GM.off[b.id]); bs.forEach(b => { GM.off[b.id] = allOn; }); gmM(); }
+function gmMake(ids, id, preview) {
+  const ks = ids.map(i => db.bills.find(x => x.id == i)).filter(Boolean);
+  return { id, date: nowS(), customer: GM.g, group: GM.g, gm: true, items: [], mergedIds: ids, total: sum(ks), status: 'unpaid', pay: null };
+}
+async function gmPreview() {
+  const { sel } = gmSel(); if (!sel.length) return alert('เลือกบิลก่อน');
+  const cvs = await gmCanvases(gmMake(sel.map(b => b.id), '(ตัวอย่าง)'));
+  modal(`<div class="flex justify-between mb-2"><b class="text-xl">ตัวอย่างใบแจ้งยอดรวม</b><button onclick="closeM()">✕</button></div>${cvs.map(c => `<img src="${c.toDataURL('image/png')}" class="w-full border mb-2">`).join('')}<button class="btn w-full py-3" onclick="gmM()">← กลับไปเลือกบิล</button>`);
+}
+function gmCreate() {
+  const { sel } = gmSel(); if (sel.length < 2) return alert('เลือกบิลอย่างน้อย 2 บิล');
+  const id = 'MG-' + uid().slice(-5), ids = sel.map(b => b.id), b = gmMake(ids, id);
+  sel.forEach(k => { k.mergedInto = id; }); db.bills.unshift(b); save(); closeM(); toast('สร้างใบแจ้งยอดรวมกลุ่มแล้ว'); render(); openBill(id);
+}
+function gmData(b) {
+  const ks = kids(b), cs = []; ks.forEach(k => { if (!cs.includes(k.customer)) cs.push(k.customer); });
+  cs.sort((x, y) => { const a = db.customers.indexOf(x), c = db.customers.indexOf(y); return (a < 0 ? 999 : a) - (c < 0 ? 999 : c); });
+  const ds = ks.map(k => k.date.slice(0, 10)).sort(), d0 = ds[0], d1 = ds[ds.length - 1], days = [];
+  for (const d = new Date(d0 + 'T00:00'); ymd(d) <= d1; d.setDate(d.getDate() + 1)) days.push(ymd(d));
+  const cell = {}; ks.forEach(k => { const key = k.date.slice(0, 10) + '|' + k.customer; cell[key] = (cell[key] || 0) + k.total; });
+  const tot = {}; cs.forEach(c => { tot[c] = sum(ks.filter(k => k.customer === c)); });
+  return { cs, days, cell, tot, d0, d1, total: sum(ks) };
+}
+async function gmCanvases(b) {
+  await Promise.all([fontsReady(), logoReady]);
+  const D = gmData(b), ch = []; for (let i = 0; i < D.cs.length; i += 4) ch.push(D.cs.slice(i, i + 4));
+  return ch.map((cs, ci) => drawGm(b, D, cs, ci, ch.length));
+}
+function drawGm(b, D, cs, ci, n) {
+  const K = 2, W = 720, P = 24, RH = 46, DW = 150, last = ci === n - 1, colW = (W - 2 * P - DW) / cs.length;
+  const m = document.createElement('canvas').getContext('2d'); m.font = fnt(32, 1);
+  const title = 'ใบแจ้งยอดรวม (กลุ่ม ' + b.group + ')' + (n > 1 ? ' [' + (ci + 1) + '/' + n + ']' : ''), tl = wrapT(m, title, W - 2 * P);
+  const lw = 150, lh = LOGO.naturalWidth ? Math.round(lw * LOGO.naturalHeight / LOGO.naturalWidth) : 0;
+  const H = P + lh + 10 + tl.length * 46 + 40 + 40 + 16 + RH * (D.days.length + 2) + (last ? 90 : 0) + P;
+  const c = document.createElement('canvas'); c.width = W * K; c.height = H * K; const x = c.getContext('2d'); x.scale(K, K);
+  x.fillStyle = '#fff'; x.fillRect(0, 0, W, H); x.textBaseline = 'middle'; x.textAlign = 'left';
+  const cen = (t, y, f, col) => { x.font = f; x.fillStyle = col || '#000'; x.fillText(t, (W - x.measureText(t).width) / 2, y); };
+  let y = P; if (lh) x.drawImage(LOGO, (W - lw) / 2, y, lw, lh); y += lh + 10;
+  tl.forEach(t => { cen(t, y + 23, fnt(32, 1)); y += 46; });
+  const pd = b.status === 'paid', stt = pd ? 'ชำระแล้ว (' + (PAY[b.pay] || '') + ')' : 'ค้างชำระ', rng = dLab(D.d0) + ' – ' + dLab(D.d1) + ' ' + (+D.d1.slice(0, 4) + 543);
+  x.font = fnt(22, 0); const w1 = x.measureText('ช่วงวันที่ ' + rng + '  ').width; x.font = fnt(21, 1); const w2 = x.measureText(stt).width + 28, sx = (W - w1 - w2) / 2;
+  x.font = fnt(22, 0); x.fillStyle = '#333'; x.fillText('ช่วงวันที่ ' + rng + '  ', sx, y + 20);
+  x.fillStyle = pd ? '#bbf7d0' : '#fde68a'; x.beginPath(); x.roundRect(sx + w1, y + 4, w2, 32, 16); x.fill();
+  x.font = fnt(21, 1); x.fillStyle = pd ? '#14532d' : '#78350f'; x.fillText(stt, sx + w1 + 14, y + 21); y += 40;
+  cen('เลขที่ ' + b.id + ' · ออกเมื่อ ' + fd(b.date), y + 18, fnt(21, 0), '#333'); y += 40 + 16;
+  const cx = i => P + DW + i * colW;
+  const cellT = (t, xx, yy, w, al, f, col) => { x.font = f; x.fillStyle = col || '#000'; const tw = x.measureText(t).width; x.fillText(t, al === 'r' ? xx + w - 10 - tw : al === 'c' ? xx + (w - tw) / 2 : xx + 10, yy + RH / 2); };
+  const box = (xx, yy, w, fill) => { if (fill) { x.fillStyle = fill; x.fillRect(xx, yy, w, RH); } x.strokeStyle = '#111'; x.lineWidth = 1; x.strokeRect(xx + .5, yy + .5, w - 1, RH - 1); };
+  box(P, y, DW, '#312e81'); cellT('วันที่', P, y, DW, 'c', fnt(25, 1), '#fff');
+  cs.forEach((nm, i) => { box(cx(i), y, colW, '#312e81'); let f = 25; x.font = fnt(f, 1); while (f > 15 && x.measureText(nm).width > colW - 14) { f--; x.font = fnt(f, 1); } cellT(nm, cx(i), y, colW, 'c', fnt(f, 1), '#fff'); });
+  y += RH;
+  D.days.forEach(d => {
+    box(P, y, DW); cellT(dLab(d), P, y, DW, 'l', fnt(25, 0));
+    cs.forEach((nm, i) => { box(cx(i), y, colW); const v = D.cell[d + '|' + nm]; if (v) cellT(Math.round(v * 100) % 100 ? fm(v) : Math.round(v).toLocaleString('en-US'), cx(i), y, colW, 'r', fnt(25, 0)); });
+    y += RH;
+  });
+  box(P, y, DW, '#f6a23a'); cellT('รวม', P, y, DW, 'l', fnt(27, 1));
+  cs.forEach((nm, i) => { box(cx(i), y, colW, '#f6a23a'); cellT(Math.round(D.tot[nm] * 100) % 100 ? fm(D.tot[nm]) : Math.round(D.tot[nm]).toLocaleString('en-US'), cx(i), y, colW, 'r', fnt(27, 1)); });
+  y += RH;
+  if (last) {
+    y += 14; x.fillStyle = '#e8301f'; x.beginPath(); x.roundRect(P, y, W - 2 * P, 70, 12); x.fill();
+    x.font = fnt(34, 1); x.fillStyle = '#fff'; x.fillText(pd ? 'ยอดรวมทั้งกลุ่ม' : 'ยอดที่ต้องโอน', P + 18, y + 36); const t = '฿' + fm(D.total); x.fillText(t, W - P - 18 - x.measureText(t).width, y + 36);
+  }
+  return c;
+}
+async function gmShow(b) {
+  try { const cvs = await gmCanvases(b), rc = $('#rc'); if (rc) rc.innerHTML = cvs.map(c => `<img src="${c.toDataURL('image/png')}" class="w-full border mb-2">`).join(''); }
+  catch (e) { const rc = $('#rc'); if (rc) rc.textContent = 'สร้างภาพไม่สำเร็จ'; }
+}
 
 // ===== ประกาศท้ายบิล =====
 function togNotice(id) { const x = db.notices.find(v => v.id == id); x.on = x.on === false; save(); }
@@ -440,20 +549,20 @@ const nameBox = (key, label, onsel) => {
     ord = [...ord.filter(i => !served(i)), ...ord.filter(served).sort((a, b) => last[db[key][b]].r - last[db[key][a]].r)];
     ord.forEach(i => { const l = last[db[key][i]]; if (l && l.d > thr) info[i] = '✓ ' + (l.d.slice(0, 10) === todayS() ? l.d.slice(11) : new Date(l.d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })); });
   }
-  return `<div class="card"><div class="flex justify-between mb-2"><b>${label}</b><button class="btn g" onclick="addName('${key}','ชื่อ')">+ เพิ่มรายชื่อ</button></div><div class="grid grid-cols-3 gap-2">${ord.map(i => `<div class="border rounded-xl p-2 flex gap-1 items-center ${info[i] ? 'opacity-60' : ''}"><button class="btn p flex-1" onclick="${onsel}(${i})">${esc(db[key][i])}${info[i] ? `<br><small>${info[i]}</small>` : ''}</button><button class="text-rose-600" onclick="delName('${key}',${i})">🗑</button></div>`).join('') || '<p class="text-slate-400">ยังไม่มีรายชื่อ</p>'}</div></div>`;
+  return `<div class="card"><div class="flex justify-between mb-2"><b>${label}</b><button class="btn g" onclick="addName('${key}','ชื่อ')">+ เพิ่มรายชื่อ</button></div><div class="grid grid-cols-3 gap-2">${ord.map(i => `<div class="border rounded-xl p-2 flex gap-1 items-center ${info[i] ? 'opacity-60' : ''}"><button class="btn p flex-1" onclick="${onsel}(${i})">${esc(db[key][i])}${key === 'customers' && (db.custGroup || {})[db[key][i]] ? `<br><small>กลุ่ม: ${esc(db.custGroup[db[key][i]])}</small>` : ''}${info[i] ? `<br><small>${info[i]}</small>` : ''}</button>${key === 'customers' ? `<button onclick="grpForm(${i})" title="ตั้งกลุ่ม">🏷</button>` : ''}<button class="text-rose-600" onclick="delName('${key}',${i})">🗑</button></div>`).join('') || '<p class="text-slate-400">ยังไม่มีรายชื่อ</p>'}</div></div>`;
 };
 
 const V = {
   home: () => `<div class="grid grid-cols-3 gap-4 max-w-4xl mx-auto mt-4">${tile('🛒', 'เมนูการขาย', 'cust', 'bg-indigo-600 col-span-3')}${(() => { const u = tops().filter(b => b.status === 'unpaid'); return `<button onclick="showUnpaid()" class="bg-orange-500 text-white rounded-2xl p-4 text-center font-extrabold text-xl shadow active:scale-95 col-span-3">💰 บิลค้างจ่าย ${u.length ? u.length + ' บิล' : '(ไม่มี)'}</button>`; })()}${tile('🧾', 'ประวัติบิล', 'bills', 'bg-sky-600')}${tile('📦', 'ซื้อเข้า', 'purchase', 'bg-emerald-600')}${tile('👷', 'ค่าจ้างพนักงาน', 'staff', 'bg-amber-600')}${tile('💸', 'รายจ่ายทั่วไป', 'exp', 'bg-rose-600')}${tile('📊', 'สรุปบัญชี', 'sum', 'bg-slate-700')}</div>`,
 
-  cust: () => `<div class="max-w-4xl mx-auto grid gap-3"><button class="btn p text-2xl py-8" onclick="selCust(WALK)">👤 ${WALK}</button>${nameBox('customers', 'ลูกค้าประจำ', 'selReg')}</div>`,
+  cust: () => `<div class="max-w-4xl mx-auto grid gap-3"><div class="grid grid-cols-3 gap-3"><button class="btn p text-2xl py-8 col-span-2" onclick="selCust(WALK)">👤 ${WALK}</button><button class="btn a text-xl" onclick="gmM(true)">🧾 รวมบิลกลุ่ม</button></div>${nameBox('customers', 'ลูกค้าประจำ', 'selReg')}</div>`,
 
   pos: () => `<div class="flex gap-3 fill"><div class="card flex-1 min-w-0 overflow-y-auto"><div class="flex flex-wrap gap-2 items-center mb-3"><b>ลูกค้า:</b><span class="bg-indigo-100 text-indigo-900 font-bold px-3 py-1 rounded-lg">${esc(cust)}</span><button class="btn" onclick="editCust()">✏️ แก้ชื่อ</button><button class="btn" onclick="go('cust')">เปลี่ยนลูกค้า</button><button class="btn a" onclick="parkedList()">🕐 บิลที่พัก (${db.parked.length})</button><button class="btn ${selN.length ? 'p' : ''}" onclick="noticePick()">📢 ประกาศ (${selTexts().length})</button><button class="btn p ml-auto" onclick="addProd()">+ สร้างปุ่มสินค้า</button></div>${pgrid('c')}</div><div class="pane w-[560px] shrink-0 flex flex-col gap-2"><div class="card flex-1 min-w-0 overflow-y-auto">${receipt({ date: nowS(), customer: cust, total: rdn(sum(cart)), rnd: cartRnd(), notices: selTexts() }, cartLines(cart, 'delCart'))}</div><div class="grid grid-cols-3 gap-2"><button class="btn r" onclick="clearCart()">ยกเลิกบิล</button><button class="btn a" onclick="park()">พักบิล</button><button class="btn g" onclick="payM()">ชำระเงิน</button></div></div></div>`,
 
   bills: () => {
     const L = (F.k ? db.bills : tops()).filter(b => per(b.date, F.p) && (F.s === 'all' || b.status === F.s) && (F.c === 'all' || b.customer === F.c));
     const cs = [['all', 'ลูกค้าทั้งหมด'], ...[...new Set(tops().map(b => b.customer))].map(c => [c, c])];
-    return `<div class="card"><div class="flex flex-wrap gap-2 items-center mb-3">${selH(PO, F.p, "F.p=this.value;render()")}${selH(cs, F.c, "F.c=this.value;render()")}${selH([['all', 'ทุกสถานะ'], ['unpaid', 'ค้างชำระ'], ['paid', 'ชำระแล้ว']], F.s, "F.s=this.value;render()")}<label class="flex items-center gap-1 text-sm ml-auto"><input type="checkbox" ${F.k ? 'checked' : ''} onchange="F.k=this.checked;render()">แสดงบิลที่รวมแล้ว</label><button class="btn" onclick="selAll()">${F.c !== 'all' ? 'เลือกทั้งหมดของลูกค้านี้' : 'เลือกค้างชำระทั้งหมดที่แสดง'}</button><button class="btn g" onclick="paySel('transfer')">โอนแล้ว (ที่เลือก)</button><button class="btn a" onclick="paySel('cash')">เงินสด (ที่เลือก)</button><button class="btn p" onclick="mergeSel()">รวมบิลที่เลือก</button><button class="btn r" onclick="cancelSel()">ยกเลิกที่เลือก</button></div>${F.s === 'unpaid' ? `<div class="bg-orange-100 text-orange-900 font-black text-xl rounded-xl p-2 mb-2">ค้างจ่ายรวม ${L.filter(x => !x.mergedInto).length} บิล ฿${fm(sum(L.filter(x => !x.mergedInto)))}</div>` : ''}<table class="w-full text-sm"><tr class="font-bold"><td></td><td>เลขที่</td><td>วันที่</td><td>ลูกค้า</td><td class="text-right">ยอดรวม</td><td>สถานะ</td><td></td></tr>${L.map(b => `<tr><td>${b.mergedInto ? '' : `<input type="checkbox" class="bc" value="${b.id}" ${b.status === 'unpaid' ? 'data-un="1"' : ''}>`}</td><td class="font-bold">${b.id}</td><td class="text-xs">${fd(b.date)}</td><td>${esc(b.customer)}${isMG(b) ? ' <span class="text-xs bg-indigo-100 px-1 rounded">ใบแจ้งยอดรวม</span>' : ''}${b.mergedInto ? ' <span class="text-xs bg-slate-200 px-1 rounded">รวมแล้วใน ' + b.mergedInto + '</span>' : ''}</td><td class="text-right font-black">฿${fm(b.total)}</td><td><span class="px-2 py-0.5 rounded-full text-xs font-bold ${b.status === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${stat(b)}</span></td><td class="whitespace-nowrap"><div class="flex gap-1">${b.status === 'unpaid' && !b.mergedInto ? `<button class="btn g" onclick="payConfirm(['${b.id}'],'transfer')">โอนแล้ว</button><button class="btn a" onclick="payConfirm(['${b.id}'],'cash')">เงินสด</button>` : ''}<button class="btn" onclick="openBill('${b.id}')">เปิดดู</button></div></td></tr>`).join('') || '<tr><td colspan="7" class="text-center text-slate-400 p-6">ไม่พบบิล</td></tr>'}</table></div>`;
+    return `<div class="card"><div class="flex flex-wrap gap-2 items-center mb-3">${selH(PO, F.p, "F.p=this.value;render()")}${selH(cs, F.c, "F.c=this.value;render()")}${selH([['all', 'ทุกสถานะ'], ['unpaid', 'ค้างชำระ'], ['paid', 'ชำระแล้ว']], F.s, "F.s=this.value;render()")}<label class="flex items-center gap-1 text-sm ml-auto"><input type="checkbox" ${F.k ? 'checked' : ''} onchange="F.k=this.checked;render()">แสดงบิลที่รวมแล้ว</label><button class="btn a" onclick="gmM(true)">🧾 รวมบิลกลุ่ม</button><button class="btn" onclick="selAll()">${F.c !== 'all' ? 'เลือกทั้งหมดของลูกค้านี้' : 'เลือกค้างชำระทั้งหมดที่แสดง'}</button><button class="btn g" onclick="paySel('transfer')">โอนแล้ว (ที่เลือก)</button><button class="btn a" onclick="paySel('cash')">เงินสด (ที่เลือก)</button><button class="btn p" onclick="mergeSel()">รวมบิลที่เลือก</button><button class="btn r" onclick="cancelSel()">ยกเลิกที่เลือก</button></div>${F.s === 'unpaid' ? `<div class="bg-orange-100 text-orange-900 font-black text-xl rounded-xl p-2 mb-2">ค้างจ่ายรวม ${L.filter(x => !x.mergedInto).length} บิล ฿${fm(sum(L.filter(x => !x.mergedInto)))}</div>` : ''}<table class="w-full text-sm"><tr class="font-bold"><td></td><td>เลขที่</td><td>วันที่</td><td>ลูกค้า</td><td class="text-right">ยอดรวม</td><td>สถานะ</td><td></td></tr>${L.map(b => `<tr><td>${b.mergedInto ? '' : `<input type="checkbox" class="bc" value="${b.id}" ${b.status === 'unpaid' ? 'data-un="1"' : ''}>`}</td><td class="font-bold">${b.id}</td><td class="text-xs">${fd(b.date)}</td><td>${esc(b.customer)}${isMG(b) ? ' <span class="text-xs bg-indigo-100 px-1 rounded">ใบแจ้งยอดรวม</span>' : ''}${b.mergedInto ? ' <span class="text-xs bg-slate-200 px-1 rounded">รวมแล้วใน ' + b.mergedInto + '</span>' : ''}</td><td class="text-right font-black">฿${fm(b.total)}</td><td><span class="px-2 py-0.5 rounded-full text-xs font-bold ${b.status === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${stat(b)}</span></td><td class="whitespace-nowrap"><div class="flex gap-1">${b.status === 'unpaid' && !b.mergedInto ? `<button class="btn g" onclick="payConfirm(['${b.id}'],'transfer')">โอนแล้ว</button><button class="btn a" onclick="payConfirm(['${b.id}'],'cash')">เงินสด</button>` : ''}<button class="btn" onclick="openBill('${b.id}')">เปิดดู</button></div></td></tr>`).join('') || '<tr><td colspan="7" class="text-center text-slate-400 p-6">ไม่พบบิล</td></tr>'}</table></div>`;
   },
 
   purchase: () => `<div class="flex gap-3 fill"><div class="card flex-1 min-w-0 overflow-y-auto"><div class="flex flex-wrap gap-2 items-center mb-3"><b>ซื้อจาก:</b>${selH([['', '-- เลือกผู้ขาย --'], ...db.suppliers.map(s => [s, s])], sup, "sup=this.value;render()")}<button class="btn g" onclick="addName('suppliers','ชื่อผู้ขาย')">+ ผู้ขาย</button><button class="btn r" onclick="delSup()">ลบผู้ขาย</button><button class="btn p ml-auto" onclick="addProd()">+ สร้างปุ่มสินค้า</button></div>${pgrid('p')}</div><div class="pane w-[560px] shrink-0 flex flex-col gap-2 overflow-y-auto"><div class="card"><b>รายการซื้อเข้า (${esc(sup || 'ยังไม่เลือกผู้ขาย')})</b><div class="space-y-1 my-2">${cartLines(pcart, 'delP')}</div><div class="flex justify-between font-black text-lg border-t pt-1"><span>รวม</span><span>฿${fm(sum(pcart))}</span></div><button class="btn g w-full mt-2" onclick="savePur()">ยืนยัน (ค้างจ่าย)</button></div><div class="card space-y-2"><b>ประวัติซื้อเข้า</b>${db.purchases.map(p => `<div class="border rounded-xl p-2 text-sm"><div class="flex justify-between"><b>${esc(p.supplier)}</b><span class="text-xs">${fd(p.date)}</span></div><div class="text-xs text-slate-500">${p.items.map(i => esc(i.name) + ' ' + i.qty).join(', ')}</div><div class="flex justify-between"><b>฿${fm(p.total)}</b><b class="${p.status === 'paid' ? 'text-emerald-600' : 'text-amber-600'}">${p.status === 'paid' ? 'จ่ายแล้ว (' + PAY[p.pay] + ')' : 'ค้างจ่าย'}</b></div><div class="flex gap-1 mt-1">${p.status === 'paid' ? '' : `<button class="btn g" onclick="choosePay('p','${p.id}')">เปลี่ยนเป็นจ่ายแล้ว</button>`}<button class="btn r" onclick="delPur('${p.id}')">ลบ</button></div></div>`).join('') || '<p class="text-slate-400 text-sm">ยังไม่มีรายการ</p>'}</div></div></div>`,
@@ -538,6 +647,7 @@ function cashDone(r) {
 }
 function sale(st, m, ex) {
   const b = { id: 'INV-' + uid().slice(-6), date: nowS(), customer: cust, items: cart, total: rdn(sum(cart)), status: st, pay: m || null, paidAt: st === 'paid' ? nowS() : null };
+  b.grp = grpOf(cust);
   const nt = selTexts(); if (nt.length) b.notices = nt;
   if (cartRnd()) b.rnd = cartRnd();
   if (ex) Object.assign(b, ex);
@@ -550,7 +660,8 @@ function sale(st, m, ex) {
 function openBill(id) {
   const b = db.bills.find(x => x.id == id); if (!b) return;
   const fresh = freshId === id;
-  modal(`<div class="flex justify-between mb-2"><b>รายละเอียดใบเสร็จ</b>${fresh ? '' : `<button onclick="closeBill('${id}')">✕</button>`}</div>${isMG(b) ? `<div class="flex gap-1 mb-2"><button class="btn flex-1 ${split === 'bill' ? 'p' : ''}" onclick="split='bill';openBill('${id}')">แยกรายบิล</button><button class="btn flex-1 ${split === 'day' ? 'p' : ''}" onclick="split='day';openBill('${id}')">แยกรายวัน</button></div>` : ''}<div id="rc">${receipt(b)}</div><div class="grid grid-cols-2 gap-2 mt-3">${b.status === 'unpaid' && !b.mergedInto ? `<button class="btn g col-span-2" onclick="choosePay('b','${id}')">เปลี่ยนสถานะเป็น "ชำระแล้ว"</button>` : ''}${b.status === 'paid' && !b.mergedInto && !fresh ? `<button class="btn col-span-2" onclick="unpay('${id}')">↩ ย้อนกลับเป็นค้างชำระ (กดผิด)</button>` : ''}${b.mergedInto ? `<div class="col-span-2 text-center text-sm text-slate-500">บิลนี้ถูกรวมใน ${b.mergedInto} ชำระที่ใบแจ้งยอดรวม</div>` : ''}${isMG(b) && b.status === 'unpaid' ? `<button class="btn col-span-2" onclick="unmerge('${id}')">ยกเลิกการรวม (แยกกลับเป็นบิลเดิม)</button>` : ''}<button class="btn" onclick="shareBill('${id}')">แชร์เป็นรูป</button><button class="btn p" onclick="printBill('${id}')">พิมพ์ทันที</button>${fresh ? `<button class="btn col-span-2" onclick="closeBill('${id}')">ปิดโดยไม่พิมพ์ (กลับไปเลือกลูกค้า)</button>` : ''}</div>`);
+  modal(`<div class="flex justify-between mb-2"><b>รายละเอียดใบเสร็จ</b>${fresh ? '' : `<button onclick="closeBill('${id}')">✕</button>`}</div>${isMG(b) && !b.gm ? `<div class="flex gap-1 mb-2"><button class="btn flex-1 ${split === 'bill' ? 'p' : ''}" onclick="split='bill';openBill('${id}')">แยกรายบิล</button><button class="btn flex-1 ${split === 'day' ? 'p' : ''}" onclick="split='day';openBill('${id}')">แยกรายวัน</button></div>` : ''}<div id="rc">${b.gm ? '<div class="text-center text-slate-400 py-6">กำลังสร้างภาพ...</div>' : receipt(b)}</div><div class="grid grid-cols-2 gap-2 mt-3">${b.status === 'unpaid' && !b.mergedInto ? `<button class="btn g col-span-2" onclick="choosePay('b','${id}')">เปลี่ยนสถานะเป็น "ชำระแล้ว"</button>` : ''}${b.status === 'paid' && !b.mergedInto && !fresh ? `<button class="btn col-span-2" onclick="unpay('${id}')">↩ ย้อนกลับเป็นค้างชำระ (กดผิด)</button>` : ''}${b.mergedInto ? `<div class="col-span-2 text-center text-sm text-slate-500">บิลนี้ถูกรวมใน ${b.mergedInto} ชำระที่ใบแจ้งยอดรวม</div>` : ''}${isMG(b) && b.status === 'unpaid' ? `<button class="btn col-span-2" onclick="unmerge('${id}')">ยกเลิกการรวม (แยกกลับเป็นบิลเดิม)</button>` : ''}<button class="btn" onclick="shareBill('${id}')">แชร์เป็นรูป</button>${b.gm ? '' : `<button class="btn p" onclick="printBill('${id}')">พิมพ์ทันที</button>`}${fresh ? `<button class="btn col-span-2" onclick="closeBill('${id}')">ปิดโดยไม่พิมพ์ (กลับไปเลือกลูกค้า)</button>` : ''}</div>`);
+  if (b.gm) gmShow(b);
 }
 function closeBill(id) { const fresh = freshId === id; freshId = null; closeM(); if (fresh) go('cust'); }
 async function printBill(id) {
@@ -560,12 +671,13 @@ async function printBill(id) {
 async function shareBill(id) {
   const b = db.bills.find(x => x.id == id); if (!b) return;
   try {
-    const c = await makeCanvas(billBlocks(b), 2, false);
-    const blob = await new Promise(r => c.toBlob(r, 'image/png')), file = new File([blob], b.id + '.png', { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file] }); } catch (e) { if (e.name !== 'AbortError') toast('แชร์ไม่สำเร็จ'); return; }
+    const cvs = b.gm ? await gmCanvases(b) : [await makeCanvas(billBlocks(b), 2, false)];
+    const files = [], blobs = [];
+    for (let i = 0; i < cvs.length; i++) { const blob = await new Promise(r => cvs[i].toBlob(r, 'image/png')); blobs.push(blob); files.push(new File([blob], b.id + (cvs.length > 1 ? '-' + (i + 1) : '') + '.png', { type: 'image/png' })); }
+    if (navigator.canShare && navigator.canShare({ files })) {
+      try { await navigator.share({ files }); } catch (e) { if (e.name !== 'AbortError') toast('แชร์ไม่สำเร็จ'); return; }
     } else {
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; a.click(); toast('บันทึกรูปลงเครื่องแล้ว');
+      files.forEach((f, i) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blobs[i]); a.download = f.name; a.click(); }); toast('บันทึกรูปลงเครื่องแล้ว');
     }
     closeBill(id);
   } catch (e) { toast('แชร์ไม่สำเร็จ: ' + (e.message || e)); }
@@ -673,10 +785,17 @@ function calc() {
   ['กำไร/ขาดทุนสุทธิ', inc - exp, 1], ['ลูกค้าค้างชำระ', sum(tops().filter(x => x.status === 'unpaid' && ir(x.date)))], ['ค้างจ่ายผู้ขาย', sum(db.purchases.filter(x => x.status === 'unpaid' && ir(x.date)))], ['เงินฝากพนักงาน (ไม่นับเป็นรายจ่าย)', sT('dep')]];
 }
 const rowsH = r => r.map(([l, v, b]) => `<div class="flex justify-between ${b ? 'font-black border-t mt-1 pt-1' : ''}"><span>${l.replace(/^ +/, '&nbsp;&nbsp;')}</span><span>฿${fm(v)}</span></div>`).join('');
-function wipe() {
-  if (!confirm('ลบประวัติทั้งหมด (บิล ซื้อเข้า ค่าจ้าง รายจ่าย บิลพัก)?\nรายชื่อและปุ่มสินค้าจะยังอยู่')) return;
-  if (!confirm('ยืนยันอีกครั้ง! ลบแล้วกู้คืนไม่ได้')) return;
-  Object.assign(db, { bills: [], parked: [], purchases: [], tx: [], exps: [] }); save(); toast('ลบประวัติทั้งหมดแล้ว'); render();
+async function wipe() {
+  if (!confirm('ลบประวัติทั้งหมด (บิล ซื้อเข้า ค่าจ้าง รายจ่าย บิลพัก) เฉพาะในแอปนี้?\nข้อมูลใน Google Drive จะไม่ถูกลบ (ลบเองใน Drive ทีหลังได้)\nรายชื่อและปุ่มสินค้าจะยังอยู่')) return;
+  if (!confirm('ยืนยันอีกครั้ง! ลบในแอปแล้วกู้คืนในแอปไม่ได้')) return;
+  const c = cfg();
+  if (c.on && c.url && navigator.onLine) {
+    try { await gPost({ action: 'backup', name: 'mypos-before-wipe-' + nowS().replace(/[:T]/g, '-') + '.json', content: JSON.stringify(db) }); toast('ส่งสำเนาก่อนลบขึ้น Drive แล้ว'); }
+    catch (e) { if (!confirm('ส่งสำเนาก่อนลบขึ้น Drive ไม่สำเร็จ (' + ((e && e.message) || e) + ')\nลบต่อไปหรือไม่?')) return; }
+  }
+  Object.assign(db, { bills: [], parked: [], purchases: [], tx: [], exps: [] });
+  const st = syn(); st.rows = {}; st.bkHold = true; saveSyn(st);
+  save(); toast('ลบประวัติทั้งหมดแล้ว (ข้อมูลใน Drive ยังอยู่)'); render();
 }
 
 render();
