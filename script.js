@@ -1,9 +1,10 @@
 // ===== ข้อมูล (เก็บใน localStorage) =====
-const VER = '3.2.4';
-const CHANGES = ['v3.2.4: พักบิลแล้วกลับหน้าเลือกลูกค้า + ปุ่มบิลที่พัก, ลูกค้าที่ขายแล้ววันนี้ไปอยู่ท้ายรายชื่อจนกว่าจะรีเซ็ต','v3.2.3: ปุ่ม ↕ จัดลำดับ (⬆⬇) รายชื่อลูกค้า/ผู้ขาย/สินค้า ลำดับคงค้างจนกว่าจะแก้','v3.2.2: กลุ่มลูกค้า + รวมบิลกลุ่ม (ใบแจ้งยอดรวมเป็นตารางแชร์ LINE), ชีทโครงสร้างใหม่ (สรุป/รายลูกค้า/รายรับ/รายจ่าย), ลบประวัติไม่แตะข้อมูลใน Drive', 'v3.2.1: ส่งข้อมูลขึ้น Google Drive อัตโนมัติ (สำรองข้อมูล, สรุปบัญชีลง Google Sheets, รูปสลิปบิลที่ชำระแล้ว), ไฟล์สำรอง/นำเข้า, คำต่อท้ายช่องกรอก (กก. / บาท / ตัว), ใช้ "กก." แทน kg', 'v3.2.0: กรอกสินค้า Enter น้ำหนัก>ราคา>จำนวนตัว(เว้นว่างได้)>ตกลง, บิลค้างจ่ายกดรับชำระได้ทันที (โอน/เงินสด), ติ๊กหลายบิลชำระพร้อมกัน, ย้อนกลับเป็นค้างชำระ', 'v3.1.3: คีย์บอร์ดตัวเลขจริง (ซ่อนแป้นบนจอ มีปุ่มสลับ), รับเงินสดและเงินทอน, ปัดเศษลงที่ยอดบิล, ประกาศขนาด 26 กึ่งกลาง, พักบิลพร้อมประกาศ', 'v3.1.2: ชื่อลูกค้าที่ออกบิลแล้วจางจนถึงเวลารีเซ็ต (ตั้งเวลาได้ ค่าตั้งต้น 06:00) และปุ่มรีเซ็ตทันที', 'v3.1.1: ปุ่มบิลค้างจ่ายในหน้าหลัก (แสดงจำนวนและยอดรวม)', 'v3.1.0: ประกาศท้ายบิล (เลือกเป็นบางบิล, ตัวช่วยปรับราคา), ตั้งค่า Line ID ที่สลิป, ลูกค้าประจำที่ออกบิลแล้วย้ายลงล่างสุดวนเป็นรอบ', 'v3.0.2: หน้าขาย/ซื้อเข้า ขยายกล่องบิลเป็น 560 จุด แก้ข้อความล้นกล่อง', 'v3.0.1: รายการสินค้าบนหน้าจอพอดี 1 บรรทัดเหมือนสลิป, ป้อนกระดาษท้ายสลิปตั้งต้น 5 บรรทัด', 'v3.0: ใบแจ้งยอดรวม (เก็บบิลเดิม ชำระแล้วอัปเดตทุกบิล ไม่นับยอดซ้ำ ยกเลิกการรวมได้)', 'v3.0: สลิป — ตัดกระดาษโดย RawBT/แอป ปรับบรรทัดป้อนกระดาษ ลดขอบบน ชื่อสินค้า 1 บรรทัด', 'v2.x: พิมพ์ทันทีผ่าน RawBT แชร์เป็นรูป โลโก้ พักบิลอัตโนมัติ'];
+const VER = '3.2.5';
+const CHANGES = ['v3.2.5: แก้ไขบิล/วันที่บิลในประวัติ, บิลรวมแสดงรายการเฉพาะบิลล่าสุด (สลับ รวมยอด/แยกบิล), ชำระบิลรวมแบบเลือกบิล','v3.2.4: พักบิลแล้วกลับหน้าเลือกลูกค้า + ปุ่มบิลที่พัก, ลูกค้าที่ขายแล้ววันนี้ไปอยู่ท้ายรายชื่อจนกว่าจะรีเซ็ต','v3.2.3: ปุ่ม ↕ จัดลำดับ (⬆⬇) รายชื่อลูกค้า/ผู้ขาย/สินค้า ลำดับคงค้างจนกว่าจะแก้','v3.2.2: กลุ่มลูกค้า + รวมบิลกลุ่ม (ใบแจ้งยอดรวมเป็นตารางแชร์ LINE), ชีทโครงสร้างใหม่ (สรุป/รายลูกค้า/รายรับ/รายจ่าย), ลบประวัติไม่แตะข้อมูลใน Drive', 'v3.2.1: ส่งข้อมูลขึ้น Google Drive อัตโนมัติ (สำรองข้อมูล, สรุปบัญชีลง Google Sheets, รูปสลิปบิลที่ชำระแล้ว), ไฟล์สำรอง/นำเข้า, คำต่อท้ายช่องกรอก (กก. / บาท / ตัว), ใช้ "กก." แทน kg', 'v3.2.0: กรอกสินค้า Enter น้ำหนัก>ราคา>จำนวนตัว(เว้นว่างได้)>ตกลง, บิลค้างจ่ายกดรับชำระได้ทันที (โอน/เงินสด), ติ๊กหลายบิลชำระพร้อมกัน, ย้อนกลับเป็นค้างชำระ', 'v3.1.3: คีย์บอร์ดตัวเลขจริง (ซ่อนแป้นบนจอ มีปุ่มสลับ), รับเงินสดและเงินทอน, ปัดเศษลงที่ยอดบิล, ประกาศขนาด 26 กึ่งกลาง, พักบิลพร้อมประกาศ', 'v3.1.2: ชื่อลูกค้าที่ออกบิลแล้วจางจนถึงเวลารีเซ็ต (ตั้งเวลาได้ ค่าตั้งต้น 06:00) และปุ่มรีเซ็ตทันที', 'v3.1.1: ปุ่มบิลค้างจ่ายในหน้าหลัก (แสดงจำนวนและยอดรวม)', 'v3.1.0: ประกาศท้ายบิล (เลือกเป็นบางบิล, ตัวช่วยปรับราคา), ตั้งค่า Line ID ที่สลิป, ลูกค้าประจำที่ออกบิลแล้วย้ายลงล่างสุดวนเป็นรอบ', 'v3.0.2: หน้าขาย/ซื้อเข้า ขยายกล่องบิลเป็น 560 จุด แก้ข้อความล้นกล่อง', 'v3.0.1: รายการสินค้าบนหน้าจอพอดี 1 บรรทัดเหมือนสลิป, ป้อนกระดาษท้ายสลิปตั้งต้น 5 บรรทัด', 'v3.0: ใบแจ้งยอดรวม (เก็บบิลเดิม ชำระแล้วอัปเดตทุกบิล ไม่นับยอดซ้ำ ยกเลิกการรวมได้)', 'v3.0: สลิป — ตัดกระดาษโดย RawBT/แอป ปรับบรรทัดป้อนกระดาษ ลดขอบบน ชื่อสินค้า 1 บรรทัด', 'v2.x: พิมพ์ทันทีผ่าน RawBT แชร์เป็นรูป โลโก้ พักบิลอัตโนมัติ'];
 const K = 'mypos2';
 let db = Object.assign({ customers: [], products: [], suppliers: [], staff: [], bills: [], parked: [], purchases: [], tx: [], exps: [], expItems: [], notices: [], lineId: '', resetHour: 6, resetAt: '', custGroup: {} }, JSON.parse(localStorage.getItem(K) || '{}'));
 const save = () => { try { localStorage.setItem(K, JSON.stringify(db)); } catch (e) { alert('พื้นที่เก็บข้อมูลในเครื่องเต็ม! บันทึกไม่สำเร็จ\nให้สำรองข้อมูลแล้วติดต่อผู้พัฒนาทันที'); } schedSync(); };
+const mgSplit = ks => { const a = ks.slice().sort((x, y) => x.date.localeCompare(y.date)); const lat = a.pop(); return [lat, a]; };
 const isMG = b => Array.isArray(b.mergedIds);
 const kids = b => b.mergedIds.map(id => db.bills.find(x => x.id == id)).filter(Boolean);
 const tops = () => db.bills.filter(b => !b.mergedInto);
@@ -64,7 +65,7 @@ const PAY = { cash: 'เงินสด', transfer: 'เงินโอน' };
 const TX = { wage: 'จ่ายค่าจ้าง', adv: 'เบิกล่วงหน้า', dep: 'ฝากเงิน', rep: 'หักคืนเงินเบิก' };
 const stat = b => b.status === 'paid' ? `ชำระแล้ว (${PAY[b.pay]})` : 'ค้างชำระ';
 let freshId = null;
-let cust = WALK, cart = [], pcart = [], view = 'home', split = 'bill', sup = '';
+let cust = WALK, cart = [], pcart = [], view = 'home', split = 'sum', sup = '', EDIT = null;
 let F = { p: 'all', s: 'all', c: 'all', k: false }, ST = { tab: 'list', id: null, p: 'all' };
 let S = { p: 'day', from: ymd(new Date()), to: ymd(new Date()) };
 
@@ -220,12 +221,10 @@ function billBlocks(b) {
   L.push({ t: 'rule' });
   if (!ks) b.items.forEach(i => L.push(itemBlock(i)));
   else {
-    const g = {}; ks.forEach(m => { const k = split === 'day' ? m.date.slice(0, 10) : m.id; (g[k] = g[k] || []).push(m); });
-    Object.entries(g).forEach(([k, ms]) => {
-      L.push({ t: 'l', x: split === 'day' ? 'วันที่ ' + new Date(k).toLocaleDateString('th-TH') : 'บิล ' + k + ' (' + fd(ms[0].date) + ')', sz: 24, b: 1 });
-      ms.forEach(m => m.items.forEach(i => L.push(itemBlock(i))));
-      L.push({ t: 'lr', l: 'รวม', r: '฿' + fm(sum(ms)), sz: 28, b: 1 }, { t: 'rule', w: 1 });
-    });
+    const [lat, old] = mgSplit(ks);
+    const sec = ms => { L.push({ t: 'l', x: 'บิล ' + ms[0].id + ' (' + fd(ms[0].date) + ')', sz: 24, b: 1 }); ms.forEach(m => m.items.forEach(i => L.push(itemBlock(i)))); L.push({ t: 'lr', l: 'รวม', r: '฿' + fm(sum(ms)), sz: 28, b: 1 }, { t: 'rule', w: 1 }); };
+    if (split === 'bill') ks.slice().sort((a, b) => a.date.localeCompare(b.date)).forEach(m => sec([m]));
+    else { if (lat) sec([lat]); if (old.length) { L.push({ t: 'l', x: 'ยอดค้างก่อนหน้า ' + old.length + ' บิล', sz: 24, b: 1 }); old.forEach(m => L.push({ t: 'lr', l: dLab(m.date.slice(0, 10)) + ' ' + m.id, r: '฿' + fm(m.total), sz: 26 })); L.push({ t: 'rule', w: 1 }); } }
   }
   L.push({ t: 'rule' });
   if (b.rnd) L.push({ t: 'lr', l: 'ปัดเศษ', r: '-฿' + fm(b.rnd), sz: 26 });
@@ -529,9 +528,10 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitLines);
 const cartLines = (a, fn) => a.length ? a.map(i => `<div class="flex gap-1"><div class="flex-1 min-w-0">${line(i)}</div><button class="text-rose-600 no-print" onclick="${fn}('${i.id}')">✕</button></div>`).join('') : '<div class="text-center text-slate-400 py-6">- ยังไม่มีรายการ -</div>';
 function body(b) {
   if (!isMG(b)) return b.items.map(line).join('');
-  const ks = kids(b);
-  const g = {}; ks.forEach(m => { const k = split === 'day' ? m.date.slice(0, 10) : m.id; (g[k] = g[k] || []).push(m); });
-  return Object.entries(g).map(([k, ms]) => `<div class="border-t border-dashed border-black pt-1 mt-1"><div class="font-bold text-xs">${split === 'day' ? 'วันที่ ' + new Date(k).toLocaleDateString('th-TH') : 'บิล ' + k + ' (' + fd(ms[0].date) + ')'}</div>${ms.map(m => m.items.map(line).join('')).join('')}<div class="text-right text-sm font-bold">รวม ฿${fm(sum(ms))}</div></div>`).join('');
+  const ks = kids(b), [lat, old] = mgSplit(ks);
+  const sec = m => `<div class="border-t border-dashed border-black pt-1 mt-1"><div class="font-bold text-xs">บิล ${m.id} (${fd(m.date)})</div>${m.items.map(line).join('')}<div class="text-right text-sm font-bold">รวม ฿${fm(m.total)}</div></div>`;
+  if (split === 'bill') return ks.slice().sort((a, b) => a.date.localeCompare(b.date)).map(sec).join('');
+  return (lat ? sec(lat) : '') + (old.length ? `<div class="border-t border-dashed border-black pt-1 mt-1"><div class="font-bold text-xs">ยอดค้างก่อนหน้า ${old.length} บิล</div>${old.map(m => `<div class="flex justify-between text-lg"><span>${dLab(m.date.slice(0, 10))} ${m.id}</span><b>฿${fm(m.total)}</b></div>`).join('')}</div>` : '');
 }
 const noticeHtml = b => { const ns = noticesOf(b); return ns.length ? `<div class="border-t border-black mt-2 pt-1 text-center font-bold" style="font-size:18px">** ประกาศ **</div>${ns.map(x => `<div class="font-bold text-center" style="font-size:18px">${esc(x)}</div>`).join('')}<div class="border-t border-black mt-1"></div>` : ''; };
 const receipt = (b, pre) => `<div class="receipt">${HEAD}<div class="font-extrabold text-center border-y-2 border-black my-2 py-1">${rTitle(b)}</div><div class="text-xs mb-1">${b.id ? 'เลขที่: ' + b.id + '<br>' : ''}เวลา: ${fd(b.date)}<br>ลูกค้า: <b>${esc(b.customer)}</b>${b.status ? '<br>สถานะ: ' + stat(b) : ''}${isMG(b) ? '<br>รวมจาก ' + kids(b).length + ' บิล' : ''}</div><div class="border-t-2 border-black pt-1 space-y-1">${pre || body(b)}</div><div class="border-t-2 border-black mt-2 pt-1">${b.rnd ? `<div class="flex justify-between text-sm"><span>ปัดเศษ</span><span>-฿${fm(b.rnd)}</span></div>` : ''}<div class="flex justify-between text-xl font-black"><span>รวมทั้งสิ้น</span><span>฿${fm(b.total)}</span></div>${b.rcv != null ? `<div class="flex justify-between text-sm"><span>รับเงินสด</span><span>฿${fm(b.rcv)}</span></div><div class="flex justify-between text-sm font-bold"><span>เงินทอน</span><span>฿${fm(b.chg)}</span></div>` : ''}</div>${noticeHtml(b)}<div class="text-center text-xs mt-3">${db.lineId ? 'Line: ' + esc(db.lineId) + '<br>' : ''}<b>" THANK YOU "</b></div></div>`;
@@ -548,7 +548,7 @@ const sname = id => (db.staff.find(s => s.id == id) || {}).name || '-';
 const nameBox = (key, label, onsel) => {
   let ord = db[key].map((c, i) => i); const info = {};
   if (key === 'customers') {
-    const thr = resetThr(), last = {}; db.bills.forEach((b, r) => { if (!isMG(b) && !(b.customer in last)) last[b.customer] = { r, d: b.date }; });
+    const thr = resetThr(), last = {}; db.bills.forEach((b, r) => { if (!isMG(b) && (!(b.customer in last) || b.date > last[b.customer].d)) last[b.customer] = { r, d: b.date }; });
     if (!ORDM) ord = [...ord.filter(i => !(last[db[key][i]] && last[db[key][i]].d > thr)), ...ord.filter(i => last[db[key][i]] && last[db[key][i]].d > thr)];
     ord.forEach(i => { const l = last[db[key][i]]; if (l && l.d > thr) info[i] = '✓ ' + (l.d.slice(0, 10) === todayS() ? l.d.slice(11) : new Date(l.d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })); });
   }
@@ -560,10 +560,10 @@ const V = {
 
   cust: () => `<div class="max-w-4xl mx-auto grid gap-3"><div class="grid grid-cols-4 gap-3"><button class="btn p text-2xl py-8 col-span-2" onclick="selCust(WALK)">👤 ${WALK}</button><button class="btn a text-xl" onclick="gmM(true)">🧾 รวมบิลกลุ่ม</button><button class="btn text-xl" onclick="parkedList()">⏸ บิลที่พัก (${db.parked.length})</button></div>${nameBox('customers', 'ลูกค้าประจำ', 'selReg')}</div>`,
 
-  pos: () => `<div class="flex gap-3 fill"><div class="card flex-1 min-w-0 overflow-y-auto"><div class="flex flex-wrap gap-2 items-center mb-3"><b>ลูกค้า:</b><span class="bg-indigo-100 text-indigo-900 font-bold px-3 py-1 rounded-lg">${esc(cust)}</span><button class="btn" onclick="editCust()">✏️ แก้ชื่อ</button><button class="btn" onclick="go('cust')">เปลี่ยนลูกค้า</button><button class="btn a" onclick="parkedList()">🕐 บิลที่พัก (${db.parked.length})</button><button class="btn ${selN.length ? 'p' : ''}" onclick="noticePick()">📢 ประกาศ (${selTexts().length})</button><button class="btn p ml-auto" onclick="addProd()">+ สร้างปุ่มสินค้า</button></div>${pgrid('c')}</div><div class="pane w-[560px] shrink-0 flex flex-col gap-2"><div class="card flex-1 min-w-0 overflow-y-auto">${receipt({ date: nowS(), customer: cust, total: rdn(sum(cart)), rnd: cartRnd(), notices: selTexts() }, cartLines(cart, 'delCart'))}</div><div class="grid grid-cols-3 gap-2"><button class="btn r" onclick="clearCart()">ยกเลิกบิล</button><button class="btn a" onclick="park()">พักบิล</button><button class="btn g" onclick="payM()">ชำระเงิน</button></div></div></div>`,
+  pos: () => `<div class="flex gap-3 fill"><div class="card flex-1 min-w-0 overflow-y-auto"><div class="flex flex-wrap gap-2 items-center mb-3"><b>ลูกค้า:</b><span class="bg-indigo-100 text-indigo-900 font-bold px-3 py-1 rounded-lg">${esc(cust)}</span><button class="btn" onclick="editCust()">✏️ แก้ชื่อ</button><button class="btn" onclick="go('cust')">เปลี่ยนลูกค้า</button><button class="btn a" onclick="parkedList()">🕐 บิลที่พัก (${db.parked.length})</button><button class="btn ${selN.length ? 'p' : ''}" onclick="noticePick()">📢 ประกาศ (${selTexts().length})</button><button class="btn p ml-auto" onclick="addProd()">+ สร้างปุ่มสินค้า</button></div>${pgrid('c')}</div><div class="pane w-[560px] shrink-0 flex flex-col gap-2">${EDIT ? `<div class="card bg-amber-50 border-2 border-amber-400"><b class="text-lg">✏️ กำลังแก้ไขบิล ${EDIT.id}</b><div class="flex items-center gap-2 mt-1"><b>วันที่บิล</b><input type="date" class="inp !w-auto" value="${EDIT.date}" onchange="EDIT.date=this.value"></div></div>` : ''}<div class="card flex-1 min-w-0 overflow-y-auto">${receipt({ date: nowS(), customer: cust, total: rdn(sum(cart)), rnd: cartRnd(), notices: selTexts() }, cartLines(cart, 'delCart'))}</div>${EDIT ? `<div class="grid grid-cols-2 gap-2"><button class="btn r" onclick="cancelEdit()">ยกเลิกการแก้ไข</button><button class="btn g" onclick="saveEdit()">💾 บันทึกการแก้ไข</button></div>` : `<div class="grid grid-cols-3 gap-2"><button class="btn r" onclick="clearCart()">ยกเลิกบิล</button><button class="btn a" onclick="park()">พักบิล</button><button class="btn g" onclick="payM()">ชำระเงิน</button></div>`}</div></div>`,
 
   bills: () => {
-    const L = (F.k ? db.bills : tops()).filter(b => per(b.date, F.p) && (F.s === 'all' || b.status === F.s) && (F.c === 'all' || b.customer === F.c));
+    const L = (F.k ? db.bills : tops()).filter(b => per(b.date, F.p) && (F.s === 'all' || b.status === F.s) && (F.c === 'all' || b.customer === F.c)).sort((a, b) => b.date.localeCompare(a.date));
     const cs = [['all', 'ลูกค้าทั้งหมด'], ...[...new Set(tops().map(b => b.customer))].map(c => [c, c])];
     return `<div class="card"><div class="flex flex-wrap gap-2 items-center mb-3">${selH(PO, F.p, "F.p=this.value;render()")}${selH(cs, F.c, "F.c=this.value;render()")}${selH([['all', 'ทุกสถานะ'], ['unpaid', 'ค้างชำระ'], ['paid', 'ชำระแล้ว']], F.s, "F.s=this.value;render()")}<label class="flex items-center gap-1 text-sm ml-auto"><input type="checkbox" ${F.k ? 'checked' : ''} onchange="F.k=this.checked;render()">แสดงบิลที่รวมแล้ว</label><button class="btn a" onclick="gmM(true)">🧾 รวมบิลกลุ่ม</button><button class="btn" onclick="selAll()">${F.c !== 'all' ? 'เลือกทั้งหมดของลูกค้านี้' : 'เลือกค้างชำระทั้งหมดที่แสดง'}</button><button class="btn g" onclick="paySel('transfer')">โอนแล้ว (ที่เลือก)</button><button class="btn a" onclick="paySel('cash')">เงินสด (ที่เลือก)</button><button class="btn p" onclick="mergeSel()">รวมบิลที่เลือก</button><button class="btn r" onclick="cancelSel()">ยกเลิกที่เลือก</button></div>${F.s === 'unpaid' ? `<div class="bg-orange-100 text-orange-900 font-black text-xl rounded-xl p-2 mb-2">ค้างจ่ายรวม ${L.filter(x => !x.mergedInto).length} บิล ฿${fm(sum(L.filter(x => !x.mergedInto)))}</div>` : ''}<table class="w-full text-sm"><tr class="font-bold"><td></td><td>เลขที่</td><td>วันที่</td><td>ลูกค้า</td><td class="text-right">ยอดรวม</td><td>สถานะ</td><td></td></tr>${L.map(b => `<tr><td>${b.mergedInto ? '' : `<input type="checkbox" class="bc" value="${b.id}" ${b.status === 'unpaid' ? 'data-un="1"' : ''}>`}</td><td class="font-bold">${b.id}</td><td class="text-xs">${fd(b.date)}</td><td>${esc(b.customer)}${isMG(b) ? ' <span class="text-xs bg-indigo-100 px-1 rounded">ใบแจ้งยอดรวม</span>' : ''}${b.mergedInto ? ' <span class="text-xs bg-slate-200 px-1 rounded">รวมแล้วใน ' + b.mergedInto + '</span>' : ''}</td><td class="text-right font-black">฿${fm(b.total)}</td><td><span class="px-2 py-0.5 rounded-full text-xs font-bold ${b.status === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${stat(b)}</span></td><td class="whitespace-nowrap"><div class="flex gap-1">${b.status === 'unpaid' && !b.mergedInto ? `<button class="btn g" onclick="payConfirm(['${b.id}'],'transfer')">โอนแล้ว</button><button class="btn a" onclick="payConfirm(['${b.id}'],'cash')">เงินสด</button>` : ''}<button class="btn" onclick="openBill('${b.id}')">เปิดดู</button></div></td></tr>`).join('') || '<tr><td colspan="7" class="text-center text-slate-400 p-6">ไม่พบบิล</td></tr>'}</table></div>`;
   },
@@ -592,7 +592,7 @@ const V = {
 
 function render() { const v = $('#ver'); if (v) v.textContent = 'v' + VER; $('#home').classList.toggle('hidden', view === 'home'); $('#app').innerHTML = V[view](); fitLines(); }
 function showUnpaid() { F = { p: 'all', s: 'unpaid', c: 'all', k: false }; go('bills'); }
-function go(v) { if (view === 'pos' && v !== 'pos' && cart.length) { parkCart(); toast('พักบิลอัตโนมัติแล้ว'); } view = v; render(); }
+function go(v) { if (EDIT && v !== 'pos') { cart = []; selN = []; EDIT = null; } if (view === 'pos' && !EDIT && v !== 'pos' && cart.length) { parkCart(); toast('พักบิลอัตโนมัติแล้ว'); } view = v; render(); }
 
 // ===== ลูกค้า / รายชื่อ =====
 function selCust(name) { selN = []; cust = name; go('pos'); }
@@ -663,7 +663,7 @@ function sale(st, m, ex) {
 function openBill(id) {
   const b = db.bills.find(x => x.id == id); if (!b) return;
   const fresh = freshId === id;
-  modal(`<div class="flex justify-between mb-2"><b>รายละเอียดใบเสร็จ</b>${fresh ? '' : `<button onclick="closeBill('${id}')">✕</button>`}</div>${isMG(b) && !b.gm ? `<div class="flex gap-1 mb-2"><button class="btn flex-1 ${split === 'bill' ? 'p' : ''}" onclick="split='bill';openBill('${id}')">แยกรายบิล</button><button class="btn flex-1 ${split === 'day' ? 'p' : ''}" onclick="split='day';openBill('${id}')">แยกรายวัน</button></div>` : ''}<div id="rc">${b.gm ? '<div class="text-center text-slate-400 py-6">กำลังสร้างภาพ...</div>' : receipt(b)}</div><div class="grid grid-cols-2 gap-2 mt-3">${b.status === 'unpaid' && !b.mergedInto ? `<button class="btn g col-span-2" onclick="choosePay('b','${id}')">เปลี่ยนสถานะเป็น "ชำระแล้ว"</button>` : ''}${b.status === 'paid' && !b.mergedInto && !fresh ? `<button class="btn col-span-2" onclick="unpay('${id}')">↩ ย้อนกลับเป็นค้างชำระ (กดผิด)</button>` : ''}${b.mergedInto ? `<div class="col-span-2 text-center text-sm text-slate-500">บิลนี้ถูกรวมใน ${b.mergedInto} ชำระที่ใบแจ้งยอดรวม</div>` : ''}${isMG(b) && b.status === 'unpaid' ? `<button class="btn col-span-2" onclick="unmerge('${id}')">ยกเลิกการรวม (แยกกลับเป็นบิลเดิม)</button>` : ''}<button class="btn" onclick="shareBill('${id}')">แชร์เป็นรูป</button>${b.gm ? '' : `<button class="btn p" onclick="printBill('${id}')">พิมพ์ทันที</button>`}${fresh ? `<button class="btn col-span-2" onclick="closeBill('${id}')">ปิดโดยไม่พิมพ์ (กลับไปเลือกลูกค้า)</button>` : ''}</div>`);
+  modal(`<div class="flex justify-between mb-2"><b>รายละเอียดใบเสร็จ</b>${fresh ? '' : `<button onclick="closeBill('${id}')">✕</button>`}</div>${isMG(b) && !b.gm ? `<div class="flex gap-1 mb-2"><button class="btn flex-1 ${split === 'sum' ? 'p' : ''}" onclick="split='sum';openBill('${id}')">รวมยอด</button><button class="btn flex-1 ${split === 'bill' ? 'p' : ''}" onclick="split='bill';openBill('${id}')">แสดงยอดแยกบิล</button></div>` : ''}<div id="rc">${b.gm ? '<div class="text-center text-slate-400 py-6">กำลังสร้างภาพ...</div>' : receipt(b)}</div><div class="grid grid-cols-2 gap-2 mt-3">${b.status === 'unpaid' && !b.mergedInto ? `<button class="btn g col-span-2" onclick="${isMG(b) ? `payMG('${id}')` : `choosePay('b','${id}')`}">เปลี่ยนสถานะเป็น "ชำระแล้ว"</button>` : ''}${b.status === 'paid' && !b.mergedInto && !fresh ? `<button class="btn col-span-2" onclick="unpay('${id}')">↩ ย้อนกลับเป็นค้างชำระ (กดผิด)</button>` : ''}${b.mergedInto ? `<div class="col-span-2 text-center text-sm text-slate-500">บิลนี้ถูกรวมใน ${b.mergedInto} ชำระที่ใบแจ้งยอดรวม</div>` : ''}${isMG(b) && b.status === 'unpaid' ? `<button class="btn col-span-2" onclick="unmerge('${id}')">ยกเลิกการรวม (แยกกลับเป็นบิลเดิม)</button>` : ''}${isMG(b) ? kids(b).map(k => `<button class="btn col-span-2" onclick="editBill('${k.id}')">✏️ แก้ไขบิล ${k.id} (${dLab(k.date.slice(0, 10))})</button>`).join('') : `<button class="btn col-span-2" onclick="editBill('${id}')">✏️ แก้ไขบิล / วันที่</button>`}<button class="btn" onclick="shareBill('${id}')">แชร์เป็นรูป</button>${b.gm ? '' : `<button class="btn p" onclick="printBill('${id}')">พิมพ์ทันที</button>`}${fresh ? `<button class="btn col-span-2" onclick="closeBill('${id}')">ปิดโดยไม่พิมพ์ (กลับไปเลือกลูกค้า)</button>` : ''}</div>`);
   if (b.gm) gmShow(b);
 }
 function closeBill(id) { const fresh = freshId === id; freshId = null; closeM(); if (fresh) go('cust'); }
@@ -686,6 +686,45 @@ async function shareBill(id) {
   } catch (e) { toast('แชร์ไม่สำเร็จ: ' + (e.message || e)); }
 }
 
+function editBill(id) {
+  const b = db.bills.find(x => x.id == id); if (!b || !b.items) return;
+  if (cart.length && !EDIT && !confirm('ตะกร้าปัจจุบันมีรายการอยู่ จะถูกพักไว้ แล้วเปิดบิลนี้เพื่อแก้ไข')) return;
+  if (cart.length && !EDIT) parkCart();
+  cart = JSON.parse(JSON.stringify(b.items)); cust = b.customer;
+  const ls = liveNotices(); selN = ls.filter(x => (b.notices || []).includes(x.text)).map(x => x.id);
+  EDIT = { id, date: b.date.slice(0, 10) }; closeM(); view = 'pos'; render();
+}
+function cancelEdit() { cart = []; selN = []; EDIT = null; go('bills'); }
+function saveEdit() {
+  const b = db.bills.find(x => x.id == EDIT.id); if (!b) return cancelEdit();
+  if (!cart.length) return alert('ไม่มีรายการสินค้า');
+  if (!EDIT.date) return alert('เลือกวันที่');
+  if (!confirm('บันทึกการแก้ไขบิล ' + b.id + '?' + (b.status === 'paid' ? '\nบิลนี้ชำระแล้ว ยอดอาจเปลี่ยน' : ''))) return;
+  const old = b.total, tm = b.date.slice(10) || 'T00:00:00';
+  b.items = cart; b.total = rdn(sum(cart)); const r = cartRnd(); if (r) b.rnd = r; else delete b.rnd;
+  b.date = EDIT.date + tm; b.grp = grpOf(b.customer);
+  const nt = selTexts(); if (nt.length) b.notices = nt; else delete b.notices;
+  if (b.total !== old && b.rcv != null) { delete b.rcv; delete b.chg; }
+  const par = b.mergedInto && db.bills.find(x => x.id == b.mergedInto); if (par) par.total = sum(kids(par));
+  const st = syn(); delete st.slip[b.id]; if (par) delete st.slip[par.id]; saveSyn(st);
+  const id = par ? par.id : b.id; cart = []; selN = []; EDIT = null; save(); view = 'bills'; render(); toast('บันทึกการแก้ไขแล้ว'); openBill(id);
+}
+function payMG(id) {
+  const b = db.bills.find(x => x.id == id); if (!b) return;
+  modal(`<div class="flex justify-between mb-2"><b class="text-xl">ชำระบิลไหนบ้าง</b><button onclick="closeM()">✕</button></div><div class="text-sm text-slate-500 mb-2">ติ๊กเฉพาะบิลที่ชำระ บิลที่ไม่ติ๊กจะแยกออกเป็นบิลค้างชำระ</div>${kids(b).slice().sort((a, c) => a.date.localeCompare(c.date)).map(k => `<label class="flex items-center gap-3 border-b py-2 text-xl"><input type="checkbox" class="mgk w-7 h-7" checked value="${k.id}" data-a="${k.total}" onchange="mgTot()"><span class="flex-1">${dLab(k.date.slice(0, 10))} · ${k.id}</span><b>฿${fm(k.total)}</b></label>`).join('')}<div class="bg-amber-100 rounded-xl p-3 text-2xl font-black mt-2 flex justify-between"><span>ยอดที่ชำระ</span><span id="mgt"></span></div><div class="grid grid-cols-2 gap-2 mt-3"><button class="btn g py-3" onclick="payMGDo('${id}','cash')">เงินสด</button><button class="btn p py-3" onclick="payMGDo('${id}','transfer')">เงินโอน</button><button class="btn col-span-2" onclick="closeM()">ยกเลิก</button></div>`);
+  mgTot();
+}
+function mgTot() { const t = [...document.querySelectorAll('.mgk:checked')].reduce((a, c) => a + +c.dataset.a, 0); $('#mgt').textContent = '฿' + fm(t); }
+function payMGDo(id, m) {
+  const b = db.bills.find(x => x.id == id), ids = [...document.querySelectorAll('.mgk:checked')].map(c => c.value);
+  if (!b || !ids.length) return toast('ติ๊กบิลที่ชำระก่อน');
+  const all = kids(b), rest = all.filter(k => !ids.includes(k.id)), t = nowS();
+  rest.forEach(k => { delete k.mergedInto; });
+  b.mergedIds = ids; b.total = sum(kids(b));
+  b.status = 'paid'; b.pay = m; b.paidAt = t; kids(b).forEach(k => { k.status = 'paid'; k.pay = m; k.paidAt = t; });
+  if (!b.gm && ids.length === 1) { const k = kids(b)[0]; delete k.mergedInto; db.bills = db.bills.filter(x => x.id != id); save(); closeM(); render(); toast('บันทึกการชำระแล้ว'); if (m === 'cash') openDrawer(); return; }
+  save(); closeM(); render(); openBill(id); toast('บันทึกการชำระแล้ว' + (rest.length ? ' (แยก ' + rest.length + ' บิลที่ไม่ชำระ)' : '')); if (m === 'cash') openDrawer();
+}
 function choosePay(kind, id) {
   modal(`<b class="block mb-3">เลือกประเภทการชำระเงิน</b><div class="space-y-2"><button class="btn g w-full py-3" onclick="doPay('${kind}','${id}','cash')">เงินสด${kind === 'b' ? ' (เปิดลิ้นชัก)' : ''}</button><button class="btn p w-full py-3" onclick="doPay('${kind}','${id}','transfer')">เงินโอน</button><button class="btn w-full" onclick="closeM()">ยกเลิก</button></div>`);
 }
