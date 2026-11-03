@@ -1,6 +1,6 @@
 // ===== ข้อมูล (เก็บใน localStorage) =====
-const VER = '3.2.10';
-const CHANGES = ['v3.2.10: ลบบิลที่พักต้องกดยืนยัน','v3.2.9: ปุ่ม 🚚 ค่าส่ง กรอกราคาเอง (ต่อบิลเดียว)','v3.2.8: แก้ชื่อสินค้า/ชื่อลูกค้า (ชื่อลูกค้าเปลี่ยนตามบิลเก่า), จัดลำดับสินค้าเห็นชื่อชัด','v3.2.7: ยอดค้างก่อนหน้าในบิลรวม ขนาดเท่ารายการสินค้า','v3.2.6: บิลรวม รวมยอด: เน้นยอดบิลล่าสุด ยอดค้างรวมทั้งหมดตัวเล็ก','v3.2.5: แก้ไขบิล/วันที่บิลในประวัติ, บิลรวมแสดงรายการเฉพาะบิลล่าสุด (สลับ รวมยอด/แยกบิล), ชำระบิลรวมแบบเลือกบิล','v3.2.4: พักบิลแล้วกลับหน้าเลือกลูกค้า + ปุ่มบิลที่พัก, ลูกค้าที่ขายแล้ววันนี้ไปอยู่ท้ายรายชื่อจนกว่าจะรีเซ็ต','v3.2.3: ปุ่ม ↕ จัดลำดับ (⬆⬇) รายชื่อลูกค้า/ผู้ขาย/สินค้า ลำดับคงค้างจนกว่าจะแก้','v3.2.2: กลุ่มลูกค้า + รวมบิลกลุ่ม (ใบแจ้งยอดรวมเป็นตารางแชร์ LINE), ชีทโครงสร้างใหม่ (สรุป/รายลูกค้า/รายรับ/รายจ่าย), ลบประวัติไม่แตะข้อมูลใน Drive', 'v3.2.1: ส่งข้อมูลขึ้น Google Drive อัตโนมัติ (สำรองข้อมูล, สรุปบัญชีลง Google Sheets, รูปสลิปบิลที่ชำระแล้ว), ไฟล์สำรอง/นำเข้า, คำต่อท้ายช่องกรอก (กก. / บาท / ตัว), ใช้ "กก." แทน kg', 'v3.2.0: กรอกสินค้า Enter น้ำหนัก>ราคา>จำนวนตัว(เว้นว่างได้)>ตกลง, บิลค้างจ่ายกดรับชำระได้ทันที (โอน/เงินสด), ติ๊กหลายบิลชำระพร้อมกัน, ย้อนกลับเป็นค้างชำระ', 'v3.1.3: คีย์บอร์ดตัวเลขจริง (ซ่อนแป้นบนจอ มีปุ่มสลับ), รับเงินสดและเงินทอน, ปัดเศษลงที่ยอดบิล, ประกาศขนาด 26 กึ่งกลาง, พักบิลพร้อมประกาศ', 'v3.1.2: ชื่อลูกค้าที่ออกบิลแล้วจางจนถึงเวลารีเซ็ต (ตั้งเวลาได้ ค่าตั้งต้น 06:00) และปุ่มรีเซ็ตทันที', 'v3.1.1: ปุ่มบิลค้างจ่ายในหน้าหลัก (แสดงจำนวนและยอดรวม)', 'v3.1.0: ประกาศท้ายบิล (เลือกเป็นบางบิล, ตัวช่วยปรับราคา), ตั้งค่า Line ID ที่สลิป, ลูกค้าประจำที่ออกบิลแล้วย้ายลงล่างสุดวนเป็นรอบ', 'v3.0.2: หน้าขาย/ซื้อเข้า ขยายกล่องบิลเป็น 560 จุด แก้ข้อความล้นกล่อง', 'v3.0.1: รายการสินค้าบนหน้าจอพอดี 1 บรรทัดเหมือนสลิป, ป้อนกระดาษท้ายสลิปตั้งต้น 5 บรรทัด', 'v3.0: ใบแจ้งยอดรวม (เก็บบิลเดิม ชำระแล้วอัปเดตทุกบิล ไม่นับยอดซ้ำ ยกเลิกการรวมได้)', 'v3.0: สลิป — ตัดกระดาษโดย RawBT/แอป ปรับบรรทัดป้อนกระดาษ ลดขอบบน ชื่อสินค้า 1 บรรทัด', 'v2.x: พิมพ์ทันทีผ่าน RawBT แชร์เป็นรูป โลโก้ พักบิลอัตโนมัติ'];
+const VER = '3.2.11';
+const CHANGES = ['v3.2.11: ปุ่มพิมพ์บิลกลุ่ม (ตารางขาวดำ 80 มม. 3 ราย/ตาราง สลิปใบเดียว)','v3.2.10: ลบบิลที่พักต้องกดยืนยัน','v3.2.9: ปุ่ม 🚚 ค่าส่ง กรอกราคาเอง (ต่อบิลเดียว)','v3.2.8: แก้ชื่อสินค้า/ชื่อลูกค้า (ชื่อลูกค้าเปลี่ยนตามบิลเก่า), จัดลำดับสินค้าเห็นชื่อชัด','v3.2.7: ยอดค้างก่อนหน้าในบิลรวม ขนาดเท่ารายการสินค้า','v3.2.6: บิลรวม รวมยอด: เน้นยอดบิลล่าสุด ยอดค้างรวมทั้งหมดตัวเล็ก','v3.2.5: แก้ไขบิล/วันที่บิลในประวัติ, บิลรวมแสดงรายการเฉพาะบิลล่าสุด (สลับ รวมยอด/แยกบิล), ชำระบิลรวมแบบเลือกบิล','v3.2.4: พักบิลแล้วกลับหน้าเลือกลูกค้า + ปุ่มบิลที่พัก, ลูกค้าที่ขายแล้ววันนี้ไปอยู่ท้ายรายชื่อจนกว่าจะรีเซ็ต','v3.2.3: ปุ่ม ↕ จัดลำดับ (⬆⬇) รายชื่อลูกค้า/ผู้ขาย/สินค้า ลำดับคงค้างจนกว่าจะแก้','v3.2.2: กลุ่มลูกค้า + รวมบิลกลุ่ม (ใบแจ้งยอดรวมเป็นตารางแชร์ LINE), ชีทโครงสร้างใหม่ (สรุป/รายลูกค้า/รายรับ/รายจ่าย), ลบประวัติไม่แตะข้อมูลใน Drive', 'v3.2.1: ส่งข้อมูลขึ้น Google Drive อัตโนมัติ (สำรองข้อมูล, สรุปบัญชีลง Google Sheets, รูปสลิปบิลที่ชำระแล้ว), ไฟล์สำรอง/นำเข้า, คำต่อท้ายช่องกรอก (กก. / บาท / ตัว), ใช้ "กก." แทน kg', 'v3.2.0: กรอกสินค้า Enter น้ำหนัก>ราคา>จำนวนตัว(เว้นว่างได้)>ตกลง, บิลค้างจ่ายกดรับชำระได้ทันที (โอน/เงินสด), ติ๊กหลายบิลชำระพร้อมกัน, ย้อนกลับเป็นค้างชำระ', 'v3.1.3: คีย์บอร์ดตัวเลขจริง (ซ่อนแป้นบนจอ มีปุ่มสลับ), รับเงินสดและเงินทอน, ปัดเศษลงที่ยอดบิล, ประกาศขนาด 26 กึ่งกลาง, พักบิลพร้อมประกาศ', 'v3.1.2: ชื่อลูกค้าที่ออกบิลแล้วจางจนถึงเวลารีเซ็ต (ตั้งเวลาได้ ค่าตั้งต้น 06:00) และปุ่มรีเซ็ตทันที', 'v3.1.1: ปุ่มบิลค้างจ่ายในหน้าหลัก (แสดงจำนวนและยอดรวม)', 'v3.1.0: ประกาศท้ายบิล (เลือกเป็นบางบิล, ตัวช่วยปรับราคา), ตั้งค่า Line ID ที่สลิป, ลูกค้าประจำที่ออกบิลแล้วย้ายลงล่างสุดวนเป็นรอบ', 'v3.0.2: หน้าขาย/ซื้อเข้า ขยายกล่องบิลเป็น 560 จุด แก้ข้อความล้นกล่อง', 'v3.0.1: รายการสินค้าบนหน้าจอพอดี 1 บรรทัดเหมือนสลิป, ป้อนกระดาษท้ายสลิปตั้งต้น 5 บรรทัด', 'v3.0: ใบแจ้งยอดรวม (เก็บบิลเดิม ชำระแล้วอัปเดตทุกบิล ไม่นับยอดซ้ำ ยกเลิกการรวมได้)', 'v3.0: สลิป — ตัดกระดาษโดย RawBT/แอป ปรับบรรทัดป้อนกระดาษ ลดขอบบน ชื่อสินค้า 1 บรรทัด', 'v2.x: พิมพ์ทันทีผ่าน RawBT แชร์เป็นรูป โลโก้ พักบิลอัตโนมัติ'];
 const K = 'mypos2';
 let db = Object.assign({ customers: [], products: [], suppliers: [], staff: [], bills: [], parked: [], purchases: [], tx: [], exps: [], expItems: [], notices: [], lineId: '', resetHour: 6, resetAt: '', custGroup: {} }, JSON.parse(localStorage.getItem(K) || '{}'));
 const save = () => { try { localStorage.setItem(K, JSON.stringify(db)); } catch (e) { alert('พื้นที่เก็บข้อมูลในเครื่องเต็ม! บันทึกไม่สำเร็จ\nให้สำรองข้อมูลแล้วติดต่อผู้พัฒนาทันที'); } schedSync(); };
@@ -154,6 +154,26 @@ function runBlocks(ctx, blocks, draw, pad = 10) {
     else if (b.t === 'logo') {
       const w = b.w || 340, h = LOGO.naturalWidth ? Math.round(w * LOGO.naturalHeight / LOGO.naturalWidth) : 0;
       if (draw && h) ctx.drawImage(LOGO, (PW - w) / 2, y, w, h); y += h + 6;
+    }
+    else if (b.t === 'tbl') {
+      const RH = 42, n = b.cs.length, DW = 118, cw = (W - DW) / n, nr = b.D.days.length + 2, x0 = PADX, nf = v => Math.round(v * 100) % 100 ? fm(v) : Math.round(v).toLocaleString('en-US');
+      if (draw) {
+        const cell = (t, cx, cy, w, al, f, col) => { ctx.font = f; ctx.fillStyle = col; const tw = ctx.measureText(t).width; ctx.fillText(t, al === 'r' ? cx + w - 8 - tw : al === 'c' ? cx + (w - tw) / 2 : cx + 8, cy + RH / 2); };
+        ctx.fillStyle = '#000'; ctx.fillRect(x0, y, W, RH);
+        cell('วันที่', x0, y, DW, 'c', fnt(24, 1), '#fff');
+        b.cs.forEach((nm, i) => { let f = 24; ctx.font = fnt(f, 1); while (f > 14 && ctx.measureText(nm).width > cw - 10) { f--; ctx.font = fnt(f, 1); } cell(nm, x0 + DW + i * cw, y, cw, 'c', fnt(f, 1), '#fff'); });
+        b.D.days.forEach((d, r) => {
+          const cy = y + RH * (r + 1); cell(dLab(d), x0, cy, DW, 'l', fnt(26, 0), '#000');
+          b.cs.forEach((nm, i) => { const v = b.D.cell[d + '|' + nm]; if (v) cell(nf(v), x0 + DW + i * cw, cy, cw, 'r', fnt(26, 0), '#000'); });
+        });
+        const ty = y + RH * (nr - 1); cell('รวม', x0, ty, DW, 'l', fnt(28, 1), '#000');
+        b.cs.forEach((nm, i) => cell(nf(b.D.tot[nm]), x0 + DW + i * cw, ty, cw, 'r', fnt(28, 1), '#000'));
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+        for (let r = 0; r <= nr; r++) { ctx.beginPath(); ctx.moveTo(x0, y + RH * r); ctx.lineTo(x0 + W, y + RH * r); ctx.stroke(); }
+        for (let i = 0; i <= n; i++) { const vx = i === 0 ? x0 + DW : x0 + DW + i * cw; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0, y + RH * nr); ctx.moveTo(vx, y); ctx.lineTo(vx, y + RH * nr); ctx.stroke(); }
+        ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x0, ty); ctx.lineTo(x0 + W, ty); ctx.stroke(); ctx.lineWidth = 2;
+      }
+      y += RH * nr + 8;
     }
     else if (b.t === 'c' || b.t === 'l') {
       ctx.font = fnt(sz, b.b);
@@ -484,6 +504,18 @@ function drawGm(b, D, cs, ci, n) {
   }
   return c;
 }
+function gmBlocks(b) {
+  const D = gmData(b), pd = b.status === 'paid', chunks = [];
+  for (let i = 0; i < D.cs.length; i += 3) chunks.push(D.cs.slice(i, i + 3));
+  const L = [...headBlocks(), { t: 'rule' }, { t: 'c', x: 'ใบแจ้งยอดรวม (กลุ่ม ' + b.group + ')', sz: 28, b: 1 }, { t: 'rule' },
+    { t: 'l', x: 'ช่วงวันที่ ' + dLab(D.d0) + ' - ' + dLab(D.d1) + ' ' + (+D.d1.slice(0, 4) + 543), sz: 24 },
+    { t: 'l', x: 'เลขที่: ' + b.id, sz: 24 }, { t: 'l', x: 'ออกเมื่อ: ' + fd(b.date), sz: 24 }, { t: 'l', x: 'สถานะ: ' + stat(b), sz: 24, b: 1 }, { t: 'gap', h: 6 }];
+  chunks.forEach((cs, i) => { if (chunks.length > 1) L.push({ t: 'l', x: 'ตารางที่ ' + (i + 1) + '/' + chunks.length, sz: 22 }); L.push({ t: 'tbl', cs, D }); });
+  L.push({ t: 'rule' }, { t: 'lr', l: pd ? 'ยอดรวมทั้งกลุ่ม' : 'ยอดที่ต้องโอน', r: '฿' + fm(D.total), sz: 38, b: 1 }, { t: 'rule' });
+  if (db.lineId) L.push({ t: 'c', x: 'Line: ' + db.lineId, sz: 24 });
+  L.push({ t: 'c', x: '" THANK YOU "', sz: 26, b: 1 }, { t: 'gap', h: 16 });
+  return L;
+}
 async function gmShow(b) {
   try { const cvs = await gmCanvases(b), rc = $('#rc'); if (rc) rc.innerHTML = cvs.map(c => `<img src="${c.toDataURL('image/png')}" class="w-full border mb-2">`).join(''); }
   catch (e) { const rc = $('#rc'); if (rc) rc.textContent = 'สร้างภาพไม่สำเร็จ'; }
@@ -690,13 +722,13 @@ function sale(st, m, ex) {
 function openBill(id) {
   const b = db.bills.find(x => x.id == id); if (!b) return;
   const fresh = freshId === id;
-  modal(`<div class="flex justify-between mb-2"><b>รายละเอียดใบเสร็จ</b>${fresh ? '' : `<button onclick="closeBill('${id}')">✕</button>`}</div>${isMG(b) && !b.gm ? `<div class="flex gap-1 mb-2"><button class="btn flex-1 ${split === 'sum' ? 'p' : ''}" onclick="split='sum';openBill('${id}')">รวมยอด</button><button class="btn flex-1 ${split === 'bill' ? 'p' : ''}" onclick="split='bill';openBill('${id}')">แสดงยอดแยกบิล</button></div>` : ''}<div id="rc">${b.gm ? '<div class="text-center text-slate-400 py-6">กำลังสร้างภาพ...</div>' : receipt(b)}</div><div class="grid grid-cols-2 gap-2 mt-3">${b.status === 'unpaid' && !b.mergedInto ? `<button class="btn g col-span-2" onclick="${isMG(b) ? `payMG('${id}')` : `choosePay('b','${id}')`}">เปลี่ยนสถานะเป็น "ชำระแล้ว"</button>` : ''}${b.status === 'paid' && !b.mergedInto && !fresh ? `<button class="btn col-span-2" onclick="unpay('${id}')">↩ ย้อนกลับเป็นค้างชำระ (กดผิด)</button>` : ''}${b.mergedInto ? `<div class="col-span-2 text-center text-sm text-slate-500">บิลนี้ถูกรวมใน ${b.mergedInto} ชำระที่ใบแจ้งยอดรวม</div>` : ''}${isMG(b) && b.status === 'unpaid' ? `<button class="btn col-span-2" onclick="unmerge('${id}')">ยกเลิกการรวม (แยกกลับเป็นบิลเดิม)</button>` : ''}${isMG(b) ? kids(b).map(k => `<button class="btn col-span-2" onclick="editBill('${k.id}')">✏️ แก้ไขบิล ${k.id} (${dLab(k.date.slice(0, 10))})</button>`).join('') : `<button class="btn col-span-2" onclick="editBill('${id}')">✏️ แก้ไขบิล / วันที่</button>`}<button class="btn" onclick="shareBill('${id}')">แชร์เป็นรูป</button>${b.gm ? '' : `<button class="btn p" onclick="printBill('${id}')">พิมพ์ทันที</button>`}${fresh ? `<button class="btn col-span-2" onclick="closeBill('${id}')">ปิดโดยไม่พิมพ์ (กลับไปเลือกลูกค้า)</button>` : ''}</div>`);
+  modal(`<div class="flex justify-between mb-2"><b>รายละเอียดใบเสร็จ</b>${fresh ? '' : `<button onclick="closeBill('${id}')">✕</button>`}</div>${isMG(b) && !b.gm ? `<div class="flex gap-1 mb-2"><button class="btn flex-1 ${split === 'sum' ? 'p' : ''}" onclick="split='sum';openBill('${id}')">รวมยอด</button><button class="btn flex-1 ${split === 'bill' ? 'p' : ''}" onclick="split='bill';openBill('${id}')">แสดงยอดแยกบิล</button></div>` : ''}<div id="rc">${b.gm ? '<div class="text-center text-slate-400 py-6">กำลังสร้างภาพ...</div>' : receipt(b)}</div><div class="grid grid-cols-2 gap-2 mt-3">${b.status === 'unpaid' && !b.mergedInto ? `<button class="btn g col-span-2" onclick="${isMG(b) ? `payMG('${id}')` : `choosePay('b','${id}')`}">เปลี่ยนสถานะเป็น "ชำระแล้ว"</button>` : ''}${b.status === 'paid' && !b.mergedInto && !fresh ? `<button class="btn col-span-2" onclick="unpay('${id}')">↩ ย้อนกลับเป็นค้างชำระ (กดผิด)</button>` : ''}${b.mergedInto ? `<div class="col-span-2 text-center text-sm text-slate-500">บิลนี้ถูกรวมใน ${b.mergedInto} ชำระที่ใบแจ้งยอดรวม</div>` : ''}${isMG(b) && b.status === 'unpaid' ? `<button class="btn col-span-2" onclick="unmerge('${id}')">ยกเลิกการรวม (แยกกลับเป็นบิลเดิม)</button>` : ''}${isMG(b) ? kids(b).map(k => `<button class="btn col-span-2" onclick="editBill('${k.id}')">✏️ แก้ไขบิล ${k.id} (${dLab(k.date.slice(0, 10))})</button>`).join('') : `<button class="btn col-span-2" onclick="editBill('${id}')">✏️ แก้ไขบิล / วันที่</button>`}<button class="btn" onclick="shareBill('${id}')">แชร์เป็นรูป</button><button class="btn p" onclick="printBill('${id}')">${b.gm ? '🖨 พิมพ์บิลกลุ่ม' : 'พิมพ์ทันที'}</button>${fresh ? `<button class="btn col-span-2" onclick="closeBill('${id}')">ปิดโดยไม่พิมพ์ (กลับไปเลือกลูกค้า)</button>` : ''}</div>`);
   if (b.gm) gmShow(b);
 }
 function closeBill(id) { const fresh = freshId === id; freshId = null; closeM(); if (fresh) go('cust'); }
 async function printBill(id) {
   const b = db.bills.find(x => x.id == id); if (!b) return;
-  if (await safePrint(billBlocks(b))) closeBill(id);
+  if (await safePrint(b.gm ? gmBlocks(b) : billBlocks(b))) closeBill(id);
 }
 async function shareBill(id) {
   const b = db.bills.find(x => x.id == id); if (!b) return;
